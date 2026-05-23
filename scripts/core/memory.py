@@ -12,6 +12,7 @@ import json
 import os
 import sqlite3
 import time
+import warnings
 from collections import deque
 from dataclasses import dataclass, field, asdict
 from typing import Any, NamedTuple
@@ -182,8 +183,12 @@ class ResearchMemory:
                 ),
             )
             self.db.commit()
-        except sqlite3.Error:
+        except sqlite3.Error as exc:
             self.db.rollback()
+            warnings.warn(
+                f"[ResearchMemory] DB write failed: {exc}. Data may not persist.",
+                stacklevel=2,
+            )
 
     def get_context(self, limit: int = 10) -> list[ContextUnit]:
         """
@@ -237,16 +242,15 @@ class ResearchMemory:
             key: Unique identifier (e.g. "paper:2312.00001")
             value: Serializable value to store
             tags: List of tag strings for retrieval
-            ttl: Optional time-to-live in seconds (None = permanent)
+            ttl: Optional time-to-live in seconds (None = permanent).
+                 Note: `ttl` parameter is accepted for future implementation.
+                 Currently TTL is not enforced on retrieval.
+
+        Returns:
+            None
         """
         cursor = self.db.cursor()
         timestamp = time.time()
-
-        # Expire old entry if exists
-        if ttl is not None:
-            expire_at = timestamp + ttl
-        else:
-            expire_at = None
 
         try:
             cursor.execute(
@@ -334,7 +338,12 @@ class ResearchMemory:
     def compress_context(self, max_items: int = 2):
         """
         Compress context when it exceeds 20 items.
-        Summarizes older items into a compact form.
+
+        Replaces older items with a single "compressed" ContextUnit that
+        contains the count and a brief text summary. Note: this is
+        rule-based compression (string joining), not LLM summarization.
+        LLM-based summarization is planned as a future enhancement
+        when the LLM integration layer is available.
 
         The compression strategy:
         1. Keep the most recent `max_items` units intact

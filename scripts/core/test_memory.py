@@ -26,6 +26,12 @@ def test_memory_push_and_retrieve():
         assert len(mem.context) == 1
         assert mem.context[0].result == {"revenue": 100}
 
+        # Verify DB persistence
+        count = mem.db.execute(
+            "SELECT COUNT(*) FROM contexts WHERE session_id = ?", ("test-session",)
+        ).fetchone()[0]
+        assert count >= 1, "Context was not persisted to DB"
+
         mem.save_session()
 
         restored = ResearchMemory.load_session("test-session", db_path=db)

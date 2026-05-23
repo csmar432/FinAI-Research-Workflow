@@ -24,7 +24,6 @@ import re
 import sys
 import textwrap
 import time
-from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -38,10 +37,7 @@ NOTES_DIR = KNOWLEDGE_DIR / "notes"
 INDEX_FILE = PAPERS_DIR / "index.json"
 
 
-# ─── Memory Integration ────────────────────────────────────────────────
-
 _memory: "ResearchMemory | None" = None
-_memory_short_term: deque = deque(maxlen=20)
 
 
 def set_memory(memory: "ResearchMemory | None"):
