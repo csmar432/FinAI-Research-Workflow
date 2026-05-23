@@ -230,18 +230,18 @@ class ResearchSession:
         dict[str, Any]
             Same structure as run(), scoped to the follow-up tasks.
         """
-        if self._state not in (SessionState.CREATED, SessionState.RUNNING, SessionState.COMPLETED):
+        # Resume on ask from any non-RUNNING state
+        if self._state != SessionState.RUNNING:
             self._state = SessionState.RUNNING
 
         context = self.memory.get_context(limit=self.config.max_context_items)
-        recent_goal = context[-1].task if context else self.config.user_goal
 
         if self.config.verbose:
-            print(f"[ResearchSession.ask] Context: {recent_goal[:60]}...")
             print(f"[ResearchSession.ask] Follow-up: {followup}")
 
         # Combine follow-up with context for smarter decomposition
-        combined_request = f"{recent_goal} + {followup}"
+        combined_request = context[-1].task if context else self.config.user_goal
+        combined_request = f"{combined_request} + {followup}"
 
         # Decompose the follow-up
         tasks = self.planner.decompose(f"{self.config.user_goal}。{followup}")

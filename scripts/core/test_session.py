@@ -128,8 +128,10 @@ def test_session_state_transitions():
 
     assert session._state == SessionState.CREATED
 
-    # Running a trivial request that will fail gracefully (no tools available)
-    # The session transitions to RUNNING during run()
-    # After run(), it either COMPLETED or FAILED depending on results
-    # We just verify the state machine is set up correctly
-    assert session._state == SessionState.CREATED
+    # ask() should transition CREATED → RUNNING
+    session.ask("do something")
+    assert session._state == SessionState.RUNNING
+
+    # Ask again while RUNNING should stay RUNNING
+    session.ask("continue")
+    assert session._state == SessionState.RUNNING
