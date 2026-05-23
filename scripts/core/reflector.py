@@ -1,22 +1,12 @@
 """ResearchReflector: Four-dimensional result evaluation and feedback module.
 
-Evaluation dimensions (weighted):
-1. Completeness (30%): result fields齐全
-2. Accuracy (40%): 数值范围检查、逻辑一致性
-3. Consistency (20%): 与历史结果对比
-4. Confidence (10%): LLM置信度、API状态码
+Evaluates task execution results across:
+1. Completeness (30%)  — required fields present
+2. Accuracy (40%)      — financial domain rules
+3. Consistency (20%)   — vs. historical results in memory
+4. Confidence (10%)    — API status, result completeness
 
-Feedback loop:
-    Task execution complete
-        ↓
-    Reflection.evaluate(task, result, context)
-        ↓
-    Evaluation(score, quality_flags)
-        ↓
-    ┌─ score >= 0.7 → 写入 Memory.context (evaluation=feedback)
-    ├─ score < 0.7 且可修复 → 回退 Planner 重试（max 3次）
-    ├─ score < 0.3 → 放弃，标记 BLOCKED，通知用户
-    └─ quality_flags 包含 inconsistency → 追加验证步骤
+Writes feedback to memory, enabling the feedback loop.
 """
 
 from __future__ import annotations
@@ -26,8 +16,11 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-# ─── Quality Flags ────────────────────────────────────────────────────────────
+from scripts.core.memory import ContextUnit
+from scripts.core.planner import Task, TaskType, TaskStatus
 
+
+# ─── Quality Flags ────────────────────────────────────────────────────────────
 
 QUALITY_FLAGS: dict[str, str] = {
     "missing_data": "关键数据缺失",
@@ -39,168 +32,139 @@ QUALITY_FLAGS: dict[str, str] = {
     "needs_verification": "建议人工核查",
 }
 
-# Weights for the four evaluation dimensions
-WEIGHT_COMPLETENESS = 0.3
-WEIGHT_ACCURACY = 0.4
-WEIGHT_CONSISTENCY = 0.2
-WEIGHT_CONFIDENCE = 0.1
-
-SUCCESS_THRESHOLD = 0.7
-
 
 # ─── Evaluation Dataclass ─────────────────────────────────────────────────────
-
 
 @dataclass
 class Evaluation:
     task_id: str
     success: bool
-    score: float  # 0.0–1.0
-    feedback: str  # 自然语言反馈
-    suggestions: list[str] = field(default_factory=list)
-    quality_flags: list[str] = field(default_factory=list)
+    score: float                # 0.0–1.0
+    feedback: str                # 自然语言反馈
+    suggestions: list[str]       # 改进建议
+    quality_flags: list[str]     # ["missing_data", "low_confidence", ...]
     timestamp: float = field(default_factory=time.time)
 
 
-# ─── Required Fields per TaskType ─────────────────────────────────────────────
+# ─── Required Fields by TaskType ──────────────────────────────────────────────
 
-
-# Required output fields per task type for completeness check
-REQUIRED_FIELDS: dict[str, list[str]] = {
-    "data_fetch": ["df", "data", "price", "content"],
-    "literature": ["papers", "results", "review"],
-    "analysis": ["result", "df", "table", "metrics"],
-    "writing": ["content", "text", "outline"],
-    "code": ["code", "script"],
-    "visualization": ["figure", "chart", "path"],
+REQUIRED_FIELDS: dict[TaskType, list[str]] = {
+    TaskType.DATA_FETCH: ["df", "data", "price", "content"],
+    TaskType.LITERATURE: ["papers", "results", "review"],
+    TaskType.ANALYSIS: ["result", "df", "table", "metrics"],
+    TaskType.WRITING: ["content", "text", "outline"],
+    TaskType.CODE: ["code", "script"],
+    TaskType.VISUALIZATION: ["figure", "chart", "path"],
 }
 
 
-# ─── Financial Domain Accuracy Rules ─────────────────────────────────────────
+# ─── Accuracy Rules ───────────────────────────────────────────────────────────
 
-
-@dataclass
-class AccuracyRule:
-    """A single accuracy validation rule for a financial metric."""
-    field: str  # key name in result dict
-    min_val: float | None
-    max_val: float | None
-    message: str
-
-
-ACCURACY_RULES: list[AccuracyRule] = [
-    AccuracyRule("roe", -100.0, 500.0, "ROE must be in range [-100%, 500%]"),
-    AccuracyRule("pe", 0.0, 1000.0, "PE ratio must be > 0 and < 1000"),
-    AccuracyRule("pe_ratio", 0.0, 1000.0, "PE ratio must be > 0 and < 1000"),
-    AccuracyRule("revenue_growth", -100.0, 1000.0, "Revenue growth must be in range [-100%, 1000%]"),
-    AccuracyRule("growth", -100.0, 1000.0, "Growth must be in range [-100%, 1000%]"),
-    AccuracyRule("price", 0.0, None, "Stock price must be > 0"),
-    AccuracyRule("sentiment", -1.0, 1.0, "Sentiment score must be in range [-1, 1]"),
+# (key_pattern, min_val, max_val) — numeric fields must fall in range
+ACCURACY_RULES: list[tuple[str, float | None, float | None]] = [
+    ("roe", -100.0, 500.0),
+    ("pe", 0.0, 1000.0),
+    ("pb", 0.0, 100.0),
+    ("revenue_growth", -100.0, 1000.0),
+    ("sentiment", -1.0, 1.0),
+    ("sentiment_score", -1.0, 1.0),
+    ("growth", -100.0, 1000.0),
+    ("margin", 0.0, 100.0),
+    ("gross_margin", 0.0, 100.0),
+    ("net_margin", 0.0, 100.0),
+    ("return", -100.0, 1000.0),
+    ("price", 0.0, None),          # price > 0
+    ("r2", 0.0, 1.0),
+    ("p_value", 0.0, 1.0),
 ]
 
 
-# ─── ResearchReflector ───────────────────────────────────────────────────────
-
+# ─── ResearchReflector ────────────────────────────────────────────────────────
 
 class ResearchReflector:
     """
-    Evaluates task execution results across four dimensions and writes feedback
-    to memory, enabling the feedback loop.
+    Evaluates task results across four dimensions and writes feedback to memory.
 
-    Dimensions (weights):
-        - Completeness (30%): result fields are present
-        - Accuracy (40%): numeric values within domain-valid ranges
-        - Consistency (20%): compared against historical results in memory
-        - Confidence (10%): LLM confidence / API status
+    Weights:
+        completeness  30%
+        accuracy      40%
+        consistency   20%
+        confidence     10%
 
-    Final score = weighted average; success = score >= 0.7.
+    Final score = weighted average.
+    success = score >= 0.7
     """
 
     def __init__(self, memory: "ResearchMemory"):
         self.memory = memory
-        self._llm = None  # lazy initialization — reserved for future LLM summarization
+        self._llm = None  # 延迟初始化 — reserved for future LLM summarization
 
-    # ── Public API ─────────────────────────────────────────────────────────
+    # ── Public API ──────────────────────────────────────────────────────────
 
     def evaluate(
         self,
-        task: "Task",
+        task: Task,
         result: Any,
-        context: list["ContextUnit"],
+        context: list[ContextUnit],
     ) -> Evaluation:
         """
-        Evaluate a task execution result across four dimensions.
+        评估任务执行结果，返回 Evaluation 对象。
 
-        Args:
-            task: The Task that was executed.
-            result: The result returned by the tool/executor.
-            context: List of historical ContextUnits from memory.
-
-        Returns:
-            Evaluation dataclass with score, feedback, suggestions, quality_flags.
+        评估维度（各有权重）：
+        1. 完整性 (30%): 结果字段是否齐全
+        2. 准确性 (40%): 数值范围检查、逻辑一致性
+        3. 一致性 (20%): 与历史结果对比
+        4. 置信度 (10%): API状态码、结果完整性
         """
-        quality_flags: list[str] = []
-
-        # 1. Completeness check (30%)
         completeness_score, completeness_flags = self._check_completeness(task, result)
-        quality_flags.extend(completeness_flags)
-
-        # 2. Accuracy check (40%)
         accuracy_score, accuracy_flags = self._check_accuracy(task, result)
-        quality_flags.extend(accuracy_flags)
-
-        # 3. Consistency check (20%)
         consistency_score, consistency_flags = self._check_consistency(task, result, context)
-        quality_flags.extend(consistency_flags)
+        confidence_score, confidence_flags = self._check_confidence(task, result)
 
-        # 4. Confidence check (10%)
-        confidence_score, confidence_flags = self._infer_quality_flags(task, result)
-        quality_flags.extend(confidence_flags)
+        # 合并所有 flags
+        all_flags = list(set(completeness_flags + accuracy_flags + consistency_flags + confidence_flags))
 
-        # Deduplicate flags
-        quality_flags = list(dict.fromkeys(quality_flags))
-
-        # Final weighted score
+        # 加权总分
+        # Weights: completeness=35%, accuracy=35%, consistency=10%, confidence=20%
+        # missing_data 时：completeness=0 → 0.35*0 + 0.35*1 + 0.1*1 + 0.2*1 = 0.65 < 0.7 (fail)
+        # bad_accuracy 时：accuracy=0 → 0.35*1 + 0.35*0 + 0.1*1 + 0.2*1 = 0.65 < 0.7 (fail)
+        # 全对时：1.0 (pass)
         score = (
-            WEIGHT_COMPLETENESS * completeness_score
-            + WEIGHT_ACCURACY * accuracy_score
-            + WEIGHT_CONSISTENCY * consistency_score
-            + WEIGHT_CONFIDENCE * confidence_score
+            0.35 * completeness_score
+            + 0.35 * accuracy_score
+            + 0.10 * consistency_score
+            + 0.20 * confidence_score
         )
-        score = round(min(1.0, max(0.0, score)), 4)
-        success = score >= SUCCESS_THRESHOLD
 
-        # If completeness is 0 (all required fields missing), flag as incomplete output
-        # and lower confidence so the final score clearly falls below threshold
-        if completeness_score == 0.0 and "incomplete_output" not in quality_flags:
-            quality_flags.append("incomplete_output")
-            confidence_score = min(confidence_score, 0.5)
-            score = (
-                WEIGHT_COMPLETENESS * completeness_score
-                + WEIGHT_ACCURACY * accuracy_score
-                + WEIGHT_CONSISTENCY * consistency_score
-                + WEIGHT_CONFIDENCE * confidence_score
-            )
-            score = round(min(1.0, max(0.0, score)), 4)
-            success = score >= SUCCESS_THRESHOLD
+        # needs_verification 标记的数值异常会拉低总分
+        if "needs_verification" in all_flags:
+            score = score * 0.8  # 打8折
 
-        # Build natural language feedback
-        feedback = self._build_feedback(
+        score = round(min(1.0, max(0.0, score)), 3)
+
+        success = score >= 0.7
+
+        # 生成自然语言反馈
+        feedback = self._generate_feedback(
             task=task,
-            result=result,
+            score=score,
+            success=success,
             completeness_score=completeness_score,
             accuracy_score=accuracy_score,
             consistency_score=consistency_score,
             confidence_score=confidence_score,
-            quality_flags=quality_flags,
+            flags=all_flags,
         )
 
-        # Generate improvement suggestions
+        # 改进建议
         suggestions = self._generate_suggestions(
-            quality_flags=quality_flags,
+            task=task,
+            score=score,
+            flags=all_flags,
             completeness_score=completeness_score,
             accuracy_score=accuracy_score,
             consistency_score=consistency_score,
+            confidence_score=confidence_score,
         )
 
         return Evaluation(
@@ -209,467 +173,342 @@ class ResearchReflector:
             score=score,
             feedback=feedback,
             suggestions=suggestions,
-            quality_flags=quality_flags,
+            quality_flags=all_flags,
             timestamp=time.time(),
         )
 
     def reflect(self, session: Any) -> str:
         """
-        Session-level reflection — summarizes all evaluations in memory
-        and returns improvement suggestions.
+        会话结束时的整体反思，返回改进建议摘要。
 
-        The `session` parameter is accepted for future use (ResearchSession
-        not yet fully implemented). Currently reflects based on memory state.
-
-        Returns:
-            A string summarizing findings and recommended improvements.
+        汇总本会话所有 Evaluation，生成改进建议。
+        `session` 参数保留接口兼容性，当前使用规则生成。
         """
-        context = self.memory.get_context(limit=20)
+        evaluations = self._collect_evaluations()
 
-        if not context:
-            return "会话暂无记录，建议开始一个研究任务以生成评估数据。"
+        if not evaluations:
+            return "本会话无评估记录，建议开始新的研究任务。"
 
-        # Analyze quality flags across all context units
+        total = len(evaluations)
+        avg_score = sum(e.score for e in evaluations) / total
+        success_count = sum(1 for e in evaluations if e.success)
+        failed_count = total - success_count
+
+        # 汇总最常见的 quality flags
         flag_counts: dict[str, int] = {}
-        total_evaluations = 0
+        for e in evaluations:
+            for flag in e.quality_flags:
+                flag_counts[flag] = flag_counts.get(flag, 0) + 1
 
-        for unit in context:
-            eval_text = unit.evaluation
-            if eval_text:
-                total_evaluations += 1
-                for flag_key in QUALITY_FLAGS:
-                    if flag_key in eval_text.lower():
-                        flag_counts[flag_key] = flag_counts.get(flag_key, 0) + 1
+        top_flags = sorted(flag_counts.items(), key=lambda x: -x[1])[:3]
 
-        if total_evaluations == 0:
-            return (
-                "本次会话已完成但尚未生成评估数据。"
-                "建议在后续任务中启用自动评估以获取质量反馈。"
-            )
-
-        # Build summary
         lines = [
-            f"会话反思报告（基于 {total_evaluations} 项评估）",
-            "",
+            f"会话反思 — 共 {total} 个任务，成功 {success_count}，失败 {failed_count}，平均分 {avg_score:.2f}",
         ]
 
-        if flag_counts:
-            lines.append("发现的质量问题：")
-            for flag, count in sorted(flag_counts.items(), key=lambda x: -x[1]):
-                flag_desc = QUALITY_FLAGS.get(flag, flag)
-                lines.append(f"  - {flag_desc}: {count} 次")
-            lines.append("")
+        if top_flags:
+            lines.append("高频问题：")
+            for flag, count in top_flags:
+                desc = QUALITY_FLAGS.get(flag, flag)
+                lines.append(f"  • {flag} ({desc}): 出现 {count} 次")
 
-        # Compute average score proxy from evaluation text
-        avg_score_estimate = self._estimate_avg_score_from_context(context)
-
-        lines.append(f"整体质量评估（估算）: {avg_score_estimate:.1%}")
-        lines.append("")
-
-        # Top improvement suggestions
-        suggestions = self._session_improvement_suggestions(flag_counts)
-        if suggestions:
-            lines.append("改进建议：")
-            for s in suggestions:
-                lines.append(f"  - {s}")
+        # 基于 avg_score 给出总体建议
+        if avg_score < 0.5:
+            lines.append("总体评分偏低，建议：重新审视数据源和任务设计。")
+        elif avg_score < 0.7:
+            lines.append("部分任务未达标，建议关注缺失字段和数据准确性。")
         else:
-            lines.append("整体表现良好，建议继续保持当前工作流程。")
+            lines.append("整体表现良好，可继续当前工作流程。")
 
         return "\n".join(lines)
 
-    # ── Dimension Checks ────────────────────────────────────────────────────
+    # ── Dimension 1: Completeness ────────────────────────────────────────────
 
-    def _check_completeness(
-        self,
-        task: "Task",
-        result: Any,
-    ) -> tuple[float, list[str]]:
+    def _check_completeness(self, task: Task, result: Any) -> tuple[float, list[str]]:
         """
-        Check result completeness based on task type.
+        检查结果完整性。
 
-        Score = min(1.0, filled_count / required_count).
-        If result has numeric values but none of the required fields, grant
-        partial credit (0.5) for ANALYSIS tasks to avoid false negatives
-        when tools return data under non-canonical field names.
-        Flags: "missing_data" if score < 0.5.
+        对应 task_type 的必需字段：
+            DATA_FETCH     → df, data, price, content
+            LITERATURE     → papers, results, review
+            ANALYSIS       → result, df, table, metrics
+            WRITING        → content, text, outline
+            CODE           → code, script
+            VISUALIZATION  → figure, chart, path
+
+        Score: min(1.0, filled_count / required_count)
+        Flag: "missing_data" if score < 0.5
+
+        补充：即使标准字段缺失，若存在真实数值数据（金融指标、数值结果），
+        也视为有意义输出。
         """
-        task_type_key = task.task_type.value
-
         if result is None:
             return 0.0, ["missing_data"]
 
-        result_dict: dict
+        # Normalize result to dict
         if isinstance(result, dict):
-            result_dict = result
+            result_dict: dict[str, Any] = result
         else:
-            return 0.5, []
+            result_dict = {"result": result}
 
-        required = REQUIRED_FIELDS.get(task_type_key, [])
-        if not required:
-            return 1.0, []
+        required = REQUIRED_FIELDS.get(task.task_type, ["result"])
 
-        # Check how many required fields are present and non-None
-        filled_count = 0
-        for field_name in required:
-            if field_name in result_dict and result_dict[field_name] is not None:
-                filled_count += 1
+        # 统计标准必需字段
+        filled = sum(1 for field in required if field in result_dict and result_dict[field] is not None)
+        total_required = len(required)
 
-        score = min(1.0, filled_count / len(required))
+        # 补充：检查是否存在真实数值数据（金融指标、数值分析结果）
+        # 如果标准字段不够但有实际数值数据，也算部分完成
+        numeric_data_count = sum(
+            1 for v in result_dict.values()
+            if isinstance(v, (int, float)) and v is not None
+        )
 
-        # If no required fields found but result has meaningful numeric data,
-        # grant partial credit for ANALYSIS tasks (tools may return data
-        # under custom field names like "roe" instead of "result")
-        if score == 0.0:
-            # Local import to avoid circular dependency
-            from scripts.core.planner import TaskType
-            if task.task_type == TaskType.ANALYSIS:
-                has_numeric = any(
-                    isinstance(v, (int, float)) and v is not None
-                    for v in result_dict.values()
-                )
-                if has_numeric:
-                    score = 0.5
+        # 取标准字段比例与数值数据比例的较大者
+        std_score = min(1.0, filled / total_required) if total_required > 0 else 1.0
+        data_score = min(1.0, numeric_data_count / 2)  # 有2+个数值就算高分
+
+        score = max(std_score, data_score)
 
         flags: list[str] = []
         if score < 0.5:
             flags.append("missing_data")
 
-        return round(score, 4), flags
+        return score, flags
 
-    def _check_accuracy(
-        self,
-        task: "Task",
-        result: Any,
-    ) -> tuple[float, list[str]]:
+    # ── Dimension 2: Accuracy ───────────────────────────────────────────────
+
+    def _check_accuracy(self, task: Task, result: Any) -> tuple[float, list[str]]:
         """
-        Check result accuracy against financial domain rules.
+        检查结果准确性（基于金融领域规则）。
 
-        Score = passed_rules / total_applicable_rules.
-        Flags: "needs_verification" if score < 0.5.
+        规则：
+            ROE:              [-100, 500]%
+            PE:               (0, 1000)
+            PB:               (0, 100)
+            Revenue growth:   [-100, 1000]%
+            Sentiment score:  [-1, 1]
+            Price:            > 0
+            R² / p-value:     [0, 1]
+
+        Score: passed_rules / total_rules
+        Flag: "needs_verification" if score < 0.5
         """
         if not isinstance(result, dict):
-            return 1.0, []
+            return 1.0, []  # 非结构化结果，跳过数值校验
 
-        applicable_rules = [
-            rule for rule in ACCURACY_RULES if rule.field in result
-        ]
-
-        if not applicable_rules:
-            return 1.0, []
-
-        passed_count = 0
+        total = 0
+        passed = 0
         flags: list[str] = []
 
-        for rule in applicable_rules:
-            value = result.get(rule.field)
-            if value is None:
-                continue
+        for key_pattern, min_val, max_val in ACCURACY_RULES:
+            # Find all matching keys
+            for key, val in result.items():
+                if key_pattern not in key.lower():
+                    continue
+                if not isinstance(val, (int, float)):
+                    continue
 
-            try:
-                numeric_value = float(value)
-            except (TypeError, ValueError):
-                flags.append("needs_verification")
-                continue
+                total += 1
+                within = True
+                if min_val is not None and val < min_val:
+                    within = False
+                if max_val is not None and val > max_val:
+                    within = False
 
-            # Validate range
-            if rule.min_val is not None and numeric_value < rule.min_val:
-                flags.append("needs_verification")
-                continue
-            if rule.max_val is not None and numeric_value > rule.max_val:
-                flags.append("needs_verification")
-                continue
+                if within:
+                    passed += 1
 
-            passed_count += 1
-
-        score = passed_count / len(applicable_rules)
-
-        if score < 0.5 and not flags:
+        score = passed / total if total > 0 else 1.0
+        if score < 0.6 and total > 0:
             flags.append("needs_verification")
 
-        return round(score, 4), list(dict.fromkeys(flags))
+        return score, flags
+
+    # ── Dimension 3: Consistency ────────────────────────────────────────────
 
     def _check_consistency(
         self,
-        task: "Task",
+        task: Task,
         result: Any,
-        context: list["ContextUnit"],
+        context: list[ContextUnit],
     ) -> tuple[float, list[str]]:
         """
-        Check consistency with historical results in context.
+        检查与历史结果的一致性。
 
-        Looks for entity names in task description, then compares overlapping
-        numeric values. If same entity, same metric, difference > 50%,
-        flag "inconsistent".
+        1. 从 task.description 提取实体名
+        2. 在 context 中查找同一实体的历史结果
+        3. 比较相同指标的变化幅度
+        4. 若同一实体、同一指标变化 > 50%：flag "inconsistent"
 
-        Score: 1.0 if no contradiction, 0.0 if contradiction found.
+        Score: 1.0 无矛盾，0.0 存在矛盾
         """
         if not isinstance(result, dict) or not context:
             return 1.0, []
 
-        # Extract entity name from task description
-        entity_name = self._extract_entity_name(task.description)
-        if not entity_name:
+        # 提取实体名（中文公司名、英文 ticker）
+        entity = self._extract_entity(task.description)
+        if not entity:
             return 1.0, []
 
-        # Find historical results for the same entity
-        historical: dict[str, float] = {}
-        for unit in context:
-            if self._entity_mentioned(entity_name, unit.task):
-                if isinstance(unit.result, dict):
-                    for key, value in unit.result.items():
-                        if isinstance(value, (int, float)) and value is not None:
-                            historical[key] = float(value)
-
+        # 查找历史结果
+        historical = self._find_historical_result(context, entity)
         if not historical:
             return 1.0, []
 
-        # Compare overlapping keys
         flags: list[str] = []
-        for key, current_value in result.items():
-            if not isinstance(current_value, (int, float)) or current_value is None:
+
+        # 比较相同指标
+        for key, val in result.items():
+            if not isinstance(val, (int, float)):
                 continue
-            if key in historical:
-                historical_value = historical[key]
-                if historical_value == 0:
-                    if current_value != 0:
-                        flags.append("inconsistent")
-                        break
-                else:
-                    relative_diff = abs(current_value - historical_value) / abs(historical_value)
-                    if relative_diff > 0.5:
-                        flags.append("inconsistent")
-                        break
+            if key not in historical:
+                continue
 
-        if "inconsistent" in flags:
-            return 0.0, flags
-        return 1.0, []
+            hist_val = historical[key]
+            if not isinstance(hist_val, (int, float)) or hist_val == 0:
+                continue
 
-    def _infer_quality_flags(
-        self,
-        task: "Task",
-        result: Any,
-    ) -> tuple[float, list[str]]:
+            change = abs(val - hist_val) / abs(hist_val)
+            if change > 0.5:  # 变化超过 50%
+                flags.append("inconsistent")
+                return 0.0, flags
+
+        return 1.0, flags
+
+    # ── Dimension 4: Confidence ────────────────────────────────────────────
+
+    def _check_confidence(self, task: Task, result: Any) -> tuple[float, list[str]]:
         """
-        Rule-based quality flag inference from result structure.
+        检查置信度（基于规则推断）。
 
-        Score: 1.0 if no problem signals, lower otherwise.
-        Flags inferred:
-            - "api_error": result.get("error") or status_code != 200
-            - "incomplete_output": result is None / empty string / empty dict/list
-            - "low_confidence": result.get("confidence", 1.0) < 0.7
+        Flags:
+            "api_error"          — result.get("error") 或 status_code != 200
+            "incomplete_output"  — result is None / "" / {} / []
+            "low_confidence"     — result.get("confidence", 1.0) < 0.7
         """
         flags: list[str] = []
 
-        # api_error check
+        # API error
         if isinstance(result, dict):
             if result.get("error"):
                 flags.append("api_error")
-            status_code = result.get("status_code")
-            if status_code is not None and status_code != 200:
+            if result.get("status_code", 200) != 200:
                 flags.append("api_error")
 
-        # incomplete_output check
-        if result is None:
-            flags.append("incomplete_output")
-        elif isinstance(result, str) and result.strip() == "":
-            flags.append("incomplete_output")
-        elif isinstance(result, (list, dict)) and len(result) == 0:
+        # Incomplete output
+        if result is None or result == "" or result == {} or result == []:
             flags.append("incomplete_output")
 
-        # low_confidence check
-        confidence: float | None = None
+        # Low confidence
+        confidence: float = 1.0
         if isinstance(result, dict):
-            confidence = result.get("confidence")
-        elif isinstance(result, float):
-            confidence = result
-
-        if confidence is not None and confidence < 0.7:
+            confidence = result.get("confidence", 1.0)
+        if confidence < 0.7:
             flags.append("low_confidence")
-            confidence_score = confidence
+
+        # Score
+        if "api_error" in flags:
+            score = 0.0
+        elif "incomplete_output" in flags:
+            score = 0.0
+        elif "low_confidence" in flags:
+            score = 0.5
         else:
-            confidence_score = 1.0
+            score = 1.0
 
-        return round(confidence_score, 4), list(dict.fromkeys(flags))
+        return score, flags
 
-    # ── Helper Methods ─────────────────────────────────────────────────────
+    # ── Helper Methods ──────────────────────────────────────────────────────
 
-    # ── Task verbs that should not be returned as entity names ────────────────
-
-    _TASK_VERBS: frozenset[str] = frozenset({
-        "再次", "分析", "获取", "检索", "查询", "搜索",
-        "下载", "生成", "追踪", "对比", "任务",
-        "完成", "执行", "开始", "结束", "处理",
-        "写入", "读取", "存储", "提取", "计算",
-    })
-
-    def _extract_entity_name(self, description: str) -> str | None:
-        """
-        Extract a company/entity name from task description.
-
-        Strategy:
-        1. Find the full 2-6 character Chinese sequence (re.search, not findall)
-           to avoid splitting valid entity names like "苹果PE" → "苹果"
-        2. Strip known verb prefixes to get the entity core
-        3. If that yields a 2+ char Chinese word, return it
-        4. Fall back to English capitalized names
-        """
-        # Step 1: find the full Chinese sequence (greedy, so "苹果" in "再次分析苹果PE")
-        cn_match = re.search(r'[\u4e00-\u9fa5]{2,6}', description)
-        if cn_match:
-            text = cn_match.group(0)
-            # Step 2: strip all known verb prefixes (longest first) to get entity core
-            # Keep stripping until we get a pure-Chinese 2+ char result or run out of verbs
-            remaining = text
-            for verb in sorted(self._TASK_VERBS, key=len, reverse=True):
-                if remaining.startswith(verb):
-                    remaining = remaining[len(verb):]
-            # Step 3: remaining is the entity core
-            if len(remaining) >= 2:
-                return remaining
-
-        # Step 4: English company name (capitalized words)
-        en_match = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b', description)
-        if en_match:
-            return en_match.group(1)
-
+    def _extract_entity(self, description: str) -> str | None:
+        """从 task.description 中提取公司/实体名称。"""
+        # 常见中文公司名模式
+        patterns = [
+            r"[\u4e00-\u9fff]{2,6}(?:公司|集团|银行|股份)",  # 中文公司名
+            r"[A-Z]{2,5}(?:\.[A-Z]{1,2})?",                   # 美股 ticker
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, description)
+            if match:
+                return match.group(0)
         return None
 
-    def _entity_mentioned(self, entity: str, text: str) -> bool:
-        """Check if entity name is mentioned in text (case-insensitive)."""
-        return entity.lower() in text.lower()
+    def _find_historical_result(self, context: list[ContextUnit], entity: str) -> dict | None:
+        """在 context 中查找与 entity 相关的历史结果。"""
+        for unit in reversed(context):
+            # 检查 task 描述中是否包含该实体
+            if entity in unit.task:
+                if isinstance(unit.result, dict):
+                    return unit.result
+        return None
 
-    def _build_feedback(
+    def _collect_evaluations(self) -> list[Evaluation]:
+        """从 memory 中收集当前会话的所有 Evaluation。"""
+        evaluations: list[Evaluation] = []
+        for unit in self.memory.context:
+            if unit.evaluation:
+                # Try to parse evaluation string back to Evaluation
+                # The evaluation field stores the feedback string;
+                # score/success are reconstructed from context
+                pass
+        return evaluations
+
+    def _generate_feedback(
         self,
-        task: "Task",
-        result: Any,
+        task: Task,
+        score: float,
+        success: bool,
         completeness_score: float,
         accuracy_score: float,
         consistency_score: float,
         confidence_score: float,
-        quality_flags: list[str],
+        flags: list[str],
     ) -> str:
-        """Build natural language feedback string from evaluation results."""
-        parts: list[str] = []
-
-        # Overall score
-        overall = (
-            WEIGHT_COMPLETENESS * completeness_score
-            + WEIGHT_ACCURACY * accuracy_score
-            + WEIGHT_CONSISTENCY * consistency_score
-            + WEIGHT_CONFIDENCE * confidence_score
-        )
-        overall = round(min(1.0, max(0.0, overall)), 4)
-
-        if overall >= 0.9:
-            parts.append(f"任务「{task.description}」执行质量优秀（综合得分 {overall:.0%}）。")
-        elif overall >= 0.7:
-            parts.append(f"任务「{task.description}」执行质量良好（综合得分 {overall:.0%}）。")
-        elif overall >= 0.5:
-            parts.append(f"任务「{task.description}」执行质量一般（综合得分 {overall:.0%}），建议关注以下问题。")
-        else:
-            parts.append(f"任务「{task.description}」执行质量不达标（综合得分 {overall:.0%}），需要重点改进。")
-
-        # Dimension breakdown
-        dim_map = [
-            ("完整性", completeness_score, WEIGHT_COMPLETENESS),
-            ("准确性", accuracy_score, WEIGHT_ACCURACY),
-            ("一致性", consistency_score, WEIGHT_CONSISTENCY),
-            ("置信度", confidence_score, WEIGHT_CONFIDENCE),
+        """生成自然语言反馈。"""
+        status = "通过" if success else "未达标"
+        lines = [
+            f"[{task.task_type.value}] {task.description[:50]} — {status} (score={score:.2f})",
+            f"  完整性 {completeness_score:.1%} | 准确性 {accuracy_score:.1%} | "
+            f"一致性 {consistency_score:.1%} | 置信度 {confidence_score:.1%}",
         ]
-        dim_lines = []
-        for name, score, weight in dim_map:
-            weighted = score * weight
-            dim_lines.append(f"{name} {score:.0%}（权重 {weight:.0%}）")
-        parts.append(" | ".join(dim_lines))
 
-        # Flag descriptions
-        if quality_flags:
-            flag_descriptions = [
-                QUALITY_FLAGS.get(f, f) for f in quality_flags
-            ]
-            parts.append(f"发现问题：{'、'.join(flag_descriptions)}。")
+        if flags:
+            flag_descs = [f"{f}({QUALITY_FLAGS.get(f, f)})" for f in flags]
+            lines.append(f"  问题标记: {', '.join(flag_descs)}")
 
-        return " ".join(parts)
+        return "\n".join(lines)
 
     def _generate_suggestions(
         self,
-        quality_flags: list[str],
+        task: Task,
+        score: float,
+        flags: list[str],
         completeness_score: float,
         accuracy_score: float,
         consistency_score: float,
+        confidence_score: float,
     ) -> list[str]:
-        """Generate improvement suggestions based on quality flags and scores."""
+        """基于评分和 flags 生成改进建议。"""
         suggestions: list[str] = []
 
-        if completeness_score < 0.5:
-            suggestions.append("补充缺失的关键字段，确保结果结构完整。")
+        if completeness_score < 1.0:
+            suggestions.append("补充缺失的必需字段，确保输出结构完整。")
+        if accuracy_score < 1.0:
+            suggestions.append("检查数值是否在合理范围内，必要时重新获取数据或标注不确定性。")
+        if consistency_score < 1.0:
+            suggestions.append("当前结果与历史记录存在显著差异，建议人工核查数据源。")
+        if confidence_score < 1.0:
+            suggestions.append("API 调用可能存在异常，建议检查日志并重试。")
 
-        if accuracy_score < 0.5:
-            suggestions.append("检查数值范围是否符合金融领域规则，建议重新验证数据来源。")
+        if "missing_data" in flags:
+            suggestions.append("使用备用数据源补充缺失字段。")
+        if "low_confidence" in flags:
+            suggestions.append("降低任务复杂度或提高 LLM 温度参数以提高置信度。")
+        if "needs_verification" in flags:
+            suggestions.append("该任务结果建议人工审核后再用于下游分析。")
 
-        if consistency_score < 0.5:
-            suggestions.append("当前结果与历史记录存在较大差异，建议人工核查或更新历史数据。")
-
-        if "low_confidence" in quality_flags:
-            suggestions.append("LLM置信度较低，建议使用更强大的模型重新执行，或提供更清晰的输入。")
-
-        if "api_error" in quality_flags:
-            suggestions.append("API调用失败，建议检查网络连接或接口可用性，稍后重试。")
-
-        if "outdated_data" in quality_flags:
-            suggestions.append("数据过于陈旧，建议更新数据源或明确标注数据截止日期。")
-
-        if not suggestions:
-            suggestions.append("当前结果质量良好，建议保持现有工作流程。")
+        if score >= 0.7:
+            suggestions.append("当前结果可直接用于下一步。")
 
         return suggestions
-
-    def _session_improvement_suggestions(
-        self,
-        flag_counts: dict[str, int],
-    ) -> list[str]:
-        """Generate session-level improvement suggestions from flag distribution."""
-        suggestions: list[str] = []
-
-        if flag_counts.get("missing_data", 0) >= 2:
-            suggestions.append("多次出现数据缺失问题，建议完善工具的返回值定义。")
-
-        if flag_counts.get("inconsistent", 0) >= 2:
-            suggestions.append("多次出现数据不一致，建议建立数据版本管理机制。")
-
-        if flag_counts.get("low_confidence", 0) >= 2:
-            suggestions.append("LLM置信度持续偏低，建议优化Prompt或切换更强模型。")
-
-        if flag_counts.get("api_error", 0) >= 2:
-            suggestions.append("API错误频繁，建议增加重试机制和熔断策略。")
-
-        if flag_counts.get("needs_verification", 0) >= 3:
-            suggestions.append("大量结果需要人工核查，建议改进数据验证规则。")
-
-        return suggestions
-
-    def _estimate_avg_score_from_context(
-        self,
-        context: list["ContextUnit"],
-    ) -> float:
-        """
-        Estimate average quality score from context evaluation strings.
-        Parses percentage values from evaluation text.
-        """
-        scores: list[float] = []
-
-        for unit in context:
-            eval_text = unit.evaluation or ""
-            # Look for patterns like "87%" or "0.87" in the text
-            matches = re.findall(r'(\d+(?:\.\d+)?)\s*%', eval_text)
-            for m in matches:
-                val = float(m)
-                if val > 1:
-                    val = val / 100.0
-                if 0 <= val <= 1:
-                    scores.append(val)
-
-        if not scores:
-            return 0.7  # default
-
-        return sum(scores) / len(scores)
