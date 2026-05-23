@@ -112,18 +112,18 @@ class ToolResult:
 # Maps tool name → (module_name, function_name or "ClassName" for class-based tools)
 
 SCRIPT_CALLABLES: dict[str, tuple[str, str]] = {
-    # fetch_a_stock: top-level function in data_pipeline module
+    # fetch_a_stock: A股日线数据 (akshare)
     "fetch_a_stock": ("scripts.data_pipeline", "fetch_a_stock"),
-    # econometrics_regression: no run_regression function; maps to descriptive_stats as placeholder
+    # econometrics_regression: 描述统计 + 回归 (placeholder: 主要功能是 descriptive_stats)
     "econometrics_regression": ("scripts.econometrics", "descriptive_stats"),
-    # literature_search: research() is the main entry point
+    # literature_search: 文献检索→下载→综述
     "literature_search": ("scripts.literature_search", "research"),
-    # paper_write: _review_chapter is the core writing function
-    "paper_write": ("scripts.paper_write", "_review_chapter"),
-    # report_generator: class-based, main method is generate_report
+    # paper_write: 论文写作 (generate_outline 是主要入口)
+    "paper_write": ("scripts.paper_write", "generate_outline"),
+    # report_generator: 研报生成 (class-based, ToolSelector 会实例化)
     "report_generator": ("scripts.report_generator", "ReportGenerator"),
-    # llm_sentiment: batch_sentiment method on LLMProcessor class
-    "llm_sentiment": ("scripts.review_layer", "batch_sentiment"),
+    # llm_sentiment: 情感分析 (使用 ReviewLayer 类作为入口)
+    "llm_sentiment": ("scripts.review_layer", "ReviewLayer"),
 }
 
 

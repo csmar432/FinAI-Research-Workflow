@@ -583,3 +583,31 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ─── 类式包装（供 ToolSelector / ResearchSession 导入）───────────────────
+
+class LiteratureManager:
+    """文献管理器类式包装，支持工具化调用。"""
+
+    def __init__(self, index_path: str = "knowledge/papers/index.json"):
+        self.index_path = index_path
+        self._papers = None
+
+    def list_papers(self, topic: str | None = None, limit: int = 20) -> list[dict]:
+        return list_papers(topic=topic, limit=limit)
+
+    def search(self, query: str) -> list[dict]:
+        return search_papers(query)
+
+    def get_paper(self, paper_id: str) -> dict | None:
+        return get_paper(paper_id)
+
+    def save_paper(self, paper: dict) -> str:
+        return save_paper(paper)
+
+    def export_bibtex(self, paper_id: str) -> str:
+        return export_bibtex(paper_id)
+
+    def add_note(self, paper_id: str, note: str):
+        add_note(paper_id, note)

@@ -726,3 +726,34 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ─── 类式包装（供 ToolSelector / ResearchSession 导入）───────────────────
+
+class PaperReader:
+    """论文阅读器类式包装，支持工具化调用。"""
+
+    def __init__(self, storage_dir: str = "knowledge/papers_fulltext"):
+        self.storage_dir = storage_dir
+
+    def download(self, arxiv_id: str) -> dict:
+        """下载论文"""
+        return download_from_arxiv(arxiv_id, storage_dir=self.storage_dir)
+
+    def read(self, arxiv_id: str, max_lines: int = 3000) -> str:
+        """读取论文正文"""
+        return load_paper_text(arxiv_id, max_lines=max_lines)
+
+    def summarize(self, arxiv_id: str) -> str:
+        """AI 摘要"""
+        text = load_paper_text(arxiv_id)
+        return summarize_with_ai(text)
+
+    def ask(self, arxiv_id: str, question: str) -> str:
+        """针对论文提问"""
+        text = load_paper_text(arxiv_id)
+        return ask_paper_with_ai(text, question)
+
+    def compare(self, arxiv_id1: str, arxiv_id2: str, question: str) -> str:
+        """对比两篇论文"""
+        return compare_papers_with_ai(arxiv_id1, arxiv_id2, question)

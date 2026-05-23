@@ -474,3 +474,29 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ─── 类式包装（供 ToolSelector / ResearchSession 导入）───────────────────
+
+class PaperSubmitter:
+    """论文投稿工具类式包装，支持工具化调用。"""
+
+    def polish(self, text: str) -> str:
+        """润色论文内容"""
+        return polish(text)
+
+    def check_plagiarism(self, text: str) -> str:
+        """检查重复率"""
+        return check_plagiarism(text)
+
+    def latex_check(self, tex_path: str) -> str:
+        """LaTeX 格式检查"""
+        return latex_check(tex_path)
+
+    def generate_cover_letter(self, title: str, venue: str, authors: str) -> str:
+        """生成投稿信"""
+        return generate_cover_letter(title, venue, authors)
+
+    def generate_response_letter(self, title: str, reviews: list[str]) -> str:
+        """生成审稿回复信"""
+        return generate_response_letter(title, reviews)
