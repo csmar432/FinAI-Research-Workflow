@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from scripts.core.memory import ResearchMemory
+from scripts.core.memory import ContextUnit, ResearchMemory
 from scripts.core.planner import Task, TaskType
 
 
@@ -108,6 +108,25 @@ class ToolResult:
     cached: bool = False
 
 
+# ─── Script Tool Mappings ───────────────────────────────────────────────────────
+# Maps tool name → (module_name, function_name or "ClassName" for class-based tools)
+
+SCRIPT_CALLABLES: dict[str, tuple[str, str]] = {
+    # fetch_a_stock: top-level function in data_pipeline module
+    "fetch_a_stock": ("scripts.data_pipeline", "fetch_a_stock"),
+    # econometrics_regression: no run_regression function; maps to descriptive_stats as placeholder
+    "econometrics_regression": ("scripts.econometrics", "descriptive_stats"),
+    # literature_search: research() is the main entry point
+    "literature_search": ("scripts.literature_search", "research"),
+    # paper_write: _review_chapter is the core writing function
+    "paper_write": ("scripts.paper_write", "_review_chapter"),
+    # report_generator: class-based, main method is generate_report
+    "report_generator": ("scripts.report_generator", "ReportGenerator"),
+    # llm_sentiment: batch_sentiment method on LLMProcessor class
+    "llm_sentiment": ("scripts.review_layer", "batch_sentiment"),
+}
+
+
 # ─── Tool Registry ──────────────────────────────────────────────────────────────
 
 
@@ -121,23 +140,37 @@ class ToolSelector:
     2. Exclude VPN-required tools when VPN is unavailable.
     3. Sort by priority ascending, then cost tier ascending (FREE → LOW → MEDIUM → HIGH).
     4. Assign confidence = 1.0 for first-ranked candidate, 0.8 for others.
+    5. Context-aware boost: +0.1 confidence for tools previously used in context.
     """
 
-    TOOL_REGISTRY: dict[str, ToolCapability] = {}
+    # MCP tool names — set once as class-level constant
+    MCP_TOOLS: frozenset[str] = frozenset({
+        "arxiv", "financial", "finviz_sec", "brave_search",
+        "fetch", "eastmoney_reports", "context7",
+    })
+
+    # Script tool names — set once as class-level constant
+    SCRIPT_TOOLS: frozenset[str] = frozenset({
+        "fetch_a_stock", "econometrics_regression", "literature_search",
+        "paper_write", "report_generator", "llm_sentiment",
+    })
+
+    # Base registry — populated once via _init_registry_base, then deep-copied per instance
+    TOOL_REGISTRY_BASE: dict[str, ToolCapability] = {}
 
     _registry_initialized = False
 
     # ── Registry initialization ──────────────────────────────────────────────
 
     @classmethod
-    def _init_registry(cls):
-        """Populate TOOL_REGISTRY with all known tools (idempotent)."""
+    def _init_registry_base(cls):
+        """Populate TOOL_REGISTRY_BASE with all known tools (idempotent)."""
         if cls._registry_initialized:
             return
 
         # ── MCP Tools ───────────────────────────────────────────────────────────
 
-        cls.TOOL_REGISTRY["arxiv"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["arxiv"] = ToolCapability(
             name="arxiv",
             task_types=[TaskType.LITERATURE, TaskType.DATA_FETCH],
             inputs=["query", "max_results"],
@@ -148,7 +181,7 @@ class ToolSelector:
             description="ArXiv论文检索和下载",
         )
 
-        cls.TOOL_REGISTRY["financial"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["financial"] = ToolCapability(
             name="financial",
             task_types=[TaskType.DATA_FETCH],
             inputs=["ticker", "data_type"],
@@ -159,7 +192,7 @@ class ToolSelector:
             description="宏观经济、行情、crypto（yfinance/FRED）",
         )
 
-        cls.TOOL_REGISTRY["finviz_sec"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["finviz_sec"] = ToolCapability(
             name="finviz_sec",
             task_types=[TaskType.DATA_FETCH, TaskType.ANALYSIS],
             inputs=["ticker", "action"],
@@ -170,7 +203,7 @@ class ToolSelector:
             description="美股筛选、90+基本面、SEC文件",
         )
 
-        cls.TOOL_REGISTRY["brave_search"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["brave_search"] = ToolCapability(
             name="brave_search",
             task_types=[TaskType.LITERATURE, TaskType.DATA_FETCH],
             inputs=["query"],
@@ -181,7 +214,7 @@ class ToolSelector:
             description="财经新闻、政策文件网络检索",
         )
 
-        cls.TOOL_REGISTRY["fetch"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["fetch"] = ToolCapability(
             name="fetch",
             task_types=[TaskType.DATA_FETCH],
             inputs=["url"],
@@ -192,7 +225,7 @@ class ToolSelector:
             description="网页正文抓取",
         )
 
-        cls.TOOL_REGISTRY["eastmoney_reports"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["eastmoney_reports"] = ToolCapability(
             name="eastmoney_reports",
             task_types=[TaskType.DATA_FETCH, TaskType.LITERATURE],
             inputs=["query", "industry"],
@@ -203,7 +236,7 @@ class ToolSelector:
             description="东方财富研报",
         )
 
-        cls.TOOL_REGISTRY["context7"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["context7"] = ToolCapability(
             name="context7",
             task_types=[TaskType.CODE],
             inputs=["library", "query"],
@@ -216,7 +249,7 @@ class ToolSelector:
 
         # ── Python Script Tools ─────────────────────────────────────────────────
 
-        cls.TOOL_REGISTRY["fetch_a_stock"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["fetch_a_stock"] = ToolCapability(
             name="fetch_a_stock",
             task_types=[TaskType.DATA_FETCH],
             inputs=["code", "start_date", "end_date"],
@@ -228,7 +261,7 @@ class ToolSelector:
             callable=None,  # loaded dynamically via _call_script
         )
 
-        cls.TOOL_REGISTRY["econometrics_regression"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["econometrics_regression"] = ToolCapability(
             name="econometrics_regression",
             task_types=[TaskType.ANALYSIS],
             inputs=["df", "formula", "cluster"],
@@ -240,7 +273,7 @@ class ToolSelector:
             callable=None,
         )
 
-        cls.TOOL_REGISTRY["literature_search"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["literature_search"] = ToolCapability(
             name="literature_search",
             task_types=[TaskType.LITERATURE],
             inputs=["query", "max_results"],
@@ -252,7 +285,7 @@ class ToolSelector:
             callable=None,
         )
 
-        cls.TOOL_REGISTRY["paper_write"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["paper_write"] = ToolCapability(
             name="paper_write",
             task_types=[TaskType.WRITING],
             inputs=["topic", "section", "outline"],
@@ -264,7 +297,7 @@ class ToolSelector:
             callable=None,
         )
 
-        cls.TOOL_REGISTRY["report_generator"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["report_generator"] = ToolCapability(
             name="report_generator",
             task_types=[TaskType.WRITING, TaskType.VISUALIZATION],
             inputs=["company", "data", "format"],
@@ -276,7 +309,7 @@ class ToolSelector:
             callable=None,
         )
 
-        cls.TOOL_REGISTRY["llm_sentiment"] = ToolCapability(
+        cls.TOOL_REGISTRY_BASE["llm_sentiment"] = ToolCapability(
             name="llm_sentiment",
             task_types=[TaskType.ANALYSIS],
             inputs=["texts"],
@@ -297,13 +330,19 @@ class ToolSelector:
         self._availability_cache: dict[str, bool] = {}
         self._vpn_available: bool | None = None
 
-        # Ensure registry is populated
-        self._init_registry()
+        # Ensure base registry is populated
+        self._init_registry_base()
+
+        # Deep copy the class registry so each instance has its own copy
+        # This prevents shared mutable state across instances
+        self.TOOL_REGISTRY: dict[str, ToolCapability] = {
+            k: v for k, v in self.TOOL_REGISTRY_BASE.items()
+        }
 
     # ── Selection ───────────────────────────────────────────────────────────────
 
     def select(
-        self, task: Task, context: list["ResearchMemory"]
+        self, task: Task, context: list[ContextUnit] | None = None
     ) -> list[ToolSelection]:
         """
         Select the best tools for a given task, sorted by priority and cost.
@@ -312,15 +351,18 @@ class ToolSelector:
         ----------
         task : Task
             The task to select tools for.
-        context : list[ContextUnit]
-            Current session context (not currently used for filtering,
-            but available for future context-aware selection).
+        context : list[ContextUnit] | None
+            Current session context. Tools previously used in context
+            receive a +0.1 confidence boost.
 
         Returns
         -------
         list[ToolSelection]
             Tools ranked by priority and cost. Empty list if no tool matches.
         """
+        if context is None:
+            context = []
+
         vpn_ok = self._check_vpn()
 
         # 1. Filter: task type match + VPN constraint
@@ -335,8 +377,9 @@ class ToolSelector:
         if not candidates:
             return []
 
-        # 2. Sort: priority asc, then cost asc
-        candidates.sort(key=lambda t: (_COST_ORDER[t.cost], t.priority))
+        # 2. Sort: priority asc (primary), then cost asc (secondary)
+        # Smaller priority number = higher priority; smaller cost order = lower cost
+        candidates.sort(key=lambda t: (t.priority, _COST_ORDER[t.cost]))
 
         # 3. Build ToolSelection list with confidence
         selections = []
@@ -351,6 +394,13 @@ class ToolSelector:
                 requires_vpn=cap.requires_vpn,
                 callable=cap.callable,
             ))
+
+        # 4. Context-aware confidence boost: if we used this tool before, boost confidence
+        for selection in selections:
+            for ctx in context:
+                if ctx.tools_used and selection.tool_name in ctx.tools_used:
+                    selection.confidence = min(1.0, selection.confidence + 0.1)
+                    break  # Only apply boost once per tool
 
         return selections
 
@@ -408,22 +458,13 @@ class ToolSelector:
                 latency_ms=(time.time() - start) * 1000,
             )
 
-        # Determine tool category
-        mcp_tools = {
-            "arxiv", "financial", "finviz_sec", "brave_search",
-            "fetch", "eastmoney_reports", "context7",
-        }
-        script_tools = {
-            "fetch_a_stock", "econometrics_regression", "literature_search",
-            "paper_write", "report_generator", "llm_sentiment",
-        }
-
         try:
-            if tool_name in mcp_tools:
+            if tool_name in self.MCP_TOOLS:
                 output = self._call_mcp(tool_name, inputs)
-            elif tool_name in script_tools:
+            elif tool_name in self.SCRIPT_TOOLS:
                 output = self._call_script(tool_name, inputs)
             else:
+                # Fallback: try as script
                 output = self._call_script(tool_name, inputs)
         except Exception as exc:  # noqa: BLE001
             return ToolResult(
@@ -465,27 +506,11 @@ class ToolSelector:
         """
         Invoke a Python script tool by dynamically importing its module.
 
-        Tool name → module mapping:
-            fetch_a_stock            → scripts.data_pipeline (function: fetch_stock_data)
-            econometrics_regression  → scripts.econometrics (function: run_regression)
-            literature_search        → scripts.literature_search (function: search)
-            paper_write              → scripts.paper_write (function: write_section)
-            report_generator         → scripts.report_generator (function: generate)
-            llm_sentiment            → scripts.review_layer (function: batch_sentiment)
+        Uses SCRIPT_CALLABLES (class-level) for tool → (module, function) mapping.
 
-        This is a stub; the actual module/function is loaded via importlib.
         Raises NotImplementedError so callers can mock it in tests.
         """
-        _SCRIPT_MAP: dict[str, tuple[str, str]] = {
-            "fetch_a_stock": ("scripts.data_pipeline", "fetch_stock_data"),
-            "econometrics_regression": ("scripts.econometrics", "run_regression"),
-            "literature_search": ("scripts.literature_search", "search"),
-            "paper_write": ("scripts.paper_write", "write_section"),
-            "report_generator": ("scripts.report_generator", "generate_report"),
-            "llm_sentiment": ("scripts.review_layer", "batch_sentiment"),
-        }
-
-        mapping = _SCRIPT_MAP.get(tool_name)
+        mapping = SCRIPT_CALLABLES.get(tool_name)
         if mapping is None:
             raise NotImplementedError(
                 f"No script mapping defined for tool '{tool_name}'"
@@ -521,7 +546,7 @@ class ToolSelector:
             )
             with urllib.request.urlopen(req) as resp:
                 self._vpn_available = resp.status == 200
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._vpn_available = False
 
         return self._vpn_available
@@ -548,27 +573,14 @@ class ToolSelector:
 
         MCP tools: assume available if VPN is up.
         Script tools: check import succeeds.
+        Uses SCRIPT_CALLABLES (class-level) — no duplicate inline map.
         """
-        mcp_tools = {
-            "arxiv", "financial", "finviz_sec", "brave_search",
-            "fetch", "eastmoney_reports", "context7",
-        }
-
-        if tool_name in mcp_tools:
+        if tool_name in self.MCP_TOOLS:
             # MCP tools are considered available if we have a network path
             return True
 
-        # Script tool — check import
-        _SCRIPT_MAP = {
-            "fetch_a_stock": ("scripts.data_pipeline", "fetch_stock_data"),
-            "econometrics_regression": ("scripts.econometrics", "run_regression"),
-            "literature_search": ("scripts.literature_search", "search"),
-            "paper_write": ("scripts.paper_write", "write_section"),
-            "report_generator": ("scripts.report_generator", "generate_report"),
-            "llm_sentiment": ("scripts.review_layer", "batch_sentiment"),
-        }
-
-        mapping = _SCRIPT_MAP.get(tool_name)
+        # Script tool — check import using class-level SCRIPT_CALLABLES
+        mapping = SCRIPT_CALLABLES.get(tool_name)
         if mapping is None:
             return False
 
