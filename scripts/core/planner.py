@@ -78,7 +78,7 @@ KEYWORD_PATTERNS: dict[TaskType, list[str]] = {
         "画图", "可视化", "图表", "chart", "plot", "绘图",
     ],
     TaskType.REVIEW: [
-        "审稿", "review", "润色",
+        "审稿", "review", "润色", "polish", "校对",
     ],
 }
 
@@ -165,17 +165,20 @@ class ResearchPlanner:
         task_types = self._estimate_task_type(user_request)
         root_tasks: list[Task] = []
 
-        # Case 1: LITERATURE / literature + review (check before ANALYSIS)
+        # Case 1: LITERATURE / literature + review
+        # Check BEFORE WRITING so "检索文献" → search→download→review (not write→chapters→assemble)
         if TaskType.LITERATURE in task_types or "综述" in user_request or "文献" in user_request:
             root_tasks.extend(self._decompose_literature(user_request))
 
-        # Case 2: WRITING task (paper/report generation)
+        # Case 2: WRITING task (report generation — "生成研报" goes search→analysis→write)
         elif TaskType.WRITING in task_types:
-            root_tasks.extend(self._decompose_writing(user_request))
-
-        # Case 2: LITERATURE task (literature search + review)
-        elif TaskType.LITERATURE in task_types:
-            root_tasks.extend(self._decompose_literature(user_request))
+            if "生成研报" in user_request or "生成报告" in user_request or "行业报告" in user_request:
+                root_tasks.extend(self._decompose_writing(user_request))
+                root_tasks.extend(self._decompose_analysis_with_data(user_request))
+            elif "写论文" in user_request or "论文大纲" in user_request:
+                root_tasks.extend(self._decompose_writing(user_request))
+            else:
+                root_tasks.extend(self._decompose_writing(user_request))
 
         # Case 3: ANALYSIS + DATA_FETCH
         elif TaskType.ANALYSIS in task_types or TaskType.DATA_FETCH in task_types:
@@ -300,11 +303,13 @@ class ResearchPlanner:
         )
         return [task]
 
-    def _register_tasks(self, tasks: list[Task]):
+    def _register_tasks(self, tasks: list[Task], parent: Task | None = None):
         """Register all tasks (including subtasks) in the planner's registry."""
         for task in tasks:
             self.tasks[task.id] = task
-            self._register_tasks(task.subtasks)
+            if parent is not None:
+                parent.subtasks.append(task)
+            self._register_tasks(task.subtasks, parent=task)
 
     def execute(self, task_graph: list[Task]) -> dict[str, Any]:
         """
@@ -341,6 +346,7 @@ class ResearchPlanner:
                 fallback_task = self._fallback(task)
                 if fallback_task:
                     results[fallback_task.id] = fallback_task.result
+                    self._register_tasks([fallback_task])
 
             results[task.id] = task.result
 
@@ -366,15 +372,22 @@ class ResearchPlanner:
         ready = [t for t in tasks if in_degree[t.id] == 0]
         sorted_tasks = []
 
+        # Build reverse adjacency: dependency → list of dependent tasks
+        dependents: dict[str, list[Task]] = {t.id: [] for t in tasks}
+        for t in tasks:
+            for dep_id in t.dependencies:
+                if dep_id in dependents:
+                    dependents[dep_id].append(t)
+
         while ready:
             task = ready.pop(0)
             sorted_tasks.append(task)
-            # Decrease in-degree for dependent tasks
-            for t in tasks:
-                if task.id in t.dependencies:
-                    in_degree[t.id] -= 1
-                    if in_degree[t.id] == 0 and t not in sorted_tasks and t not in ready:
-                        ready.append(t)
+            # Decrease in-degree for dependent tasks using reverse adjacency
+            if task.id in dependents:
+                for dep in dependents[task.id]:
+                    in_degree[dep.id] -= 1
+                    if in_degree[dep.id] == 0 and dep.id not in [t.id for t in sorted_tasks] and dep not in ready:
+                        ready.append(dep)
 
         # Append any remaining tasks (circular deps or orphaned)
         for t in tasks:
@@ -392,7 +405,7 @@ class ResearchPlanner:
         3. Skip — non-critical task
         4. Abort — critical task failure
         """
-        CRITICAL_TYPES = {TaskType.WRITING, TaskType.ANALYSIS}
+        CRITICAL_TYPES = {TaskType.WRITING, TaskType.ANALYSIS, TaskType.CODE, TaskType.ORCHESTRATE}
 
         # Level 1: Retry
         if failed_task.retry_count < 3:

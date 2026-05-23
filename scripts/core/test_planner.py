@@ -54,6 +54,13 @@ def test_fallback_retry():
     assert fallback is not None
     assert fallback.retry_count == 1
 
+    # After 3 retries exhausted → Level 3: non-critical tasks get skipped (DATA_FETCH not in CRITICAL_TYPES)
+    task.retry_count = 3
+    fallback2 = planner._fallback(task)
+    assert fallback2 is not None
+    # Level 3 skips non-critical tasks with status DONE
+    assert fallback2.status == TaskStatus.DONE and "[跳过]" in fallback2.description
+
 
 def test_get_status():
     """Test that get_status returns status for all registered tasks."""
@@ -61,6 +68,7 @@ def test_get_status():
     planner = ResearchPlanner(mem)
     tasks = planner.decompose("分析苹果公司财务数据")
     status = planner.get_status()
-    assert len(status) == len(tasks), f"Status count {len(status)} != tasks {len(tasks)}"
+    # All registered tasks (root + subtasks) should appear in status
+    assert len(status) == len(planner.tasks), f"Expected {len(planner.tasks)} tasks in status, got {len(status)}"
     valid_statuses = [s.value for s in TaskStatus]
     assert all(s in valid_statuses for s in status.values()), "All statuses should be valid TaskStatus values"
