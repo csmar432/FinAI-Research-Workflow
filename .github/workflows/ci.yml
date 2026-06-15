@@ -64,7 +64,7 @@ jobs:
             tests/test_checkpoint.py tests/test_event_monitor.py \
             tests/test_llm_gateway.py tests/test_session.py \
             tests/test_tool_selector.py \
-            --cov=scripts --cov-append -x -q --tb=short --timeout=60
+            --cov=scripts --cov-append -x --tb=long --timeout=60
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
@@ -89,7 +89,7 @@ jobs:
             tests/test_halt_rules.py \
             tests/test_halt_rules_registry.py tests/test_citation_verifier.py \
             tests/test_agent_loader.py tests/test_data_cache.py \
-            --cov=scripts --cov-append -x -q --tb=short --timeout=60
+            --cov=scripts --cov-append -x --tb=long --timeout=60
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
@@ -120,7 +120,7 @@ jobs:
             tests/test_triple_diff_did.py tests/test_latex_lint.py \
             tests/test_ollama_provider.py tests/test_project_config.py \
             tests/test_diagnostic_advanced.py tests/test_demo_research_report.py \
-            --cov=scripts --cov-append -x -q --tb=short --timeout=60
+            --cov=scripts --cov-append -x --tb=long --timeout=60
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
