@@ -59,17 +59,15 @@ jobs:
           pip install -r requirements-ci.txt
           pip install --no-deps -e .
       - name: Run core tests
+        id: run_core_tests
         run: |
-          set +e
+          set -o pipefail
           pytest tests/test_llm_reviewer.py tests/test_modern_did.py \
             tests/test_checkpoint.py tests/test_event_monitor.py \
             tests/test_llm_gateway.py tests/test_session.py \
             tests/test_tool_selector.py \
             --cov=scripts --cov-append -x --tb=long --timeout=60 \
             -v 2>&1 | tee pytest-batch1.log
-          echo "=== Exit: ${PIPESTATUS[0]} ==="
-          echo "=== Last 200 lines of log: ==="
-          tail -n 200 pytest-batch1.log || true
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
@@ -80,6 +78,13 @@ jobs:
           name: pytest-batch1-log
           path: pytest-batch1.log
           retention-days: 7
+      - name: Surface fail reason via step summary
+        if: failure()
+        run: |
+          echo "## batch 1 fail" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 80 pytest-batch1.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   test-batch-2:
     name: Tests batch 2/3 (orchestrator)
@@ -97,15 +102,13 @@ jobs:
           pip install --no-deps -e .
       - name: Run orchestrator tests
         run: |
-          set +e
+          set -o pipefail
           pytest tests/test_analyst_agents.py tests/test_ai_router.py \
             tests/test_halt_rules.py \
             tests/test_halt_rules_registry.py tests/test_citation_verifier.py \
             tests/test_agent_loader.py tests/test_data_cache.py \
             --cov=scripts --cov-append -x --tb=long --timeout=60 \
             -v 2>&1 | tee pytest-batch2.log
-          echo "=== Exit: ${PIPESTATUS[0]} ==="
-          tail -n 200 pytest-batch2.log || true
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
@@ -116,6 +119,13 @@ jobs:
           name: pytest-batch2-log
           path: pytest-batch2.log
           retention-days: 7
+      - name: Surface fail reason via step summary
+        if: failure()
+        run: |
+          echo "## batch 2 fail" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 80 pytest-batch2.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   test-batch-3:
     name: Tests batch 3/3 (econometrics)
@@ -133,7 +143,7 @@ jobs:
           pip install --no-deps -e .
       - name: Run econometrics tests
         run: |
-          set +e
+          set -o pipefail
           pytest tests/test_econometrics_rules.py tests/test_interactive_fixed_effects.py \
             tests/test_panel_quantile_regression.py tests/test_local_projections_did.py \
             tests/test_journal_template.py tests/test_memory.py \
@@ -146,8 +156,6 @@ jobs:
             tests/test_diagnostic_advanced.py tests/test_demo_research_report.py \
             --cov=scripts --cov-append -x --tb=long --timeout=60 \
             -v 2>&1 | tee pytest-batch3.log
-          echo "=== Exit: ${PIPESTATUS[0]} ==="
-          tail -n 200 pytest-batch3.log || true
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
@@ -158,6 +166,13 @@ jobs:
           name: pytest-batch3-log
           path: pytest-batch3.log
           retention-days: 7
+      - name: Surface fail reason via step summary
+        if: failure()
+        run: |
+          echo "## batch 3 fail" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 80 pytest-batch3.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   cross-platform:
     name: Cross-platform smoke test
@@ -185,10 +200,8 @@ jobs:
         shell: bash
       - name: Run subset tests
         run: |
-          set +e
+          set -o pipefail
           pytest tests/test_checkpoint.py tests/test_event_monitor.py --tb=long -v 2>&1 | tee pytest-cs.log
-          echo "=== Exit: ${PIPESTATUS[0]} ==="
-          tail -n 100 pytest-cs.log || true
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
@@ -199,6 +212,13 @@ jobs:
           name: pytest-cs-${{ matrix.os }}-log
           path: pytest-cs.log
           retention-days: 7
+      - name: Surface fail reason via step summary
+        if: failure()
+        run: |
+          echo "## cs (${{ matrix.os }}) fail" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 60 pytest-cs.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   docker:
     name: Docker Build
