@@ -26,7 +26,10 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
-    "Natural Language :: Chinese",
+    "Natural Language :: Chinese (Simplified)",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -152,16 +155,103 @@ all = [
 ]
 
 [project.scripts]
-finai-test = "pytest:main"
+# 主入口（轻量、不调 LLM、避免误触发 API）
+finai = "scripts.cli:main"
+finai-pipeline = "scripts.cli:pipeline_cmd_wrapper"
+finai-test = "scripts.cli:test_cmd"
+finai-health = "scripts.cli:health_cmd"
+finai-data = "scripts.cli:data_cmd"
+finai-lit-review = "scripts.cli:lit_review_cmd"
 
 [project.urls]
 Homepage = "https://github.com/csmar432/论文-研报工作流"
 Documentation = "https://github.com/csmar432/论文-研报工作流#readme"
 Repository = "https://github.com/csmar432/论文-研报工作流"
 Issues = "https://github.com/csmar432/论文-研报工作流/issues"
+Changelog = "https://github.com/csmar432/论文-研报工作流/blob/main/CHANGELOG.md"
+Citation = "https://github.com/csmar432/论文-研报工作流/blob/main/CITATION.cff"
+Releases = "https://github.com/csmar432/论文-研报工作流/releases"
 
+# ── Hatch 构建配置 ───────────────────────────────────────────────
 [tool.hatch.build.targets.wheel]
 packages = ["scripts"]
+
+[tool.hatch.build.targets.wheel.force-include]
+# 数据/资源目录必须显式 include，否则 wheel 不含
+"config" = "finai_research_workflow/config"
+"templates" = "finai_research_workflow/templates"
+"knowledge" = "finai_research_workflow/knowledge"
+"mcp_servers" = "finai_research_workflow/mcp_servers"
+"examples" = "finai_research_workflow/examples"
+"releases" = "finai_research_workflow/releases"
+
+[tool.hatch.build.targets.wheel.exclude]
+# 不打包的东西
+"tests/**" = "tests"
+"docs/**" = "docs"
+"papers/**" = "papers"
+"output/**" = "output"
+"data/**" = "data"
+"projects/**" = "projects"
+"canvases/**" = "canvases"
+".github/**" = ".github"
+"scripts/legacy/**" = "scripts/legacy"
+"scripts/deprecated/**" = "scripts/deprecated"
+"scripts/__pycache__/**" = "scripts/__pycache__"
+"**/__pycache__/**" = "**/__pycache__"
+"**/*.pyc" = "**/*.pyc"
+"**/*.pyo" = "**/*.pyo"
+"**/.DS_Store" = "**/.DS_Store"
+"**/.env" = "**/.env"
+"**/.env.local" = "**/.env.local"
+"**/Thumbs.db" = "**/Thumbs.db"
+"**/*.db" = "**/*.db"
+"**/*.db-journal" = "**/*.db-journal"
+"**/*.bak" = "**/*.bak"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "scripts",
+    "config",
+    "templates",
+    "knowledge",
+    "mcp_servers",
+    "examples",
+    "releases",
+    "tests",
+    "docs",
+    "README.md",
+    "README_EN.md",
+    "使用指南.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CITATION.cff",
+    "pyproject.toml",
+    "requirements.txt",
+    "requirements-optional.txt",
+    "Dockerfile",
+    "Dockerfile.dashboard",
+    "Dockerfile.gateway",
+    "Dockerfile.sse",
+    "docker-compose.yml",
+    "Makefile",
+    "run.sh",
+    "run.bat",
+    "mkdocs.yml",
+    ".env.example",
+    ".pre-commit-config.yaml",
+    ".editorconfig",
+    ".gitattributes",
+    ".gitignore",
+]
+exclude = [
+    ".github/internal-reports/**",
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/.env",
+    "**/.env.local",
+    "**/.DS_Store",
+]
 
 [tool.ruff]
 line-length = 100
@@ -174,7 +264,34 @@ ignore = ["E501", "B028"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --tb=short"
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--strict-config",
+    "--showlocals",
+    "--durations=10",
+]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: integration tests (require real network/db)",
+    "unit: pure unit tests (no I/O)",
+    "llm: tests that call LLM APIs (requires API key)",
+    "mcp: tests that call MCP servers",
+    "gpu: tests that require GPU",
+    "flaky: known flaky tests (use with care)",
 ]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:botocore.*",
+    "ignore::DeprecationWarning:urllib3.*",
+    "ignore::PendingDeprecationWarning",
+    # Allow some common warnings during tests
+    "default::UserWarning:scripts.*",
+]
+# Minimum coverage to pass CI
+# Set lower than production target to allow incremental improvement
+# 目标是 80%, 当前设为 60% (在 ci.yml 中)
+minversion = "7.0"
