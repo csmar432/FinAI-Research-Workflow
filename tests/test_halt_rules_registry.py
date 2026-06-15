@@ -285,3 +285,210 @@ class TestFullValidation:
         result = registry.validate("test_domain", {"text": "anything"})
         not_impl = [v for v in result.violations if "NOT IMPLEMENTED" in v.message]
         assert len(not_impl) >= 1
+
+
+# ── Empirical Paper Checker Tests ───────────────────────────────────────────────
+
+class TestEmpiricalEndogeneity:
+    """Tests for _check_empirical_endogeneity."""
+
+    def test_endogeneity_discussion_passes(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "We address potential endogeneity concerns using instrumental variables (IV). "
+        text += "Selection bias is mitigated through propensity score matching."
+        passed, msg = registry._check_empirical_endogeneity(
+            {"text": text},
+            {"validation": {"rules": [], "methods": ["IV", "instrumental"]}},
+        )
+        assert passed is True
+        assert msg == ""
+
+    def test_endogeneity_missing_discussion_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Our results show a positive effect on innovation."
+        passed, msg = registry._check_empirical_endogeneity(
+            {"text": text},
+            {"validation": {"rules": [], "methods": ["IV"]}},
+        )
+        assert passed is False
+        assert "No endogeneity discussion found" in msg
+
+
+class TestEmpiricalSignificance:
+    """Tests for _check_empirical_significance."""
+
+    def test_standard_significance_format_passes(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "* p<0.1, ** p<0.05, *** p<0.01. The coefficient is significantly positive."
+        passed, msg = registry._check_empirical_significance(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is True
+        assert msg == ""
+
+    def test_missing_significance_format_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "The coefficient is significant at conventional levels."
+        passed, msg = registry._check_empirical_significance(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is False
+        assert "not declared" in msg
+
+    def test_mixed_significance_systems_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Coefficient *** p<0.01, and another result marked with \u2020 p<0.05."
+        passed, msg = registry._check_empirical_significance(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is False
+        assert "Mixed significance systems" in msg
+
+
+class TestEmpiricalCausalInference:
+    """Tests for _check_empirical_causal_inference."""
+
+    def test_causal_claim_with_caveat_passes(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Our results show the policy caused an increase in innovation. "
+        text += "However, correlation does not imply causation."
+        passed, msg = registry._check_empirical_causal_inference(
+            {"text": text},
+            {"validation": {"rules": [{"check": "correlation_vs_causation"}]}},
+        )
+        assert passed is True
+        assert msg == ""
+
+    def test_causal_claim_without_caveat_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "The policy causes an increase in innovation."
+        passed, msg = registry._check_empirical_causal_inference(
+            {"text": text},
+            {"validation": {"rules": [{"check": "correlation_vs_causation"}]}},
+        )
+        assert passed is False
+        assert "caveat" in msg.lower()
+
+    def test_causal_interpretation_without_bounds_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "The policy drives economic growth."
+        passed, msg = registry._check_empirical_causal_inference(
+            {"text": text},
+            {"validation": {"rules": [{"check": "causal_interpretation_bounds"}]}},
+        )
+        assert passed is False
+        assert "overstated" in msg.lower()
+
+
+class TestEmpiricalEconomicSignificance:
+    """Tests for _check_empirical_economic_significance."""
+
+    def test_economic_significance_discussion_passes(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "The marginal effect implies a 2 percentage point increase in investment. "
+        text += "The economic significance is substantial relative to mean investment."
+        passed, msg = registry._check_empirical_economic_significance(
+            {"text": text},
+            {"validation": {"rules": []}},
+        )
+        assert passed is True
+        assert msg == ""
+
+    def test_missing_economic_significance_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "The coefficient is positive and significant at the 1% level."
+        passed, msg = registry._check_empirical_economic_significance(
+            {"text": text},
+            {"validation": {"rules": []}},
+        )
+        assert passed is False
+        assert "No economic significance discussion found" in msg
+
+
+# ── ML Paper Checker Tests ─────────────────────────────────────────────────────
+
+class TestMLBaseline:
+    """Tests for _check_ml_baseline."""
+
+    def test_sota_and_classic_baselines_passes(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "We compare against SOTA methods and classic baselines including "
+        text += "logistic regression and random forest."
+        passed, msg = registry._check_ml_baseline(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is True
+        assert msg == ""
+
+    def test_missing_baseline_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Our proposed model achieves 95% accuracy on the test set."
+        passed, msg = registry._check_ml_baseline(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is False
+        assert "No SOTA comparison found" in msg or "No classic method comparison found" in msg
+
+
+class TestMLReproducibility:
+    """Tests for _check_ml_reproducibility."""
+
+    def test_reproducibility_statement_passes(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Code available at https://github.com/author/project. "
+        text += "Experiments use random seed 42. "
+        text += "Results reported as mean ± std across 10 runs."
+        passed, msg = registry._check_ml_reproducibility(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is True
+        assert msg == ""
+
+    def test_missing_code_repo_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Experiments use random seed 42. Results: 0.85 ± 0.02."
+        passed, msg = registry._check_ml_reproducibility(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is False
+        assert "No code/repository link found" in msg
+
+    def test_missing_random_seed_fails(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        text = "Code at https://github.com/author/project. Results: 0.85 ± 0.02."
+        passed, msg = registry._check_ml_reproducibility(
+            {"text": text},
+            {"validation": {}},
+        )
+        assert passed is False
+        assert "No random seed" in msg
+
+
+class TestAllCheckersReturnTuples:
+    """Sanity test: all checker methods return (bool, str) tuples."""
+
+    def test_all_targeted_checkers_return_tuples(self):
+        registry = HaltRulesRegistry("config/halt_rules")
+        # All targeted checkers from CHECKER_MAP that exist
+        targeted = [
+            "_check_empirical_endogeneity",
+            "_check_empirical_significance",
+            "_check_empirical_causal_inference",
+            "_check_empirical_economic_significance",
+            "_check_ml_baseline",
+            "_check_ml_reproducibility",
+        ]
+        for method_name in targeted:
+            method = getattr(registry, method_name)
+            result = method({"text": "test content"}, {"validation": {}})
+            assert isinstance(result, tuple), f"{method_name} did not return a tuple"
+            assert len(result) == 2, f"{method_name} did not return a 2-tuple"
+            assert isinstance(result[0], bool), f"{method_name} first element not bool"
+            assert isinstance(result[1], str), f"{method_name} second element not str"

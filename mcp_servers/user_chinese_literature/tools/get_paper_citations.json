@@ -1,0 +1,18 @@
+{
+  "name": "get_paper_citations",
+  "description": "获取论文的引用关系。通过 DOI 或论文标题查询 Crossref 获取施引文献列表，结合 OpenAlex 补充引用网络信息。用于构建引文网络和文献计量分析。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "doi": {
+        "type": "string",
+        "description": "DOI（如 10.1016/j.jfinec.2020.01.001）"
+      },
+      "title": {
+        "type": "string",
+        "description": "论文标题（DOI 不可用时使用）"
+      }
+    },
+    "description": "获取中文文献检索 MCP 服务器。整合百度学术（免费/API）、OpenAlex 和 Crossref，覆盖中国知网(CNKI)、万方数据cssci.cssn.cn的核心学术论文。提供论文元数据、引用关系、期刊分类等信息。中的paper citations"
+  }
+}

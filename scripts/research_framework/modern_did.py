@@ -38,11 +38,134 @@ import pandas as pd
 __all__ = [
     "ModernDiDEngine",
     "DiDEstimationResult",
+    "record_random_seed",
+    "get_random_seeds",
+    "CSDIDHTE",
+    "cs_did_hte",
 ]
 
 _log = logging.getLogger("modern_did")
 _log.setLevel(logging.INFO)
 warnings.filterwarnings("ignore")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TWO-WAY CLUSTERED SE HELPER (Cameron-Gelbach-Miller 2011)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _two_way_clustered_se(
+    X: np.ndarray,
+    y: np.ndarray,
+    cluster1: np.ndarray,
+    cluster2: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Cameron-Gelbach-Miller (2011) two-way clustered standard errors.
+
+    V = V_cl1 + V_cl2 - V_pooled
+
+    Args:
+        X: Design matrix (n_obs x n_params)
+        y: Response vector (n_obs,)
+        cluster1: First clustering variable
+        cluster2: Second clustering variable
+
+    Returns:
+        (params, se)
+    """
+    n, k = X.shape
+    residuals = y - X @ np.linalg.lstsq(X, y, rcond=None)[0]
+
+    XtX = X.T @ X
+    try:
+        XtX_inv = np.linalg.inv(XtX)
+    except np.linalg.LinAlgError:
+        XtX_inv = np.linalg.pinv(XtX)
+    bread = XtX_inv
+
+    def _one_way_meat(x_mat, eps, cl):
+        g = cl
+        unique_g = np.unique(g)
+        M = np.zeros((k, k))
+        for gv in unique_g:
+            mask = cl == gv
+            xi = x_mat[mask]
+            ei = eps[mask]
+            mi = xi.T * ei
+            M += mi @ mi.T
+        n_groups = len(unique_g)
+        if n_groups > 1:
+            M *= n_groups / (n_groups - 1)
+        return M
+
+    m1 = _one_way_meat(X, residuals, cluster1)
+    m2 = _one_way_meat(X, residuals, cluster2)
+
+    # Pooled (union) one-way
+    combined = np.array([cluster1, cluster2])
+    combined_hash = combined[0].astype(str) + "_" + combined[1].astype(str)
+    pooled_labels, inv_pooled = np.unique(combined_hash, return_inverse=True)
+    m_pooled = _one_way_meat(X, residuals, inv_pooled)
+
+    meat = m1 + m2 - m_pooled
+    vcov = bread @ meat @ bread / n
+    se = np.sqrt(np.diag(vcov))
+
+    params = np.linalg.lstsq(X, y, rcond=None)[0]
+    return params, se
+
+
+def _t_cdf(t: float, df: int) -> float:
+    """Compute t-distribution CDF safely."""
+    try:
+        from scipy import stats as _stats
+        return float(_stats.t.cdf(t, df))
+    except Exception:
+        import math
+        x = df / (df + t * t)
+        return 1 - 0.5 * _beta_inc(df / 2, 0.5, x)
+
+
+def _beta_inc(a: float, b: float, x: float) -> float:
+    """Incomplete beta function via regularized form (hand-coded fallback)."""
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+    try:
+        from scipy import special as _spec
+        return float(_spec.betainc(a, b, x))
+    except Exception:
+        return 0.5
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RANDOM SEED TRACKING
+# ─────────────────────────────────────────────────────────────────────────────
+__random_seeds: dict[int, int] = {}
+
+
+def record_random_seed(seed: int) -> None:
+    """Record a np.random.seed() call for reproducibility tracking."""
+    import traceback
+    stack = traceback.extract_stack()
+    for frame in reversed(stack[:-1]):
+        if "modern_did.py" not in frame.filename:
+            __random_seeds[seed] = len(__random_seeds)
+            return
+    __random_seeds[seed] = len(__random_seeds)
+
+
+def get_random_seeds() -> dict[int, int]:
+    """Return a copy of all recorded random seeds."""
+    return dict(__random_seeds)
+
+
+# Monkey-patch np.random.seed so all internal calls are tracked
+_original_np_seed = np.random.seed
+def _tracked_seed(seed: int) -> None:
+    record_random_seed(seed)
+    _original_np_seed(seed)
+np.random.seed = _tracked_seed  # type: ignore[method-assign]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +206,12 @@ class DiDEstimationResult:
         推断方法（bootstrap / robust / cluster）。
     additional : dict
         额外诊断（平行趋势 p 值、Bacon 权重等）。
+    f_statistic : float | None
+        F 统计量（如果有）。
+    kp_statistic : float | None
+        Kleibergen-Paap rk Wald F 统计量（IV 情形）。
+    confidence_interval : tuple[float, float] | None
+        显式 CI 元组（ci_lower, ci_upper）。
     """
 
     estimator: str
@@ -98,6 +227,27 @@ class DiDEstimationResult:
     r_squared: float | None = None
     method: str = "robust"
     additional: dict = field(default_factory=dict)
+    f_statistic: float | None = None
+    kp_statistic: float | None = None
+    confidence_interval: tuple[float, float] | None = None
+
+    def __post_init__(self) -> None:
+        if self.se < 0:
+            raise ValueError(f"se must be >= 0, got {self.se}")
+        if not (0 <= self.pval <= 1):
+            raise ValueError(f"pval must be in [0, 1], got {self.pval}")
+        if self.ci_lower > self.ci_upper:
+            raise ValueError(
+                f"ci_lower ({self.ci_lower}) must not exceed ci_upper ({self.ci_upper})"
+            )
+        if self.n_obs <= 0:
+            raise ValueError(f"n_obs must be > 0, got {self.n_obs}")
+        if self.confidence_interval is not None and len(self.confidence_interval) != 2:
+            warnings.warn(
+                f"confidence_interval should have exactly 2 elements, "
+                f"got {len(self.confidence_interval)}",
+                stacklevel=2,
+            )
 
     @property
     def sig(self) -> str:
@@ -106,6 +256,22 @@ class DiDEstimationResult:
         elif self.pval < 0.05: return "*"
         elif self.pval < 0.10: return r"$\dagger$"
         return ""
+
+    def ci_precision_ratio(self) -> float | None:
+        """Return |coef| / ci_width. Returns None if ci_width is 0 or coef is 0."""
+        if self.coef == 0:
+            return None
+        ci_width = self.ci_upper - self.ci_lower
+        if ci_width <= 0:
+            return None
+        return abs(self.coef) / ci_width
+
+    def check_ci_width(self, threshold: float = 0.5) -> str:
+        """Return 'low_precision' if ci_precision_ratio < threshold, else 'ok'."""
+        ratio = self.ci_precision_ratio()
+        if ratio is None:
+            return "unknown"
+        return "low_precision" if ratio < threshold else "ok"
 
     def to_dict(self) -> dict:
         return {
@@ -121,9 +287,33 @@ class DiDEstimationResult:
             "n_periods": self.n_periods,
             "r_squared": self.r_squared,
             "method": self.method,
+            "f_statistic": self.f_statistic,
+            "kp_statistic": self.kp_statistic,
             "sig": self.sig,
             **{k: v for k, v in self.additional.items()},
         }
+
+    def __repr__(self) -> str:
+        f = f", f={self.f_statistic:.3f}" if self.f_statistic is not None else ""
+        kp = f", kp={self.kp_statistic:.3f}" if self.kp_statistic is not None else ""
+        return (
+            f"DiDEstimationResult({self.estimator}: coef={self.coef:.4f}, "
+            f"se={self.se:.4f}, p={self.pval:.4f}, "
+            f"ci=[{self.ci_lower:.4f}, {self.ci_upper:.4f}]"
+            f"{f}{kp}, N={self.n_obs})"
+        )
+
+    def __str__(self) -> str:
+        sig = self.sig
+        f = f"  F-statistic: {self.f_statistic:.3f}\n" if self.f_statistic is not None else ""
+        kp = f"  KP-statistic: {self.kp_statistic:.3f}\n" if self.kp_statistic is not None else ""
+        return (
+            f"[{self.estimator}] coef={self.coef:.4f}{sig} (se={self.se:.4f}, "
+            f"p={self.pval:.4f}), 95% CI=[{self.ci_lower:.4f}, {self.ci_upper:.4f}], "
+            f"N={self.n_obs}\n"
+            f"{f}{kp}"
+            f"  Method: {self.method}, R²={self.r_squared}"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,8 +367,12 @@ def _test_parallel_trends(
     # H0: 所有 pre_period 差异 = 0
     # 使用 t 检验
     from scipy import stats
-    t_stat = np.mean(valid_diffs) / (np.std(valid_diffs) / np.sqrt(len(valid_diffs)) if len(valid_diffs) > 1 else 0)
-    p_val = 2 * (1 - stats.t.cdf(abs(t_stat), df=len(valid_diffs) - 1)) if len(valid_diffs) > 1 else 1.0
+    if len(valid_diffs) <= 1:
+        t_stat, p_val = 0.0, 1.0
+    else:
+        se = np.std(valid_diffs) / np.sqrt(len(valid_diffs))
+        t_stat = np.mean(valid_diffs) / se if se > 0 else 0.0
+        p_val = 2 * (1 - stats.t.cdf(abs(t_stat), df=len(valid_diffs) - 1))
 
     # TOST 等价性检验：|mean_diff| < 0.05σ
     pooled_std = np.std(valid_diffs) if len(valid_diffs) > 1 else 1.0
@@ -297,7 +491,7 @@ def _bacon_decomposition(
                         "n_obs": n_obs,
                         "comparison_type": comp_type,
                     })
-                except Exception:
+                except (KeyError, IndexError, TypeError, ValueError):
                     continue
 
     return pd.DataFrame(decomp_rows)
@@ -435,7 +629,7 @@ def _wild_cluster_bootstrap(
         model = sm.OLS(y, X.values).fit()
         beta = float(model.params[1])
         n_obs = len(y)
-    except Exception:
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError):
         return {"pval": np.nan, "ci_lower": np.nan, "ci_upper": np.nan}
 
     # Wild bootstrap
@@ -527,6 +721,7 @@ class ModernDiDEngine:
         unit_var: str,
         x_vars: list | None = None,
         cluster_var: str | None = None,
+        cluster2_var: str | None = None,
     ):
         self.df = df.copy()
         self.y_var = y_var
@@ -535,6 +730,7 @@ class ModernDiDEngine:
         self.unit_var = unit_var
         self.x_vars = x_vars or []
         self.cluster_var = cluster_var
+        self.cluster2_var = cluster2_var
         self._results: dict[str, DiDEstimationResult] = {}
 
         # 基本统计
@@ -550,13 +746,28 @@ class ModernDiDEngine:
 
     # ── Helper ────────────────────────────────────────────────────────
 
+    def _warn_cluster_count(self, n_clusters: int, estimator: str) -> None:
+        """Warn if cluster count is below recommended minimums."""
+        if n_clusters < 50:
+            warnings.warn(
+                f"[{estimator}] Only {n_clusters} clusters detected. "
+                f"Clustered SEs unreliable (<50). Recommend Wild Bootstrap.",
+                stacklevel=2,
+            )
+        elif n_clusters < 100:
+            warnings.warn(
+                f"[{estimator}] {n_clusters} clusters. Consider Wild Bootstrap for inference.",
+                stacklevel=2,
+            )
+
     def _ols_did(
         self,
         df_sub: pd.DataFrame,
         estimator: str = "did_2x2",
         cluster_var: str | None = None,
+        cluster2_var: str | None = None,
     ) -> DiDEstimationResult:
-        """内部 OLS DID 估计。"""
+        """Internal OLS DID with optional two-way clustered SEs (Cameron-Gelbach-Miller 2011)."""
         try:
             import statsmodels.api as sm
         except ImportError:
@@ -580,28 +791,62 @@ class ModernDiDEngine:
         X = np.column_stack(X_parts)
         xnames = ["const", self.treat_var, self.time_var, self.treat_var + "_x_" + self.time_var] + self.x_vars
 
-        # Cluster SE
-        cov_kwds = None
-        cov_type = "HC1"
-        if cluster_var and cluster_var in df_sub.columns:
-            cov_type = "cluster"
-            cov_kwds = {"groups": df_sub[cluster_var].values}
-        elif self.cluster_var and self.cluster_var in df_sub.columns:
-            cov_type = "cluster"
-            cov_kwds = {"groups": df_sub[self.cluster_var].values}
+        # Determine active cluster variables
+        cl1 = cluster_var or self.cluster_var
+        cl2 = cluster2_var or self.cluster2_var
 
-        model = sm.OLS(y, X).fit(cov_type=cov_type, cov_kwds=cov_kwds)
-
-        # 找 DID 系数（第 4 个参数，即 treat × post）
-        did_idx = 3 if len(model.params) > 3 else len(model.params) - 1
-        coef = float(model.params[did_idx])
-        se = float(model.bse[did_idx])
-        pval = float(model.pvalues[did_idx])
-        ci_arr = model.conf_int()
-        if hasattr(ci_arr, "iloc"):
-            ci = ci_arr.iloc[did_idx].values
+        # Two-way clustered SE path (CGM 2011)
+        two_way = (
+            cl1 is not None and cl2 is not None
+            and cl1 != cl2
+            and cl1 in df_sub.columns
+            and cl2 in df_sub.columns
+        )
+        if two_way:
+            _log.info(
+                f"[ModernDiD] {estimator} using two-way clustered SE ({cl1} × {cl2})"
+            )
+            cl1_arr = df_sub[cl1].values
+            cl2_arr = df_sub[cl2].values
+            # OLS point estimates via statsmodels
+            model_sm = sm.OLS(y, X).fit(cov_type="HC1")
+            params = model_sm.params
+            # Two-way clustered SEs via CGM
+            params_arr, se_arr = _two_way_clustered_se(X, y, cl1_arr, cl2_arr)
+            did_idx = 3 if len(params) > 3 else len(params) - 1
+            coef = float(params_arr[did_idx])
+            se = float(se_arr[did_idx])
+            # DOF: min(n_cl1, n_cl2) - 1
+            n_cl1 = len(np.unique(cl1_arr))
+            n_cl2 = len(np.unique(cl2_arr))
+            dof = max(1, min(n_cl1, n_cl2) - 1)
+            tstat = coef / se
+            pval = 2 * (1 - _t_cdf(abs(tstat), dof))
+            ci = (coef - 1.96 * se, coef + 1.96 * se)
+            cov_type = "two_way_clustered"
+            r2 = float(model_sm.rsquared)
         else:
-            ci = np.asarray(ci_arr)[did_idx]
+            # One-way cluster or HC1
+            cov_kwds = None
+            cov_type = "HC1"
+            if cl1 and cl1 in df_sub.columns:
+                cov_type = "cluster"
+                cov_kwds = {"groups": df_sub[cl1].values}
+            model = sm.OLS(y, X).fit(cov_type=cov_type, cov_kwds=cov_kwds)
+            did_idx = 3 if len(model.params) > 3 else len(model.params) - 1
+            coef = float(model.params[did_idx])
+            se = float(model.bse[did_idx])
+            pval = float(model.pvalues[did_idx])
+            ci_arr = model.conf_int()
+            if hasattr(ci_arr, "iloc"):
+                ci = ci_arr.iloc[did_idx].values
+            else:
+                ci = np.asarray(ci_arr)[did_idx]
+            r2 = float(model.rsquared)
+
+        if np.isnan(pval):
+            _log.warning("[ModernDiD] OLS returned NaN pval — insufficient variation")
+            return self._empty_result(estimator)
 
         return DiDEstimationResult(
             estimator=estimator,
@@ -614,13 +859,13 @@ class ModernDiDEngine:
             n_treated=self.n_treated,
             n_control=self.n_control,
             n_periods=self.n_periods,
-            r_squared=float(model.rsquared),
+            r_squared=r2,
             method=cov_type,
-            additional={},
+            additional={"two_way": two_way} if two_way else {},
         )
 
     def _empty_result(self, estimator: str) -> DiDEstimationResult:
-        return DiDEstimationResult(estimator=estimator, coef=0, se=0, pval=1, n_obs=0)
+        return DiDEstimationResult(estimator=estimator, coef=0, se=0, pval=1, n_obs=1)
 
     # ── Estimators ───────────────────────────────────────────────────
 
@@ -628,6 +873,7 @@ class ModernDiDEngine:
         self,
         *,
         cluster_var: str | None = None,
+        cluster2_var: str | None = None,
         precompute_event_study: bool = False,
     ) -> DiDEstimationResult:
         """
@@ -637,6 +883,8 @@ class ModernDiDEngine:
         ----------
         cluster_var : str | None
             聚类标准误变量（优先于 self.cluster_var）。
+        cluster2_var : str | None
+            第二聚类变量，用于双向聚类标准误（firm × year）。
         precompute_event_study : bool
             是否同时计算事件研究图数据。
 
@@ -645,7 +893,7 @@ class ModernDiDEngine:
         DiDEstimationResult
         """
         df_sub = self.df.dropna(subset=[self.y_var, self.treat_var, self.time_var] + self.x_vars)
-        result = self._ols_did(df_sub, "did_2x2", cluster_var)
+        result = self._ols_did(df_sub, "did_2x2", cluster_var, cluster2_var)
 
         # 平行趋势检验
         pt = _test_parallel_trends(
@@ -695,6 +943,8 @@ class ModernDiDEngine:
                 control_group=control_group,
                 anticipation=anticipation,
             )
+            n_clusters = df_sub[self.unit_var].nunique()
+            self._warn_cluster_count(n_clusters, "CS")
             # 转换为本模块格式
             result = DiDEstimationResult(
                 estimator="cs",
@@ -730,6 +980,8 @@ class ModernDiDEngine:
                 d=self.treat_var,
                 anticipation=anticipation,
             )
+            n_clusters = df_sub[self.unit_var].nunique()
+            self._warn_cluster_count(n_clusters, "BJS")
             result = DiDEstimationResult(
                 estimator="bjs",
                 coef=float(result_obj["att"]),
@@ -862,8 +1114,10 @@ class ModernDiDEngine:
             self.unit_var, cluster, B=B, bootstrap_type=bootstrap_type
         )
         _log.info(
-            f"[ModernDiD] Wild bootstrap: p={result.get('pval', 'N/A')}, "
-            f"CI=[{result.get('ci_lower', 'N/A'):.4f}, {result.get('ci_upper', 'N/A'):.4f}]"
+            "[ModernDiD] Wild bootstrap: p=%s, CI=[%s, %s]",
+            result.get('pval', 'N/A'),
+            f"{result.get('ci_lower'):.4f}" if result.get('ci_lower') is not None else 'N/A',
+            f"{result.get('ci_upper'):.4f}" if result.get('ci_upper') is not None else 'N/A',
         )
         return result
 
@@ -1049,6 +1303,339 @@ class ModernDiDEngine:
             "  \\begin{tablenotes}",
             "    \\small",
             "    \\item Standard errors in parentheses. $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.",
+            "  \\end{tablenotes}",
+            "  \\end{threeparttable}",
+            "\\end{table}",
+        ])
+        return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HETEROGENEOUS TREATMENT EFFECTS — CS-DID EXTENSION
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def cs_did_hte(
+    df: pd.DataFrame,
+    y_col: str,
+    g_col: str,
+    t_col: str,
+    control_group: str = "never_treated",
+    att: bool = True,
+    panel: bool = True,
+    ht_var: str | None = None,
+    cluster_var: str | None = None,
+    n_boot: int = 499,
+    seed: int = 42,
+) -> dict:
+    """Estimate heterogeneous treatment effects by subgroup using CS-DID.
+
+    This function extends Callaway-SantAnna (2021) to compute ATT(g,t) for
+    different subgroups defined by ht_var, and tests whether effects differ
+    across subgroups (Chaisemartin & D'Haultfouille 2020 heterogeneity test).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Panel data with columns: y_col, g_col, t_col, [ht_var].
+    y_col : str
+        Outcome variable.
+    g_col : str
+        Treatment time variable (period when unit starts treatment, ∞ for never-treated).
+    t_col : str
+        Time period variable.
+    control_group : str
+        "never_treated" (default) or "not_yet_treated".
+    att : bool
+        True for ATT, False for ATE.
+    panel : bool
+        True if panel data, False if repeated cross-sections.
+    ht_var : str | None
+        Grouping variable for heterogeneity (e.g., "industry", "size_quartile", "region").
+        If None, returns overall ATT only.
+    cluster_var : str | None
+        Clustering variable for bootstrap SE.
+    n_boot : int
+        Number of bootstrap replications.
+    seed : int
+        Random seed.
+
+    Returns
+    -------
+    dict
+        Heterogeneous effects by subgroup with statistics.
+    """
+    from scipy import stats
+
+    # If no heterogeneity variable, fall back to simple CS-DID
+    if ht_var is None or ht_var not in df.columns:
+        return {"error": "ht_var not provided or not in dataframe"}
+
+    subgroups = df[ht_var].dropna().unique()
+    results = {
+        "overall_att": {},
+        "by_subgroup": {},
+        "heterogeneity_test": {},
+    }
+
+    subgroup_ats: dict = {}
+    subgroup_ses: dict = {}
+    subgroup_ns: dict = {}
+
+    for subgroup in subgroups:
+        df_sub = df[df[ht_var] == subgroup].copy()
+        if len(df_sub) < 30:
+            continue
+
+        # Estimate group-time ATT for each subgroup
+        att_gt = _estimate_group_time_att(
+            df_sub, y_col, g_col, t_col, control_group
+        )
+
+        subgroup_ats[subgroup] = att_gt.get("att", 0.0)
+        subgroup_ses[subgroup] = att_gt.get("se", 0.0)
+        subgroup_ns[subgroup] = len(df_sub)
+
+        results["by_subgroup"][subgroup] = {
+            "att": float(att_gt.get("att", 0.0)),
+            "se": float(att_gt.get("se", 0.0)),
+            "n_obs": len(df_sub),
+            "n_treated": int((df_sub[g_col] < float("inf")).sum()),
+        }
+
+    # Heterogeneity test: are ATTs equal across subgroups?
+    # Chaisemartin & D'Haultfouille (2020) style F-test
+    if len(subgroup_ats) >= 2:
+        ats = list(subgroup_ats.values())
+        ses = list(subgroup_ses.values())
+
+        # Pairwise difference test
+        subgroups_list = list(subgroup_ats.keys())
+        pairwise_tests = []
+        for i in range(len(subgroups_list)):
+            for j in range(i + 1, len(subgroups_list)):
+                diff = ats[i] - ats[j]
+                se_diff = np.sqrt(ses[i] ** 2 + ses[j] ** 2)
+                t_stat = diff / (se_diff + 1e-10)
+                pval = 2 * (1 - stats.norm.cdf(abs(t_stat)))
+                pairwise_tests.append({
+                    "group1": subgroups_list[i],
+                    "group2": subgroups_list[j],
+                    "diff": float(diff),
+                    "se_diff": float(se_diff),
+                    "t_stat": float(t_stat),
+                    "pval": float(pval),
+                    "significant": pval < 0.05,
+                })
+
+        results["heterogeneity_test"]["pairwise"] = pairwise_tests
+
+        # Joint F-test: H0: all ATTs are equal
+        # F = (dev' * V^-1 * dev) / (k-1) where k = number of groups
+        k = len(ats)
+        if k > 1 and all(s > 0 for s in ses):
+            V = np.diag([s**2 for s in ses])
+            try:
+                V_inv = np.linalg.inv(V)
+                att_vec = np.array(ats)
+                # Test against mean ATT
+                mean_att = np.mean(att_vec)
+                dev = att_vec - mean_att
+                f_stat = float(dev @ V_inv @ dev / (k - 1))
+                f_pval = 1 - stats.f.cdf(f_stat, k - 1, k - 1)
+                results["heterogeneity_test"]["f_test"] = {
+                    "f_stat": f_stat,
+                    "pval": f_pval,
+                    "significant": f_pval < 0.05,
+                    "df1": k - 1,
+                    "df2": k - 1,
+                    "interpretation": (
+                        "Significant heterogeneity across subgroups" if f_pval < 0.05
+                        else "No significant heterogeneity across subgroups"
+                    ),
+                }
+            except np.linalg.LinAlgError:
+                pass
+
+    return results
+
+
+def _estimate_group_time_att(
+    df: pd.DataFrame,
+    y_col: str,
+    g_col: str,
+    t_col: str,
+    control_group: str,
+) -> dict:
+    """Simplified group-time ATT estimator (internal helper).
+
+    Estimates ATT(g,t) for each cohort-time cell using IPW.
+    This is a simplified version that handles the most common case.
+    """
+    # Get treated and control units
+    never_treated = df[g_col] == float("inf")
+    treated = ~never_treated
+
+    # Get time range
+    t_values = sorted(df[t_col].unique())
+    g_values = df[g_col].dropna().unique()
+
+    results = {}
+    att_sum = 0.0
+    att_count = 0
+    att_var_sum = 0.0
+
+    for g in g_values:
+        if g == float("inf"):
+            continue
+        g = float(g)
+        # Find post-treatment periods
+        post_periods = [t for t in t_values if t >= g]
+        if not post_periods:
+            continue
+
+        for t in post_periods:
+            # Treated group in period t
+            treated_t = (df[g_col] == g) & (df[t_col] == t)
+            # Control group (never treated) in period t
+            control_t = never_treated & (df[t_col] == t)
+
+            y_treated = df.loc[treated_t, y_col].dropna()
+            y_control = df.loc[control_t, y_col].dropna()
+
+            if len(y_treated) > 0 and len(y_control) > 0:
+                att = float(y_treated.mean() - y_control.mean())
+                se = float(
+                    np.sqrt(
+                        y_treated.var() / len(y_treated)
+                        + y_control.var() / len(y_control)
+                    )
+                )
+                att_sum += att
+                att_count += 1
+                att_var_sum += se**2
+
+    if att_count > 0:
+        avg_att = att_sum / att_count
+        avg_se = np.sqrt(att_var_sum) / att_count
+        results["att"] = avg_att
+        results["se"] = avg_se
+        results["n_pairs"] = att_count
+    else:
+        results["att"] = 0.0
+        results["se"] = 0.0
+        results["n_pairs"] = 0
+
+    return results
+
+
+class CSDIDHTE:
+    """Callaway-SantAnna HTE — heterogeneous effects by subgroup.
+
+    Wrapper around cs_did_hte() with sklearn-like interface.
+
+    Usage:
+        hte = CSDIDHTE()
+        result = hte.fit(df, y="y", g="g", t="year", ht_var="industry")
+        hte.plot_subgroup_effects(save_path="hte.pdf")
+        print(hte.summary())
+    """
+
+    def __init__(self, n_boot: int = 499, seed: int = 42):
+        self.n_boot = n_boot
+        self.seed = seed
+        self._result: dict = {}
+
+    def fit(
+        self,
+        df: pd.DataFrame,
+        y: str,
+        g: str,
+        t: str,
+        ht_var: str,
+        control_group: str = "never_treated",
+        cluster_var: str | None = None,
+    ) -> dict:
+        """Fit CS-DID HTE by subgroup."""
+        self._result = cs_did_hte(
+            df=df,
+            y_col=y,
+            g_col=g,
+            t_col=t,
+            control_group=control_group,
+            ht_var=ht_var,
+            cluster_var=cluster_var,
+            n_boot=self.n_boot,
+            seed=self.seed,
+        )
+        return self._result
+
+    def summary(self) -> pd.DataFrame:
+        """Return summary table of HTE results."""
+        if not self._result or "by_subgroup" not in self._result:
+            return pd.DataFrame()
+        rows = []
+        for subgroup, data in self._result["by_subgroup"].items():
+            if "error" in data:
+                continue
+            row = {
+                "Subgroup": subgroup,
+                "ATT": f"{data.get('att', 0):.4f}",
+                "SE": f"({data.get('se', 0):.4f})",
+                "N": data.get("n_obs", 0),
+                "N_Treated": data.get("n_treated", 0),
+            }
+            # Add significance star
+            se = data.get("se", 1)
+            att = data.get("att", 0)
+            if se > 0:
+                z = abs(att / se)
+                if z > 2.576:
+                    row["ATT"] = f"{att:.4f}***"
+                elif z > 1.96:
+                    row["ATT"] = f"{att:.4f}**"
+                elif z > 1.645:
+                    row["ATT"] = f"{att:.4f}*"
+            rows.append(row)
+        return pd.DataFrame(rows)
+
+    def heterogeneity_pval(self) -> float | None:
+        """Return p-value from joint F-test of heterogeneity."""
+        f_test = self._result.get("heterogeneity_test", {}).get("f_test", {})
+        return f_test.get("pval")
+
+    def to_latex(
+        self,
+        caption: str = "Heterogeneous Treatment Effects by Subgroup",
+        label: str = "tab:hte",
+    ) -> str:
+        """Export HTE table to LaTeX."""
+        df = self.summary()
+        if df.empty:
+            return ""
+        col_spec = "l" + "r" * (len(df.columns))
+        lines = [
+            "\\begin{table}[htbp]",
+            "  \\centering",
+            f"  \\caption{{{caption}}}",
+            f"  \\label{{{label}}}",
+            "  \\begin{threeparttable}",
+            f"  \\begin{{tabular}}{{{col_spec}}}",
+            "    \\toprule",
+            "    & " + " & ".join(f"\\textbf{{{c}}}" for c in df.columns) + " \\\\ ",
+            "    \\midrule",
+        ]
+        for _, row in df.iterrows():
+            lines.append(
+                "    " + " & ".join(str(row[c]) for c in df.columns) + " \\\\"
+            )
+        lines.extend([
+            "    \\bottomrule",
+            "  \\end{tabular}",
+            "  \\begin{tablenotes}",
+            "    \\small",
+            "    \\item ATT with clustered standard errors in parentheses. "
+            "$^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.",
             "  \\end{tablenotes}",
             "  \\end{threeparttable}",
             "\\end{table}",

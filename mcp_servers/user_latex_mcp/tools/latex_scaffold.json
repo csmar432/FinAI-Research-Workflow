@@ -1,13 +1,44 @@
 {
   "name": "latex_scaffold",
-  "description": "在指定目录生成标准学术论文LaTeX项目结构。\\n\\n",
+  "description": "在指定目录生成标准学术论文LaTeX项目结构。\\n\\nArgs:\\n  output_dir: 输出目录\\n  template: 模板类型（sci/nips/aea/rfs/chinese）\\n  title: 论文标题\\n  authors: 作者列表（逗号分隔）\\n  abstract: 摘要\\n\\nReturns: 生成的文件列表",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "output_dir": {
+        "type": "string",
+        "description": "输出目录"
+      },
+      "template": {
+        "type": "string",
+        "description": "模板类型",
+        "enum": [
+          "sci",
+          "nips",
+          "aea",
+          "rfs",
+          "chinese"
+        ],
+        "default": "sci"
+      },
+      "title": {
+        "type": "string",
+        "description": "论文标题",
+        "default": "Untitled Paper"
+      },
+      "authors": {
+        "type": "string",
+        "description": "作者（逗号分隔）",
+        "default": ""
+      },
+      "abstract": {
+        "type": "string",
+        "description": "摘要内容",
+        "default": ""
       }
     },
-    "required": []
+    "required": [
+      "output_dir"
+    ],
+    "description": "在指定目录生成标准学术论文LaTeX项目结构。"
   }
 }

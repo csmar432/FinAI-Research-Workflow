@@ -10,21 +10,26 @@
           "SSE",
           "SZSE",
           "BSE"
-        ]
+        ],
+        "description": "交易所代码（SZ=深圳，SH=上海，BJ=北京）"
       },
       "start_date": {
-        "type": "string"
+        "type": "string",
+        "description": "起始日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "end_date": {
-        "type": "string"
+        "type": "string",
+        "description": "结束日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "is_open": {
         "type": "string",
         "enum": [
           "0",
           "1"
-        ]
+        ],
+        "description": "是否交易日（0=否，1=是）"
       }
-    }
+    },
+    "description": "获取A股交易日历。使用 Tushare Pro API。"
   }
 }

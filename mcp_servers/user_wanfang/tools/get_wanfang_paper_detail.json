@@ -1,0 +1,23 @@
+{
+  "name": "get_wanfang_paper_detail",
+  "description": "获取万方数据单篇论文的详细信息。\n\n通过论文 ID 或标题获取完整元数据，包括：摘要、关键词、作者信息、期刊信息、基金、DOI、ISSN等。\n\n可通过万方数据论文 ID 或论文标题查询。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "wanfang_id": {
+        "type": "string",
+        "description": "万方数据论文 ID"
+      },
+      "title": {
+        "type": "string",
+        "description": "论文标题（用于模糊匹配搜索）"
+      },
+      "fetch_citations": {
+        "type": "boolean",
+        "description": "是否获取引用该论文的其他论文（默认False）",
+        "default": false
+      }
+    },
+    "description": "Get detailed metadata for a Wanfang paper. 数据源：万方数据详情页。"
+  }
+}

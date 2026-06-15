@@ -1,11 +1,17 @@
 {
   "name": "get_sec_cik_by_ticker",
   "description": "通过 ticker 获取公司 CIK 编号",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "ticker": { "type": "string", "description": "股票 ticker，例如 'AAPL'" }
+      "ticker": {
+        "type": "string",
+        "description": "股票代码（如 AAPL/MSFT）"
+      }
     },
-    "required": ["ticker"]
+    "required": [
+      "ticker"
+    ],
+    "description": "通过 ticker 获取公司 CIK 编号"
   }
 }

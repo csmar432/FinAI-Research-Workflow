@@ -1021,7 +1021,7 @@ from scripts.setup_wizard import check_and_guide_setup
 result = check_and_guide_setup(topic="关税政策对A股的影响")
 # result = {
 #     "needs_setup": True,
-#     "missing": ["DEEPSEEK_API_KEY", "TUSHARE_API_KEY"],
+#     "missing": ["DEEPSEEK_API_KEY", "TUSHARE_TOKEN"],
 #     "guidance": "..."   # 格式化的配置指南文本
 # }
 ```
@@ -1040,11 +1040,11 @@ result = check_and_guide_setup(topic="关税政策对A股的影响")
 
 | Direction | Label | 推荐配置 |
 |-----------|-------|---------|
-| `a_share` | A股研究 | DEEPSEEK_API_KEY, TUSHARE_API_KEY |
+| `a_share` | A股研究 | DEEPSEEK_API_KEY, TUSHARE_TOKEN |
 | `macro` | 宏观经济研究 | DEEPSEEK_API_KEY, BRAVE_SEARCH_API_KEY |
-| `empirical_paper` | 实证学术论文 | DEEPSEEK_API_KEY, TUSHARE_API_KEY, BRAVE_SEARCH_API_KEY |
-| `quantitative` | 量化投资研究 | DEEPSEEK_API_KEY, TUSHARE_API_KEY, EODHD_API_KEY |
-| `financial_report` | 金融研究报告撰写 | DEEPSEEK_API_KEY, RELAY_API_KEY, TUSHARE_API_KEY, BRAVE_SEARCH_API_KEY |
+| `empirical_paper` | 实证学术论文 | DEEPSEEK_API_KEY, TUSHARE_TOKEN, BRAVE_SEARCH_API_KEY |
+| `quantitative` | 量化投资研究 | DEEPSEEK_API_KEY, TUSHARE_TOKEN, EODHD_API_KEY |
+| `financial_report` | 金融研究报告撰写 | DEEPSEEK_API_KEY, RELAY_API_KEY, TUSHARE_TOKEN, BRAVE_SEARCH_API_KEY |
 
 #### CLI 用法
 
@@ -1078,7 +1078,7 @@ result = pipeline.run("关税政策对A股的影响")
 #   [配置提示] 研究工作流配置检测
 # ============================================================
 #   缺失 [必须] DEEPSEEK_API_KEY — DeepSeek API Key（中文LLM调用，必需）
-#   缺失 [推荐] TUSHARE_API_KEY — Tushare Pro API Key（A股数据）
+#   缺失 [推荐] TUSHARE_TOKEN — Tushare Pro API Key（A股数据）
 #   ...
 #   快速配置: python scripts/setup_wizard.py --guided
 # ============================================================

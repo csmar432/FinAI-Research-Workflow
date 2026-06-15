@@ -1,6 +1,6 @@
 {
   "name": "search_nber_papers",
-  "description": "搜索NBER工作论文。",
+  "description": "搜索NBER工作论文。\n\n支持关键词搜索、作者搜索、分类筛选。",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -10,23 +10,27 @@
       },
       "author": {
         "type": "string",
-        "description": "作者名称"
+        "description": "作者名称（可选）"
       },
       "year_from": {
         "type": "integer",
-        "description": "起始年份"
+        "description": "起始年份",
+        "default": 2020
       },
       "year_to": {
         "type": "integer",
-        "description": "结束年份"
+        "description": "结束年份",
+        "default": 2025
       },
       "limit": {
         "type": "integer",
-        "description": "返回数量"
+        "description": "返回数量",
+        "default": 20
       }
     },
     "required": [
       "query"
-    ]
+    ],
+    "description": "Search parameters for NBER Working Papers（无需API Key） query"
   }
 }

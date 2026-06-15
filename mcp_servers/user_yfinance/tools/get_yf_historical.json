@@ -1,14 +1,40 @@
 {
   "name": "get_yf_historical",
-  "description": "获取股票历史价格",
-  "parameters": {
+  "description": "获取股票历史行情数据（日/周/月频）。使用 Yahoo Finance API，无需 API Key。可获取：调整后收盘价、开盘价、最高价、最低价、成交量、股息、拆股。用于量化策略回测、风险分析和资产定价研究。",
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "ticker": { "type": "string", "description": "股票代码，例如 'AAPL'" },
-      "start_date": { "type": "string", "description": "开始日期，格式 'YYYY-MM-DD'" },
-      "end_date": { "type": "string", "description": "结束日期，格式 'YYYY-MM-DD'" },
-      "interval": { "type": "string", "description": "K线周期：'1d','1wk','1mo'", "default": "1d" }
+      "ticker": {
+        "type": "string",
+        "description": "股票代码（如 AAPL、TSLA、0700.HK）",
+        "required": true
+      },
+      "start_date": {
+        "type": "string",
+        "description": "开始日期（YYYY-MM-DD）",
+        "required": true
+      },
+      "end_date": {
+        "type": "string",
+        "description": "结束日期（YYYY-MM-DD）",
+        "required": true
+      },
+      "interval": {
+        "type": "string",
+        "enum": [
+          "1d",
+          "1wk",
+          "1mo"
+        ],
+        "description": "数据频率",
+        "default": "1mo"
+      }
     },
-    "required": ["ticker", "start_date", "end_date"]
+    "required": [
+      "ticker",
+      "start_date",
+      "end_date"
+    ],
+    "description": "获取股票历史行情数据（日/周/月频）。使用 Yahoo Finance API，无需 API Key。"
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "ArXiv",
+  "version": "1.0.0",
+  "is_mock": false,
+  "requires_api_key": false,
+  "server_name": "user-arxiv",
+  "serverIdentifier": "user-arxiv",
+  "description": "ArXiv 学术论文搜索。使用 ArXiv API，完全免费，无需 API Key。覆盖cs, econ, eess, q-fin等学科。",
+  "tools": ["semantic_search", "get_arxiv_paper"],
+  "_note": "ArXiv API 限流：1秒1请求，避免批量抓取"
+}

@@ -13,12 +13,12 @@
 修复记录（2026-05-25）：
   1. 模型名升级至最新版本：DeepSeek deepseek-v4-flash，Claude claude-sonnet-4-7，Gemini gemini-3.5-flash
   2. ai_router.py：添加空内容检测 + timeout 参数传递
-  3. review_layer.py：修复 review_and_fix 方法变量作用域问题
+  3. econometrics_extended.py：修复回归引擎变量作用域问题
   4. generate_docx_tables.py：修复 LaTeX 块公式、单行公式、行内公式解析
   5. 本脚本：整合所有模块为统一入口
 
 改进记录（2026-05-23）：
-  6. econometrics.py：新增程序化回归引擎，真实表格由 statsmodels 计算，不依赖 AI 生成数字
+  7. econometrics_extended.py：新增程序化回归引擎，真实表格由 statsmodels 计算，不依赖 AI 生成数字
   7. 表格由 RegressionTable.to_markdown() 程序化生成，确保数字真实可靠
   8. prompt 中明确标注"以下所有表格均为程序化计算结果，请直接引用"
 """

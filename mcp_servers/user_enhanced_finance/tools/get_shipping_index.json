@@ -18,6 +18,7 @@
     },
     "required": [
       "index_name"
-    ]
+    ],
+    "description": "获取航运指数（BDI/BCI/BPI/BDTI/BCTI）。使用 akshare 接口，无需 API Key。"
   }
 }

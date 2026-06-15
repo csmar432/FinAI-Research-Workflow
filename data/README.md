@@ -1,37 +1,158 @@
 # data/ 目录说明
 
-本目录存放项目使用的外部数据文件，这些是用户提供的本地参考文件，非自动生成。
+> 所有外部数据文件统一放入 `data/` 目录。系统会从此目录读取用户提供的文件。
 
-## 文件说明
+---
 
-| 文件 | 说明 |
-|------|------|
-| `national_province_data_2026.json` | 全国各省科技创新面板数据（含研发投入、专利产出等指标） |
-| `msci_esg_ratings.json` | MSCI ESG评级数据 |
-| `msci_esg_ratings_xu.json` | MSCI ESG评级数据（xu来源） |
-| `msci_esg_ratings_cyh.json` | MSCI ESG评级数据（cyh来源） |
-| `test_national.json` | 全国数据测试文件 |
-| `charts/test_save_1.png` | 测试图表输出 |
-| `finance/.gitkeep` | 金融数据目录占位文件 |
-| `test_templates/` | 期刊模板测试文件 |
-| `test_templates/经济研究.tex` | 《经济研究》格式模板 |
-| `test_templates/金融研究.tex` | 《金融研究》格式模板 |
-| `test_templates/管理世界.tex` | 《管理世界》格式模板 |
+## 目录结构
 
+```
+data/                          ← 外部数据唯一入口
+├── README.md                  ← 本说明文件
+├── finance/                   ← 【常用】金融数据
+│   ├── stock_financials/      │   A股财务（利润表/资产负债表/现金流量表）
+│   │   └── .gitkeep
+│   ├── market_data/           │   行情数据（日频/月频）
+│   │   └── .gitkeep
+│   ├── fund_data/             │   基金数据
+│   │   └── .gitkeep
+│   └── bond_data/             │   债券数据
+│       └── .gitkeep
+├── customs/                   ← 【关税研究必备】海关进出口
+│   ├── company_import.csv      │   企业进口明细（HS编码、金额）
+│   ├── company_export.csv      │   企业出口明细（HS编码、金额）
+│   └── .gitkeep
+├── esg/                      ← ESG评级数据
+│   └── .gitkeep
+├── macro/                    ← 宏观数据
+│   ├── national_province_data_2026.json  # 全国各省科技创新面板
+│   └── .gitkeep
+├── policy/                   ← 政策实验数据
+│   ├── tariff_events.csv     │   关税政策事件（2018年中美贸易战）
+│   ├── policy_qualtrics.csv
+│   └── .gitkeep
+├── alternative_data/          ← 另类数据
+│   ├── satellite/             │   卫星图像数据
+│   ├── news_sentiment/       │   新闻情绪数据
+│   ├── patent_data/          │   专利数据
+│   └── .gitkeep
+├── user_uploaded/            ← 用户临时上传（不提交git）
+│   └── .gitkeep
+└── processed/               ← 【自动生成】清洗后的中间数据
+    └── .gitkeep
+```
+
+---
+
+## 快速上手
+
+### 方式一：放置Excel/CSV文件
+
+将文件放入对应子目录后，在 `FIN_BRIEF.md` 中注明：
+
+```markdown
 ## 数据来源
 
-- **省级科技创新数据**：`national_province_data_2026.json` 由马克数据网（https://www.macrodur.cn）获取
-- **ESG评级数据**：`msci_esg_ratings*.json` 来自MSCI官方网站或第三方数据聚合
-- **期刊模板**：`test_templates/` 中的模板文件参考各期刊官方格式要求
+| 数据类型 | 文件路径 | 来源 | 字段说明 |
+|---------|---------|------|---------|
+| A股财务 | data/finance/stock_financials/annual.csv | CSMAR | 资产负债率、ROA |
+| 海关出口 | data/customs/company_export.csv | 海关总署 | HS编码、出口额 |
+```
 
-## 更新方式
+### 方式二：让AI Agent自动读取
 
-1. **省级数据**：访问马克数据网重新下载最新数据，替换 `national_province_data_2026.json`
-2. **ESG评级**：从MSCI官网或数据供应商获取最新评级数据
-3. **模板文件**：参考各期刊官网最新投稿指南更新
+在 Cursor 中描述数据路径：
+```
+"我的A股财务数据在 data/finance/stock_financials/annual.csv，帮我用这个数据跑DID回归"
+```
 
-## 注意事项
+### 方式三：MCP自动拉取（无需手动提供）
 
-- 本目录已在 `.gitignore` 中忽略，敏感数据不会提交到版本库
-- 数据文件较大时建议使用 Git LFS 或单独管理
-- 使用数据前请验证数据时效性和完整性
+配置API Key后自动获取：
+- **A股数据**：`user-tushare`（需 TUSHARE_TOKEN，https://tushare.pro/register）
+- **宏观数据**：`user-financial`（无需Key）
+- **美股数据**：`user-yfinance`（无需Key）
+
+---
+
+## 文件命名规范
+
+| 类型 | 命名格式 | 示例 |
+|------|---------|------|
+| 面板数据 | `{topic}_{freq}_{year_range}.csv` | `a_share_annual_2010_2024.csv` |
+| 事件数据 | `{event}_{date}.csv` | `tariff_2018_07.csv` |
+| 评级数据 | `{provider}_{type}_{year}.csv` | `msci_esg_2024.csv` |
+| 宏观数据 | `{region}_{indicator}_{year_range}.xlsx` | `china_province_gdp_2010_2023.xlsx` |
+
+---
+
+## 当前已有文件
+
+| 文件 | 说明 | 来源 |
+|------|------|------|
+| `national_province_data_2026.json` | 全国各省科技创新面板数据 | 马克数据网（macrodur.cn）|
+| `policy_experiments/policy_database.json` | 政策实验数据库 | — |
+| `test_templates/` | 期刊 LaTeX 模板样例（管理世界/经济研究/金融研究）| — |
+| `charts/` | 图表输出目录 | — |
+| `finance/` | 金融数据目录占位 | — |
+
+> 注：`msci_esg_ratings.json` 和 `national_province_data_2026.xlsx` 已在 git 中删除，如需请重新下载。
+
+---
+
+## 数据来源推荐
+
+### A股上市公司数据
+
+| 来源 | 覆盖 | 成本 |
+|------|------|------|
+| **Tushare Pro** | 行情、财务、融资融券、龙虎榜 | 免费/付费 |
+| **CSMAR** | 最全，国泰安 | 学校授权 |
+| **Wind** | 最全，机构版 | 商业授权 |
+| **akshare** | 部分数据免费 | 免费 |
+
+### 海关进出口数据
+
+| 来源 | 说明 |
+|------|------|
+| **CSMAR海关数据库** | 含上市公司HS编码、进出口金额（学校授权）|
+| **海关总署官网** | 宏观层面，需手动汇总 |
+| **中国统计年鉴** | 省级层面 |
+
+### ESG评级数据
+
+| 来源 | 说明 |
+|------|------|
+| **MSCI官网** | 需账号 |
+| **华证指数** | 免费部分可用 |
+| **商道融绿** | 国内ESG数据 |
+| **中证ESG** | 需账号 |
+
+---
+
+## 禁止事项
+
+- ❌ 不要将数据文件放入 `scripts/` 或 `mcp_servers/` 目录
+- ❌ 不要在 `output/` 目录存放原始数据（output 是输出目录）
+- ❌ 不要提交超过 10MB 的数据文件到 git（使用 `.gitignore`）
+- ❌ 敏感数据（身份证、账户信息）禁止放入项目目录
+
+---
+
+## Git忽略配置
+
+`data/` 目录已在项目级 `.gitignore` 中配置：
+
+```
+# 数据目录（不提交git）
+data/
+# 但保留以下文件
+!data/README.md
+!data/.gitkeep
+```
+
+如需提交大型数据文件，使用 Git LFS：
+```bash
+git lfs track "data/**/*.xlsx"
+git lfs track "data/**/*.csv"
+```

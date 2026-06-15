@@ -1,0 +1,15 @@
+{
+  "name": "Third-Party ESG",
+  "version": "1.0.0",
+  "is_mock": false,
+  "requires_api_key": true,
+  "server_name": "user-third-party-esg",
+  "serverIdentifier": "user-third-party-esg",
+  "description": "第三方ESG评级数据。整合商道融绿（SynTao）、华证指数（CSI）、中证ESG（CSI ESG）、富时ESG等评级机构数据。支持企业ESG评分、评级分布、行业对比。需各机构API Key。",
+  "tools": [
+    "get_esg_rating",
+    "get_esg_trend",
+    "get_esg_controversy",
+    "get_esg_ranking"
+  ]
+}

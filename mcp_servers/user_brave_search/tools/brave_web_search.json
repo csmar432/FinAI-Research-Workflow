@@ -1,0 +1,23 @@
+{
+  "name": "brave_web_search",
+  "description": "网络搜索工具。使用 Brave Search API，需要 BRAVE_SEARCH_API_KEY（免费注册：https://api.search.brave.com）。Brave Search 在中英文网络内容上覆盖率极高，特别适合：中文学术搜索（知网、维普、万方等）、中美贸易政策新闻和报告、企业信息（天眼查、启信宝等）、实时政策动态。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "搜索查询词",
+        "required": true
+      },
+      "count": {
+        "type": "integer",
+        "description": "返回结果数量（默认10，最大50）",
+        "default": 10
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "description": "Search parameters for Brave Search 网络搜索。需 BRAVE_SEARCH_API_KEY（免费注册）。覆盖中英文网页、学术资源、政策文件。 query"
+  }
+}

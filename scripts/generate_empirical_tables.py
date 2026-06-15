@@ -2,7 +2,7 @@
 """
 实证表格生成器
 ==============
-整合 tariff_research_pipeline.py 的数据 + econometrics.py 的回归引擎，
+整合 tariff_research_pipeline.py 的数据 + econometrics_extended.py 的回归引擎，
 生成可直接嵌入论文的规范 Markdown 表格。
 
 设计原则：

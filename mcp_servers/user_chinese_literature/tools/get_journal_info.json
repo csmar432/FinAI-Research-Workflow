@@ -1,0 +1,18 @@
+{
+  "name": "get_journal_info",
+  "description": "获取期刊的详细信息（影响因子、期刊分类、主办单位、审稿周期、发表费用等）。通过 Crossref API 查询 DOI 关联的期刊元数据。用于评估期刊质量和选择目标投稿期刊。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "journal_name": {
+        "type": "string",
+        "description": "期刊名称（如 Journal of Financial Economics）",
+        "required": true
+      }
+    },
+    "required": [
+      "journal_name"
+    ],
+    "description": "获取中文文献检索 MCP 服务器。整合百度学术（免费/API）、OpenAlex 和 Crossref，覆盖中国知网(CNKI)、万方数据cssci.cssn.cn的核心学术论文。提供论文元数据、引用关系、期刊分类等信息。中的journal info"
+  }
+}

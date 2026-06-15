@@ -19,6 +19,15 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "NodeType",
+    "SourceRef",
+    "ProvenanceNode",
+    "compute_checksum",
+    "get_chain",
+    "latex_provenance_comment",
+]
+
 import hashlib
 import json
 import re
@@ -455,6 +464,45 @@ class ProvenanceChain:
 
         return report
 
+    def export_figure_provenance_report(
+        self,
+        figure_identifier: str,
+        output_path: Path | None = None,
+    ) -> str:
+        """Generate a per-figure provenance report as Markdown.
+
+        Shows the complete data lineage for a specific figure with hyperlinks.
+        """
+        nodes = self.trace_figure(figure_identifier)
+
+        lines = [
+            f"# Provenance Report: {figure_identifier}",
+            "",
+            f"Found {len(nodes)} provenance nodes.",
+            "",
+        ]
+
+        for i, node in enumerate(nodes):
+            lines.append(f"## Step {i + 1}: {node.node_type.value}")
+            lines.append(f"- **ID**: `{node.node_id}`")
+            lines.append(f"- **Source**: {node.source}")
+            lines.append(f"- **Timestamp**: {datetime.fromtimestamp(node.timestamp).isoformat()}")
+            if node.code_ref:
+                lines.append(f"- **Code**: `{node.code_ref}`")
+            if node.metadata:
+                for k, v in node.metadata.items():
+                    lines.append(f"- **{k}**: {v}")
+            lines.append("")
+
+        content = "\n".join(lines)
+
+        if output_path:
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(content, encoding="utf-8")
+
+        return content
+
     # ── Storage ────────────────────────────────────────────────────────
 
     def _save(self) -> None:
@@ -527,11 +575,11 @@ class ProvenanceChain:
             version=d.get("version", "1.0"),
         )
 
-@staticmethod
-def _file_hash(path: Path) -> str:
-    if path.exists():
-        return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
-    return ""
+    @staticmethod
+    def _file_hash(path: Path) -> str:
+        if path.exists():
+            return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+        return ""
 
 
 def compute_checksum(data: dict | list | str) -> str:

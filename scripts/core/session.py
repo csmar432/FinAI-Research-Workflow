@@ -17,6 +17,12 @@ User-facing entry point for the economic research agent.
 
 from __future__ import annotations
 
+__all__ = [
+    "SessionState",
+    "SessionStatus",
+    "SessionConfig",
+]
+
 import concurrent.futures
 import threading
 import time
@@ -235,8 +241,8 @@ class ResearchSession:
         return {
             "status": "enabled",
             "is_active": engine.is_active(),
-            "events": len(engine._history),
-            "proposals": len(engine._proposals),
+            "events": len(engine._history) if hasattr(engine, "_history") else 0,
+            "proposals": len(engine._proposals) if hasattr(engine, "_proposals") else 0,
         }
 
     def run(self, user_request: str) -> dict[str, Any]:
@@ -657,13 +663,8 @@ class ResearchSession:
                         return result.output
                     last_error = result.error
                 except NotImplementedError:
-                    return {
-                        "task_id": task.id,
-                        "task_type": task.task_type.value,
-                        "status": "mocked",
-                        "note": f"Tool '{selection.tool_name}' not implemented",
-                        "attempt": attempt,
-                    }
+                    # Don't give up — try remaining selections, then retry
+                    last_error = f"Tool '{selection.tool_name}' not implemented (NotImplementedError)"
                 except Exception as exc:
                     last_error = str(exc)
 

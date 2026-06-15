@@ -18,6 +18,7 @@
         "description": "结束日期 YYYYMMDD（可选）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "获取外汇历史走势数据（仅支持指定货币对）。使用 akshare 东方财富接口，无需 API Key。"
   }
 }

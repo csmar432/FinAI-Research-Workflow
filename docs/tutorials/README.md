@@ -1,93 +1,68 @@
-# Tutorials
+# Tutorials · 教程
 
-> Step-by-step guides for using the FinResearch Agent system.
-
-| # | Tutorial | Description | Difficulty |
-|---|----------|-------------|------------|
-| 1 | [快速入门 (Quickstart)](01-quickstart.md) | 5分钟快速配置和运行第一个研究流程 | Beginner |
-| 2 | [金融研究报告写作 (Financial Report)](02-financial-report.md) | 生成A股/全球市场的专业研报 | Intermediate |
-| 3 | [研究方向系统 (Research Directions)](03-research-directions.md) | 使用、浏览和扩展研究方向框架 | Intermediate |
-| 4 | [MCP 工具市场 (MCP Marketplace)](04-mcp-marketplace.md) | MCP 数据工具的安装、配置和使用 | Beginner |
-| 5 | [事件驱动研究 (Event-Driven Research)](05-event-driven-research.md) | 基于政策事件设计因果识别策略 | Advanced |
+> 从零开始掌握「论文-研报工作流」的完整使用路径。
 
 ---
 
-## Tutorial Index
+## 教程目录
 
-### Tutorial 1: 快速入门 (Quickstart)
-**File**: `docs/tutorials/01-quickstart.md`
-
-覆盖内容：
-- 环境配置（Python 3.11+、API Key）
-- 依赖安装（pip install -r requirements.txt）
-- 运行第一个研究流程
-- Cursor Agent 交互方式
-- 常见问题解答
-
-**适合人群**: 首次使用本系统的用户
+| # | 教程 | 内容 | 预计时长 |
+|---|------|------|---------|
+| 1 | [快速入门](01-quickstart.md) | 5分钟配置 + 运行第一个研究流程 | 5 分钟 |
+| 2 | [金融研究报告](02-financial-report.md) | 使用脚本生成研报 + 数据获取 | 15 分钟 |
+| 3 | [研究方向设计](03-research-directions.md) | 发现研究想法 + 数据验证 | 20 分钟 |
+| 4 | [MCP 工具市场](04-mcp-marketplace.md) | 41个数据服务器的安装与使用 | 30 分钟 |
+| 5 | [事件驱动研究](05-event-driven-research.md) | 宏观事件监控 + 自动触发研究 | 30 分钟 |
 
 ---
 
-### Tutorial 2: 金融研究报告写作 (Financial Report)
-**File**: `docs/tutorials/02-financial-report.md`
+## 推荐学习路径
 
-覆盖内容：
-- TushareDataAgent 使用（A股价数据、财务报表、融资融券）
-- ParallelAnalystOrchestrator 并行分析师架构
-- ResearchReportAgent 研报生成
-- 中文期刊模板（经济研究、金融研究、管理世界）
-- 程序化调用示例
-
-**适合人群**: 需要生成金融研究报告的用户
-
----
-
-### Tutorial 3: 研究方向系统 (Research Directions)
-**File**: `docs/tutorials/03-research-directions.md`
-
-覆盖内容：
-- 8个预置研究方向详解（carbon_economics, green_finance, macro_finance, asset_pricing, corporate_finance, digital_finance, carbon_trading, green_bond）
-- 列出可用方向
-- 关键词搜索
-- 加载和使用方向
-- 添加新研究方向（Python类 / YAML配置）
-
-**适合人群**: 需要设计实证研究方案的用户
-
----
-
-### Tutorial 4: MCP 工具市场 (MCP Marketplace)
-**File**: `docs/tutorials/04-mcp-marketplace.md`
-
-覆盖内容：
-- MCP 工具概述（Tushare、Financial、EODHD、EastMoney等）
-- 工具安装和配置
-- 工具使用示例
-- API Key 管理
-
-**适合人群**: 需要获取实时市场/宏观数据的用户
-
----
-
-### Tutorial 5: 事件驱动研究 (Event-Driven Research)
-**File**: `docs/tutorials/05-event-driven-research.md`
-
-覆盖内容：
-- 事件研究法 (Event Study)
-- 断点回归设计 (RDD)
-- 双重差分法 (DID)
-- 工具变量法 (IV)
-- 倾向得分匹配 (PSM)
-- 中国政策事件日历
-
-**适合人群**: 需要设计因果识别策略的高级用户
-
----
-
-## Quick Navigation
+### 路径 A：快速体验（30 分钟）
 
 ```
-新用户 → Tutorial 1 → Tutorial 2 → Tutorial 4
-实证研究 → Tutorial 3 → Tutorial 5
-MCP数据 → Tutorial 4
+1. 快速入门        → 配置环境，运行演示流程
+2. 金融研究报告    → 生成一份研报
+3. MCP 工具市场    → 了解可用的数据源
 ```
+
+### 路径 B：完整研究流程（2 小时）
+
+```
+1. 快速入门        → 配置环境
+2. 研究方向设计    → 发现研究想法
+3. MCP 工具市场    → 配置所需数据源
+4. 事件驱动研究    → 掌握自动化研究能力
+```
+
+---
+
+## 前置条件
+
+所有教程的前置条件相同：
+
+- Python 3.11+
+- `.env` 中配置至少一个 LLM API Key
+- 按[快速入门](01-quickstart.md)完成依赖安装
+
+---
+
+## 快速参考
+
+| 操作 | 命令 |
+|------|------|
+| 健康检查 | `python scripts/health_check.py` |
+| 运行研报 | `python scripts/demo_research_report.py` |
+| 运行测试 | `python -m pytest tests/ -q` |
+| MCP 诊断 | `python scripts/mcp_diagnostic.py` |
+| 查看帮助 | `python scripts/agent_pipeline.py --help` |
+
+---
+
+## 故障排查
+
+遇到问题时：
+
+1. 查看 [FAQ.md](../../FAQ.md)（30 个常见问题）
+2. 运行 `python scripts/health_check.py --verify` 获取详细诊断
+3. 检查 [.env.example](../../.env.example) 确认 API Key 配置

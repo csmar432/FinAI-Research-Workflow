@@ -18,6 +18,16 @@ model_router.py — 智能模型路由器
 
 from __future__ import annotations
 
+__all__ = [
+    "TaskType",
+    "ModelChoice",
+    "TaskClassification",
+    "ModelConfig",
+    "TaskClassifier",
+    "ModelSelector",
+    "ModelRouter",
+]
+
 import json
 import logging
 import os

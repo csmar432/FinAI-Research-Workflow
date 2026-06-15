@@ -25,6 +25,7 @@
     },
     "required": [
       "commodity"
-    ]
+    ],
+    "description": "获取大宗商品价格（黄金/白银/原油）。使用 akshare 接口，无需 API Key。"
   }
 }

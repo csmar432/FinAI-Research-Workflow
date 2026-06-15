@@ -31,6 +31,12 @@ class CacheError(WorkflowError):
     pass
 
 
+class DataSourceError(WorkflowError):
+    """Raised when no data source is available for a research direction."""
+
+    pass
+
+
 class CitationError(WorkflowError):
     """Raised when citation resolution fails."""
 

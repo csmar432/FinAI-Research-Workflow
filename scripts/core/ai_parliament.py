@@ -16,15 +16,43 @@ Model names are configurable via environment variables:
 
 from __future__ import annotations
 
+__all__ = [
+    "MemberType",
+    "MemberConfig",
+    "DebateRound",
+    "RebuttalRound",
+    "Verdict",
+    "BaseMemberAgent",
+    "ChairAgent",
+    "EngineeringMemberAgent",
+    "FinanceMemberAgent",
+    "MemberMethodologyAgent",
+    "MemberStatisticsAgent",
+    "MemberWritingAgent",
+    "AIParliament",
+    "AIParliamentHITLIntegration",
+    "MEMBER_CONFIGS",
+    "main",
+]
+
 import asyncio
 import json
 import logging
 import os
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Lazy import to avoid circular dependencies
+_SPECIALIZED_AGENTS_AVAILABLE = False
+try:
+    from scripts.core.specialized_agents import run_all_agents, AgentReviewResult
+    _SPECIALIZED_AGENTS_AVAILABLE = True
+except ImportError:
+    pass
 
 
 # ─── Environment-based Model Resolution ─────────────────────────────────────────
@@ -47,6 +75,9 @@ class MemberType(Enum):
     CHAIR = "chair"
     MEMBER_ENGINEERING = "member_engineering"
     MEMBER_FINANCE = "member_finance"
+    MEMBER_METHODOLOGY = "methodology"  # NEW - econometric methodology
+    MEMBER_STATISTICS = "statistics"    # NEW - statistical power and testing
+    MEMBER_WRITING = "writing"          # NEW - writing quality and LaTeX
 
 
 @dataclass
@@ -70,6 +101,15 @@ class DebateRound:
 
 
 @dataclass
+class RebuttalRound:
+    """A single rebuttal round."""
+    round_num: int
+    member_type: MemberType
+    response_to_summary: str
+    strength: str  # "strong", "moderate", "weak"
+
+
+@dataclass
 class Verdict:
     """Final verdict from the parliament."""
     score: float  # 0-5
@@ -78,6 +118,15 @@ class Verdict:
     key_strengths: list[str]
     key_weaknesses: list[str]
     debate_rounds: list[DebateRound] = field(default_factory=list)
+    # New fields
+    rebuttal_rounds: list[RebuttalRound] = field(default_factory=list)
+    disputed: bool = False  # True if any two members differ by > 1.0
+    all_arguments: list[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        # Compute disputed flag based on debate round scores
+        # This is a simplified check; actual score tracking happens in debate()
+        pass
 
 
 # ─── Member Configurations ──────────────────────────────────────────────────────
@@ -108,29 +157,56 @@ MEMBER_CONFIGS: dict[MemberType, MemberConfig] = {
         expertise=["金融工程", "计量经济学", "资产定价", "风险管理"],
         perspective="理论视角：理论是否扎实，建模是否合理，应用价值如何",
     ),
+    MemberType.MEMBER_METHODOLOGY: MemberConfig(
+        member_type=MemberType.MEMBER_METHODOLOGY,
+        name="方法论委员",
+        role="专注于因果推断方法论评审：识别策略、平行趋势、SE聚类",
+        model=_resolve_model("PARLIAMENT_METHODOLOGY_MODEL", "claude-3-opus-latest"),
+        expertise=["计量经济学", "因果推断", "DID/IV/RDD", "合成控制"],
+        perspective="方法论视角：识别策略是否可靠，平行趋势假设是否检验，SUTVA是否满足",
+    ),
+    MemberType.MEMBER_STATISTICS: MemberConfig(
+        member_type=MemberType.MEMBER_STATISTICS,
+        name="统计委员",
+        role="专注于统计功效、置信区间、等价性检验和多重检验校正",
+        model=_resolve_model("PARLIAMENT_STATISTICS_MODEL", "gpt-4o"),
+        expertise=["假设检验", "统计功效", "置信区间", "FDR校正", "TOST"],
+        perspective="统计视角：CI宽度与系数幅度关系，统计功效，等价性检验，多重比较校正",
+    ),
+    MemberType.MEMBER_WRITING: MemberConfig(
+        member_type=MemberType.MEMBER_WRITING,
+        name="写作质量委员",
+        role="专注于写作质量、LaTeX结构、图表清晰度和学术规范",
+        model=_resolve_model("PARLIAMENT_WRITING_MODEL", "gemini-2.5-flash-preview-05-20"),
+        expertise=["学术写作", "LaTeX排版", "图表设计", "学术规范"],
+        perspective="写作视角：代词明确性、时态一致性、图表引用格式、表格标题、章节过渡",
+    ),
 }
 
 
 # ─── Base Member Agent ──────────────────────────────────────────────────────────
 
 
-class BaseMemberAgent:
+class BaseMemberAgent(ABC):
     """Base class for parliament member agents."""
 
     def __init__(self, config: MemberConfig, gateway=None):
         self.config = config
         self.gateway = gateway
 
+    @abstractmethod
     async def opening_statement(self, paper: dict) -> str:
         """Generate opening statement for the debate."""
         raise NotImplementedError
 
+    @abstractmethod
     async def respond(self, context: dict) -> str:
         """Respond to other members' arguments."""
         raise NotImplementedError
 
+    @abstractmethod
     async def final_statement(self, context: dict) -> str:
-        """Generate final statement with score recommendation."""
+        """Generate final statement and summary."""
         raise NotImplementedError
 
 
@@ -153,7 +229,12 @@ class ChairAgent(BaseMemberAgent):
 3. 潜在贡献
 
 请以主持人的身份发表开场陈述。"""
-        return await self._generate_response(prompt)
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
 
     async def respond(self, context: dict) -> str:
         """Chair summarizes and keeps debate on track."""
@@ -170,7 +251,12 @@ class ChairAgent(BaseMemberAgent):
 {finance_arg[:500]}
 
 请总结双方核心论点，指出分歧点，并引导进入下一轮讨论。"""
-        return await self._generate_response(prompt)
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
 
     async def final_statement(self, context: dict) -> dict:
         """Chair produces final verdict."""
@@ -194,10 +280,40 @@ class ChairAgent(BaseMemberAgent):
 
 请以JSON格式输出。"""
         response = await self._generate_response(prompt)
+        if isinstance(response, dict):
+            # Gateway error during final_statement — propagate structured error
+            return {
+                "score": None,
+                "recommendation": "error",
+                "summary": f"{response.get('error_type', 'Unknown')}: {response.get('error', 'LLM调用失败')}",
+                "key_strengths": [],
+                "key_weaknesses": [],
+                "_error": True,
+                "_error_message": response.get("error", str(response)),
+                "_error_type": response.get("error_type"),
+            }
+        if response is None:
+            return {
+                "score": None,
+                "recommendation": "error",
+                "summary": "未配置LLM网关",
+                "key_strengths": [],
+                "key_weaknesses": [],
+                "_error": True,
+                "_error_message": "LLM gateway not configured",
+            }
         return self._parse_verdict(response, all_arguments)
 
-    async def _generate_response(self, prompt: str) -> str:
-        """Generate response using gateway or fallback."""
+    async def _generate_response(self, prompt: str) -> str | dict | None:
+        """Generate response using gateway or fallback.
+
+        Returns
+        -------
+        str | dict | None
+            On success: string content.
+            On gateway error: dict with None scores and error info.
+            On no gateway: None (caller handles gracefully).
+        """
         if self.gateway:
             try:
                 result = self.gateway.generate(
@@ -206,11 +322,17 @@ class ChairAgent(BaseMemberAgent):
                     model=self.config.model,  # Use member's configured model
                 )
                 return result.response
-            except Exception as e:
-                logger.error(f"LLM gateway call failed: {e}")
-                # Return a clear error indicator instead of hiding the failure
-                return f"[ERROR: LLM调用失败 - {type(e).__name__}]"
-        return "[WARNING: 未配置LLM网关]"
+            except Exception as exc:
+                logger.warning(f"[{self.config.member_type.value}] Generation failed: {exc}")
+                return {
+                    "content": "",
+                    "overall": None,
+                    "methodology": None,
+                    "novelty": None,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+        return None
 
     def _parse_verdict(self, response: str, arguments: list) -> dict:
         """Parse verdict from response."""
@@ -218,7 +340,7 @@ class ChairAgent(BaseMemberAgent):
         if response.startswith("[ERROR:") or response.startswith("[WARNING:"):
             logger.error(f"LLM verdict generation failed: {response}")
             return {
-                "score": 0.0,
+                "score": None,
                 "recommendation": "error",
                 "summary": response,
                 "key_strengths": [],
@@ -244,9 +366,9 @@ class ChairAgent(BaseMemberAgent):
         except Exception:
             pass
 
-        logger.warning(f"Could not parse verdict JSON, falling back to score=3.0: {response[:100]}")
+        logger.warning(f"Could not parse verdict JSON, falling back: {response[:100]}")
         return {
-            "score": 3.0,
+            "score": None,
             "recommendation": "revision",
             "summary": response[:500],
             "key_strengths": [],
@@ -295,7 +417,12 @@ class EngineeringMemberAgent(BaseMemberAgent):
 1. 同意或反驳哪些观点
 2. 补充工程实践中的重要考量
 3. 对论文的最终评价"""
-        return await self._generate_response(prompt)
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
 
     async def final_statement(self, context: dict) -> dict:
         """Engineering member's final evaluation."""
@@ -312,10 +439,30 @@ class EngineeringMemberAgent(BaseMemberAgent):
 
 JSON格式输出。"""
         response = await self._generate_response(prompt)
+        if isinstance(response, dict):
+            # Gateway error — propagate structured error
+            return {
+                "score": None,
+                "strengths": [],
+                "weaknesses": [],
+                "_error": True,
+                "_error_message": response.get("error", str(response)),
+                "_error_type": response.get("error_type"),
+            }
+        if response is None:
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "LLM gateway not configured"}
         return self._parse_score(response)
 
-    async def _generate_response(self, prompt: str) -> str:
-        """Generate response using gateway or fallback."""
+    async def _generate_response(self, prompt: str) -> str | dict | None:
+        """Generate response using gateway or fallback.
+
+        Returns
+        -------
+        str | dict | None
+            On success: string content.
+            On gateway error: dict with None scores and error info.
+            On no gateway: None (caller handles gracefully).
+        """
         if self.gateway:
             try:
                 result = self.gateway.generate(
@@ -324,16 +471,23 @@ JSON格式输出。"""
                     model=self.config.model,
                 )
                 return result.response
-            except Exception as e:
-                logger.error(f"LLM gateway call failed: {e}")
-                return f"[ERROR: LLM调用失败 - {type(e).__name__}]"
-        return "[WARNING: 未配置LLM网关]"
+            except Exception as exc:
+                logger.warning(f"[{self.config.member_type.value}] Generation failed: {exc}")
+                return {
+                    "content": "",
+                    "overall": None,
+                    "methodology": None,
+                    "novelty": None,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+        return None
 
     def _parse_score(self, response: str) -> dict:
         # Detect LLM failure markers
         if response.startswith("[ERROR:") or response.startswith("[WARNING:"):
             logger.error(f"LLM score generation failed: {response}")
-            return {"score": 0.0, "strengths": [], "weaknesses": [], "_error": True, "_error_message": response}
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": response}
 
         try:
             import re
@@ -341,7 +495,7 @@ JSON格式输出。"""
             if json_match:
                 data = json.loads(json_match.group())
                 return {
-                    "score": data.get("score", 3.0),
+                    "score": data.get("score"),
                     "strengths": data.get("strengths", []),
                     "weaknesses": data.get("weaknesses", []),
                     "_error": False,
@@ -349,8 +503,8 @@ JSON格式输出。"""
         except Exception:
             pass
 
-        logger.warning(f"Could not parse score JSON, falling back to score=3.0: {response[:100]}")
-        return {"score": 3.0, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
+        logger.warning(f"Could not parse score JSON: {response[:100]}")
+        return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
 
 
 class FinanceMemberAgent(BaseMemberAgent):
@@ -392,7 +546,12 @@ class FinanceMemberAgent(BaseMemberAgent):
 1. 同意或反驳哪些观点
 2. 补充理论层面的重要考量
 3. 对论文的最终评价"""
-        return await self._generate_response(prompt)
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
 
     async def final_statement(self, context: dict) -> dict:
         """Finance member's final evaluation."""
@@ -409,10 +568,29 @@ class FinanceMemberAgent(BaseMemberAgent):
 
 JSON格式输出。"""
         response = await self._generate_response(prompt)
+        if isinstance(response, dict):
+            return {
+                "score": None,
+                "strengths": [],
+                "weaknesses": [],
+                "_error": True,
+                "_error_message": response.get("error", str(response)),
+                "_error_type": response.get("error_type"),
+            }
+        if response is None:
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "LLM gateway not configured"}
         return self._parse_score(response)
 
-    async def _generate_response(self, prompt: str) -> str:
-        """Generate response using gateway or fallback."""
+    async def _generate_response(self, prompt: str) -> str | dict | None:
+        """Generate response using gateway or fallback.
+
+        Returns
+        -------
+        str | dict | None
+            On success: string content.
+            On gateway error: dict with None scores and error info.
+            On no gateway: None (caller handles gracefully).
+        """
         if self.gateway:
             try:
                 result = self.gateway.generate(
@@ -421,13 +599,160 @@ JSON格式输出。"""
                     model=self.config.model,
                 )
                 return result.response
-            except Exception as e:
-                logger.error(f"LLM gateway call failed: {e}")
-                return f"[ERROR: LLM调用失败 - {type(e).__name__}]"
-        return "[WARNING: 未配置LLM网关]"
+            except Exception as exc:
+                logger.warning(f"[{self.config.member_type.value}] Generation failed: {exc}")
+                return {
+                    "content": "",
+                    "overall": None,
+                    "methodology": None,
+                    "novelty": None,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+        return None
 
     def _parse_score(self, response: str) -> dict:
         # Detect LLM failure markers
+        if response.startswith("[ERROR:") or response.startswith("[WARNING:"):
+            logger.error(f"LLM score generation failed: {response}")
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": response}
+
+        try:
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                return {
+                    "score": data.get("score"),
+                    "strengths": data.get("strengths", []),
+                    "weaknesses": data.get("weaknesses", []),
+                    "_error": False,
+                }
+        except Exception:
+            pass
+
+        logger.warning(f"Could not parse score JSON: {response[:100]}")
+        return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
+
+
+class MemberMethodologyAgent(BaseMemberAgent):
+    """Reviews econometric methodology: identification strategy, parallel trends, SE clustering."""
+
+    def __init__(self, gateway=None):
+        super().__init__(MEMBER_CONFIGS[MemberType.MEMBER_METHODOLOGY], gateway)
+
+    async def opening_statement(self, paper: dict) -> str:
+        """Methodology perspective on the paper."""
+        prompt = f"""You are a methodology reviewer specializing in econometric causal inference.
+Review this paper focusing ONLY on econometric methodology.
+
+Paper Title: {paper.get('title', 'N/A')}
+Abstract: {paper.get('abstract', paper.get('content', 'N/A')[:800])}
+
+Please evaluate from the methodology perspective:
+1. **Identification Strategy**: Is the causal identification strategy clearly stated and appropriate?
+   - What is the key identifying assumption?
+   - Is it plausible given the context?
+2. **Parallel Trends**: 
+   - Are pre-treatment trends tested and visualized?
+   - Is the event study specification correctly specified?
+3. **SUTVA Compliance**:
+   - No anticipation assumption - is it justified?
+   - No spillover effects - is this plausible?
+4. **Standard Error Clustering**:
+   - Are SEs clustered appropriately (firm/time/industry)?
+   - Are there arguments for alternative clustering?
+
+Please provide specific strengths and weaknesses."""
+        return await self._generate_response(prompt)
+
+    async def respond(self, context: dict) -> str:
+        """Respond to other perspectives on methodology."""
+        chair_summary = context.get("chair_summary", "")
+        engineering_arg = context.get("engineering_arg", "")
+        finance_arg = context.get("finance_arg", "")
+
+        prompt = f"""As the methodology reviewer, please respond to the following arguments.
+
+Chair summary:
+{chair_summary[:300]}
+
+Engineering perspective:
+{engineering_arg[:300]}
+
+Finance/Theory perspective:
+{finance_arg[:300]}
+
+Please:
+1. Agree or disagree with methodological claims
+2. Address any econometric concerns raised
+3. Provide your assessment of the identification strategy"""
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
+
+    async def final_statement(self, context: dict) -> dict:
+        """Methodology member's final evaluation."""
+        prompt = f"""As the methodology reviewer, please provide your final score and reasoning.
+
+Paper: {context.get('paper_title', 'N/A')}
+Previous arguments: {context.get('previous_arguments', '')[:500]}
+
+Please provide:
+1. Methodology quality score (0-5)
+2. Main methodological strengths (1-2 points)
+3. Main methodological concerns (1-2 points)
+4. Brief justification
+
+JSON format output."""
+        response = await self._generate_response(prompt)
+        if isinstance(response, dict):
+            return {
+                "score": None,
+                "strengths": [],
+                "weaknesses": [],
+                "_error": True,
+                "_error_message": response.get("error", str(response)),
+                "_error_type": response.get("error_type"),
+            }
+        if response is None:
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "LLM gateway not configured"}
+        return self._parse_score(response)
+
+    async def _generate_response(self, prompt: str) -> str | dict | None:
+        """Generate response using gateway or fallback.
+
+        Returns
+        -------
+        str | dict | None
+            On success: string content.
+            On gateway error: dict with None scores and error info.
+            On no gateway: None (caller handles gracefully).
+        """
+        if self.gateway:
+            try:
+                result = self.gateway.generate(
+                    prompt,
+                    task_hint="academic_review",
+                    model=self.config.model,
+                )
+                return result.response
+            except Exception as exc:
+                logger.warning(f"[{self.config.member_type.value}] Generation failed: {exc}")
+                return {
+                    "content": "",
+                    "overall": None,
+                    "methodology": None,
+                    "novelty": None,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+        return None
+
+    def _parse_score(self, response: str) -> dict:
         if response.startswith("[ERROR:") or response.startswith("[WARNING:"):
             logger.error(f"LLM score generation failed: {response}")
             return {"score": 0.0, "strengths": [], "weaknesses": [], "_error": True, "_error_message": response}
@@ -438,7 +763,7 @@ JSON格式输出。"""
             if json_match:
                 data = json.loads(json_match.group())
                 return {
-                    "score": data.get("score", 3.0),
+                    "score": data.get("score"),
                     "strengths": data.get("strengths", []),
                     "weaknesses": data.get("weaknesses", []),
                     "_error": False,
@@ -446,8 +771,307 @@ JSON格式输出。"""
         except Exception:
             pass
 
-        logger.warning(f"Could not parse score JSON, falling back to score=3.0: {response[:100]}")
-        return {"score": 3.0, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
+        logger.warning(f"Could not parse score JSON: {response[:100]}")
+        return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
+
+
+class MemberStatisticsAgent(BaseMemberAgent):
+    """Reviews statistical power, CI width, equivalence testing."""
+
+    def __init__(self, gateway=None):
+        super().__init__(MEMBER_CONFIGS[MemberType.MEMBER_STATISTICS], gateway)
+
+    async def opening_statement(self, paper: dict) -> str:
+        """Statistics perspective on the paper."""
+        prompt = f"""You are a statistics reviewer.
+Review this paper focusing ONLY on statistical rigor.
+
+Paper Title: {paper.get('title', 'N/A')}
+Abstract: {paper.get('abstract', paper.get('content', 'N/A')[:800])}
+
+Please evaluate from the statistics perspective:
+1. **Confidence Interval Width**:
+   - Is the CI width reasonable relative to coefficient magnitude?
+   - Are the results economically meaningful or just statistically significant?
+2. **Statistical Power**:
+   - Was power analysis conducted?
+   - Are the sample sizes adequate?
+3. **TOST Equivalence Testing**:
+   - Were equivalence margins pre-specified?
+   - Is TOST/equivalence testing used for demonstrating "no effect"?
+4. **Multiple Testing Corrections**:
+   - FDR/Bonferroni corrections for multiple outcomes?
+   - Family-wise error rate control?
+5. **Effect Size Interpretation**:
+   - Cohen's d / partial R² reported?
+   - Practical vs statistical significance discussed?
+
+Please provide specific strengths and weaknesses."""
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
+
+    async def respond(self, context: dict) -> str:
+        """Respond to other perspectives on statistics."""
+        chair_summary = context.get("chair_summary", "")
+        engineering_arg = context.get("engineering_arg", "")
+        finance_arg = context.get("finance_arg", "")
+
+        prompt = f"""As the statistics reviewer, please respond to the following arguments.
+
+Chair summary:
+{chair_summary[:300]}
+
+Engineering perspective:
+{engineering_arg[:300]}
+
+Finance/Theory perspective:
+{finance_arg[:300]}
+
+Please:
+1. Address any statistical concerns raised
+2. Comment on effect size and practical significance
+3. Provide your assessment of statistical rigor"""
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
+
+    async def final_statement(self, context: dict) -> dict:
+        """Statistics member's final evaluation."""
+        prompt = f"""As the statistics reviewer, please provide your final score and reasoning.
+
+Paper: {context.get('paper_title', 'N/A')}
+Previous arguments: {context.get('previous_arguments', '')[:500]}
+
+Please provide:
+1. Statistical quality score (0-5)
+2. Main statistical strengths (1-2 points)
+3. Main statistical concerns (1-2 points)
+4. Brief justification
+
+JSON format output."""
+        response = await self._generate_response(prompt)
+        if isinstance(response, dict):
+            return {
+                "score": None,
+                "strengths": [],
+                "weaknesses": [],
+                "_error": True,
+                "_error_message": response.get("error", str(response)),
+                "_error_type": response.get("error_type"),
+            }
+        if response is None:
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "LLM gateway not configured"}
+        return self._parse_score(response)
+
+    async def _generate_response(self, prompt: str) -> str | dict | None:
+        """Generate response using gateway or fallback.
+
+        Returns
+        -------
+        str | dict | None
+            On success: string content.
+            On gateway error: dict with None scores and error info.
+            On no gateway: None (caller handles gracefully).
+        """
+        if self.gateway:
+            try:
+                result = self.gateway.generate(
+                    prompt,
+                    task_hint="academic_review",
+                    model=self.config.model,
+                )
+                return result.response
+            except Exception as exc:
+                logger.warning(f"[{self.config.member_type.value}] Generation failed: {exc}")
+                return {
+                    "content": "",
+                    "overall": None,
+                    "methodology": None,
+                    "novelty": None,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+        return None
+
+    def _parse_score(self, response: str) -> dict:
+        if response.startswith("[ERROR:") or response.startswith("[WARNING:"):
+            logger.error(f"LLM score generation failed: {response}")
+            return {"score": 0.0, "strengths": [], "weaknesses": [], "_error": True, "_error_message": response}
+
+        try:
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                return {
+                    "score": data.get("score"),
+                    "strengths": data.get("strengths", []),
+                    "weaknesses": data.get("weaknesses", []),
+                    "_error": False,
+                }
+        except Exception:
+            pass
+
+        logger.warning(f"Could not parse score JSON: {response[:100]}")
+        return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
+
+
+class MemberWritingAgent(BaseMemberAgent):
+    """Reviews writing quality, LaTeX structure, figure clarity."""
+
+    def __init__(self, gateway=None):
+        super().__init__(MEMBER_CONFIGS[MemberType.MEMBER_WRITING], gateway)
+
+    async def opening_statement(self, paper: dict) -> str:
+        """Writing quality perspective on the paper."""
+        prompt = f"""You are a writing quality reviewer.
+Review this paper focusing ONLY on writing quality and presentation.
+
+Paper Title: {paper.get('title', 'N/A')}
+Abstract: {paper.get('abstract', paper.get('content', 'N/A')[:800])}
+
+Please evaluate from the writing quality perspective:
+1. **Ambiguous Pronouns**:
+   - Are subject references clear?
+   - Can readers always identify what "this", "that", "it" refer to?
+2. **Tense Consistency**:
+   - Present tense for results vs past tense for methods?
+   - Consistent throughout?
+3. **Figure Reference Formatting**:
+   - Are figures referenced as "Figure 1" or "figure 1"?
+   - Consistent LaTeX-style references (\ref{{fig:xxx}})?
+4. **Table Captions**:
+   - Do tables have clear, self-explanatory captions?
+   - Are all columns/variables defined?
+5. **Section Transitions**:
+   - Do paragraphs flow logically?
+   - Are there clear signposting sentences?
+6. **Novelty Claims**:
+   - Are novelty claims supported and specific?
+   - No overclaiming contributions?
+
+Please provide specific strengths and weaknesses."""
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
+
+    async def respond(self, context: dict) -> str:
+        """Respond to other perspectives on writing quality."""
+        chair_summary = context.get("chair_summary", "")
+        engineering_arg = context.get("engineering_arg", "")
+        finance_arg = context.get("finance_arg", "")
+
+        prompt = f"""As the writing quality reviewer, please respond to the following arguments.
+
+Chair summary:
+{chair_summary[:300]}
+
+Engineering perspective:
+{engineering_arg[:300]}
+
+Finance/Theory perspective:
+{finance_arg[:300]}
+
+Please:
+1. Address any writing quality concerns raised
+2. Comment on presentation clarity
+3. Provide your assessment of overall readability"""
+        result = await self._generate_response(prompt)
+        if isinstance(result, dict):
+            return f"[ERROR: {result.get('error_type', 'Unknown')} — {result.get('error', 'LLM调用失败')[:80]}]"
+        if result is None:
+            return "[WARNING: 未配置LLM网关]"
+        return result
+
+    async def final_statement(self, context: dict) -> dict:
+        """Writing member's final evaluation."""
+        prompt = f"""As the writing quality reviewer, please provide your final score and reasoning.
+
+Paper: {context.get('paper_title', 'N/A')}
+Previous arguments: {context.get('previous_arguments', '')[:500]}
+
+Please provide:
+1. Writing quality score (0-5)
+2. Main writing strengths (1-2 points)
+3. Main writing concerns (1-2 points)
+4. Brief justification
+
+JSON format output."""
+        response = await self._generate_response(prompt)
+        if isinstance(response, dict):
+            return {
+                "score": None,
+                "strengths": [],
+                "weaknesses": [],
+                "_error": True,
+                "_error_message": response.get("error", str(response)),
+                "_error_type": response.get("error_type"),
+            }
+        if response is None:
+            return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "LLM gateway not configured"}
+        return self._parse_score(response)
+
+    async def _generate_response(self, prompt: str) -> str | dict | None:
+        """Generate response using gateway or fallback.
+
+        Returns
+        -------
+        str | dict | None
+            On success: string content.
+            On gateway error: dict with None scores and error info.
+            On no gateway: None (caller handles gracefully).
+        """
+        if self.gateway:
+            try:
+                result = self.gateway.generate(
+                    prompt,
+                    task_hint="academic_review",
+                    model=self.config.model,
+                )
+                return result.response
+            except Exception as exc:
+                logger.warning(f"[{self.config.member_type.value}] Generation failed: {exc}")
+                return {
+                    "content": "",
+                    "overall": None,
+                    "methodology": None,
+                    "novelty": None,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+        return None
+
+    def _parse_score(self, response: str) -> dict:
+        if response.startswith("[ERROR:") or response.startswith("[WARNING:"):
+            logger.error(f"LLM score generation failed: {response}")
+            return {"score": 0.0, "strengths": [], "weaknesses": [], "_error": True, "_error_message": response}
+
+        try:
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                return {
+                    "score": data.get("score"),
+                    "strengths": data.get("strengths", []),
+                    "weaknesses": data.get("weaknesses", []),
+                    "_error": False,
+                }
+        except Exception:
+            pass
+
+        logger.warning(f"Could not parse score JSON: {response[:100]}")
+        return {"score": None, "strengths": [], "weaknesses": [], "_error": True, "_error_message": "JSON解析失败"}
 
 
 # ─── AI Parliament ──────────────────────────────────────────────────────────────
@@ -460,25 +1084,33 @@ class AIParliament:
     Reference: FWMA's AI Parliament approach with transparent,
     auditable multi-model debate scoring.
 
-    Three models debate each paper:
+    Six models debate each paper:
     - Chair (Gemini) - Opens debate, summarizes, final verdict
     - Member Engineering (Claude) - Technical quality
     - Member Finance (GPT) - Theoretical soundness
+    - Member Methodology (Claude) - Econometric methodology
+    - Member Statistics (GPT) - Statistical power and testing
+    - Member Writing (Gemini) - Writing quality and LaTeX
     """
 
     def __init__(self, gateway=None):
         self.gateway = gateway
+        self.max_rounds = int(os.environ.get("PARLIAMENT_MAX_ROUNDS", "3"))
+
+        # Initialize all 6 members
         self.members = {
             MemberType.CHAIR: ChairAgent(gateway),
             MemberType.MEMBER_ENGINEERING: EngineeringMemberAgent(gateway),
             MemberType.MEMBER_FINANCE: FinanceMemberAgent(gateway),
+            MemberType.MEMBER_METHODOLOGY: MemberMethodologyAgent(gateway),
+            MemberType.MEMBER_STATISTICS: MemberStatisticsAgent(gateway),
+            MemberType.MEMBER_WRITING: MemberWritingAgent(gateway),
         }
-        self.max_rounds = 3
 
     async def debate(
         self,
         paper: dict,
-        rounds: int = 3,
+        rounds: int | None = None,
     ) -> Verdict:
         """
         Run the complete debate process.
@@ -487,14 +1119,17 @@ class AIParliament:
         ----------
         paper : dict
             Paper information with title, abstract/content.
-        rounds : int
-            Number of debate rounds.
+        rounds : int | None
+            Number of debate rounds. Defaults to self.max_rounds (from PARLIAMENT_MAX_ROUNDS env var).
 
         Returns
         -------
         Verdict
             Final verdict with score and debate transcript.
         """
+        if rounds is None:
+            rounds = self.max_rounds
+
         debate_rounds: list[DebateRound] = []
         all_arguments: list[str] = []
         individual_scores: dict[str, float] = {}
@@ -543,16 +1178,18 @@ class AIParliament:
         for round_num in range(1, rounds + 1):
             logger.info(f"Debate round {round_num}...")
 
-            # Build context from the last non-chair arguments for this round.
-            # Each debate round appends exactly 2 member responses (eng + finance).
-            # The first 3 items are openings (CHAIR, ENGINEERING, FINANCE).
-            # After round 1, all_arguments = [openings(3)] + [round1 responses(2)] = 5
-            # We want the two most recent member responses before this round's additions.
+            # For round 1, use opening statements as prior arguments.
+            # For round 2+, use the most recent member responses.
             base_opening_count = 3  # CHAIR + ENGINEERING + FINANCE openings
             prior_member_args = all_arguments[base_opening_count:]  # all member args so far
-            # The current round should respond to the last 2 prior member arguments
-            engineering_arg = prior_member_args[-2] if len(prior_member_args) >= 2 else ""
-            finance_arg = prior_member_args[-1] if len(prior_member_args) >= 1 else ""
+            # Use opening statements as context for round 1; prior rounds for rounds 2+
+            if round_num == 1:
+                # Pull engineering and finance openings as the debate context
+                engineering_arg = all_arguments[1] if len(all_arguments) > 1 else ""
+                finance_arg = all_arguments[2] if len(all_arguments) > 2 else ""
+            else:
+                engineering_arg = prior_member_args[-2] if len(prior_member_args) >= 2 else ""
+                finance_arg = prior_member_args[-1] if len(prior_member_args) >= 1 else ""
             # Most recent chair summary (if any)
             chair_summary = next(
                 (a for a in reversed(all_arguments) if str(a).startswith("[CHAIR]")),
@@ -565,15 +1202,21 @@ class AIParliament:
                 "round": round_num,
             }
 
-            # Run both member responses in parallel
-            engineering_resp, finance_resp = await asyncio.gather(
+            # Run all 6 member responses in parallel
+            engineering_resp, finance_resp, methodology_resp, statistics_resp, writing_resp = await asyncio.gather(
                 self.members[MemberType.MEMBER_ENGINEERING].respond(context),
                 self.members[MemberType.MEMBER_FINANCE].respond(context),
+                self.members[MemberType.MEMBER_METHODOLOGY].respond(context),
+                self.members[MemberType.MEMBER_STATISTICS].respond(context),
+                self.members[MemberType.MEMBER_WRITING].respond(context),
             )
 
-            all_arguments.extend([engineering_resp, finance_resp])
+            all_arguments.extend([engineering_resp, finance_resp, methodology_resp, statistics_resp, writing_resp])
             debate_rounds.append(DebateRound(round_num, MemberType.MEMBER_ENGINEERING, engineering_resp))
             debate_rounds.append(DebateRound(round_num, MemberType.MEMBER_FINANCE, finance_resp))
+            debate_rounds.append(DebateRound(round_num, MemberType.MEMBER_METHODOLOGY, methodology_resp))
+            debate_rounds.append(DebateRound(round_num, MemberType.MEMBER_STATISTICS, statistics_resp))
+            debate_rounds.append(DebateRound(round_num, MemberType.MEMBER_WRITING, writing_resp))
 
             # Chair summarizes (not on last round — final verdict handles it)
             if round_num < rounds:
@@ -583,27 +1226,53 @@ class AIParliament:
                 all_arguments.append(chair_summary)
                 debate_rounds.append(DebateRound(round_num, MemberType.CHAIR, chair_summary))
 
-        # Final statements and scoring
-        logger.info("Collecting final statements...")
+        # Final statements and scoring (all 6 members)
+        logger.info("Collecting final statements from all 6 members...")
 
         engineering_final = await self.members[MemberType.MEMBER_ENGINEERING].final_statement({
             "paper_title": paper.get("title", ""),
-            "previous_arguments": "\n".join(str(a) for a in all_arguments[-3:]),
+            "previous_arguments": "\n".join(str(a) for a in all_arguments[-6:]),
         })
-        # Use 0.0 for errors to avoid polluting avg with default 3.0
-        eng_score = 0.0 if engineering_final.get("_error") else engineering_final.get("score", 3.0)
+        eng_score = None if engineering_final.get("_error") else engineering_final.get("score")
         if engineering_final.get("_error"):
             logger.error(f"Engineering final statement failed: {engineering_final.get('_error_message', 'unknown')}")
         individual_scores["engineering"] = eng_score
 
         finance_final = await self.members[MemberType.MEMBER_FINANCE].final_statement({
             "paper_title": paper.get("title", ""),
-            "previous_arguments": "\n".join(str(a) for a in all_arguments[-3:]),
+            "previous_arguments": "\n".join(str(a) for a in all_arguments[-6:]),
         })
-        fin_score = 0.0 if finance_final.get("_error") else finance_final.get("score", 3.0)
+        fin_score = None if finance_final.get("_error") else finance_final.get("score")
         if finance_final.get("_error"):
             logger.error(f"Finance final statement failed: {finance_final.get('_error_message', 'unknown')}")
         individual_scores["finance"] = fin_score
+
+        methodology_final = await self.members[MemberType.MEMBER_METHODOLOGY].final_statement({
+            "paper_title": paper.get("title", ""),
+            "previous_arguments": "\n".join(str(a) for a in all_arguments[-6:]),
+        })
+        method_score = None if methodology_final.get("_error") else methodology_final.get("score")
+        if methodology_final.get("_error"):
+            logger.error(f"Methodology final statement failed: {methodology_final.get('_error_message', 'unknown')}")
+        individual_scores["methodology"] = method_score
+
+        statistics_final = await self.members[MemberType.MEMBER_STATISTICS].final_statement({
+            "paper_title": paper.get("title", ""),
+            "previous_arguments": "\n".join(str(a) for a in all_arguments[-6:]),
+        })
+        stat_score = None if statistics_final.get("_error") else statistics_final.get("score")
+        if statistics_final.get("_error"):
+            logger.error(f"Statistics final statement failed: {statistics_final.get('_error_message', 'unknown')}")
+        individual_scores["statistics"] = stat_score
+
+        writing_final = await self.members[MemberType.MEMBER_WRITING].final_statement({
+            "paper_title": paper.get("title", ""),
+            "previous_arguments": "\n".join(str(a) for a in all_arguments[-6:]),
+        })
+        writing_score = None if writing_final.get("_error") else writing_final.get("score")
+        if writing_final.get("_error"):
+            logger.error(f"Writing final statement failed: {writing_final.get('_error_message', 'unknown')}")
+        individual_scores["writing"] = writing_score
 
         # Chair produces final verdict
         chair_verdict = await self.members[MemberType.CHAIR].final_statement({
@@ -611,15 +1280,55 @@ class AIParliament:
             "individual_scores": individual_scores,
         })
 
-        # Use 0.0 for errors to avoid polluting avg with default 3.0
-        chair_score = 0.0 if chair_verdict.get("_error") else chair_verdict.get("score", 3.0)
+        # Use None for errors to avoid polluting avg with fallback 3.0
+        eng_score = None if engineering_final.get("_error") else engineering_final.get("score")
+        fin_score = None if finance_final.get("_error") else finance_final.get("score")
+        method_score = None if methodology_final.get("_error") else methodology_final.get("score")
+        stat_score = None if statistics_final.get("_error") else statistics_final.get("score")
+        writing_score = None if writing_final.get("_error") else writing_final.get("score")
+        chair_score = None if chair_verdict.get("_error") else chair_verdict.get("score")
+        if engineering_final.get("_error"):
+            logger.error(f"Engineering final statement failed: {engineering_final.get('_error_message', 'unknown')}")
+        individual_scores["engineering"] = eng_score
+        if finance_final.get("_error"):
+            logger.error(f"Finance final statement failed: {finance_final.get('_error_message', 'unknown')}")
+        individual_scores["finance"] = fin_score
+        if methodology_final.get("_error"):
+            logger.error(f"Methodology final statement failed: {methodology_final.get('_error_message', 'unknown')}")
+        individual_scores["methodology"] = method_score
+        if statistics_final.get("_error"):
+            logger.error(f"Statistics final statement failed: {statistics_final.get('_error_message', 'unknown')}")
+        individual_scores["statistics"] = stat_score
+        if writing_final.get("_error"):
+            logger.error(f"Writing final statement failed: {writing_final.get('_error_message', 'unknown')}")
+        individual_scores["writing"] = writing_score
+
+        # Chair produces final verdict
+        chair_verdict = await self.members[MemberType.CHAIR].final_statement({
+            "all_arguments": all_arguments,
+            "individual_scores": individual_scores,
+        })
         if chair_verdict.get("_error"):
             logger.error(f"Chair final statement failed: {chair_verdict.get('_error_message', 'unknown')}")
+        individual_scores["chair"] = chair_score
 
-        # Determine recommendation — equal-weight average of all three scores
-        avg_score = (eng_score + fin_score + chair_score) / 3
-        has_errors = engineering_final.get("_error") or finance_final.get("_error") or chair_verdict.get("_error")
-        if has_errors:
+        # Determine recommendation — equal-weight average of all valid member scores (skip None)
+        all_scores = [eng_score, fin_score, method_score, stat_score, writing_score, chair_score]
+        valid_scores = [s for s in all_scores if isinstance(s, (int, float)) and s is not None]
+        avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else None
+
+        has_errors = any([
+            engineering_final.get("_error"),
+            finance_final.get("_error"),
+            methodology_final.get("_error"),
+            statistics_final.get("_error"),
+            writing_final.get("_error"),
+            chair_verdict.get("_error"),
+        ])
+
+        if has_errors and not valid_scores:
+            recommendation = "error"
+        elif avg_score is None:
             recommendation = "error"
         elif avg_score >= 4.0:
             recommendation = "accept"
@@ -628,13 +1337,45 @@ class AIParliament:
         else:
             recommendation = "reject"
 
+        # Check for disagreement (disputed verdict)
+        if valid_scores:
+            max_diff = max(valid_scores) - min(valid_scores)
+            disputed = max_diff > 1.0
+        else:
+            disputed = False
+
+        # Rebuttal rounds - all 5 member agents respond to the chair's summary
+        rebuttal_rounds: list[RebuttalRound] = []
+        chair_summary = chair_verdict.get("summary", "")
+
+        for member_type in [
+            MemberType.MEMBER_ENGINEERING,
+            MemberType.MEMBER_FINANCE,
+            MemberType.MEMBER_METHODOLOGY,
+            MemberType.MEMBER_STATISTICS,
+            MemberType.MEMBER_WRITING,
+        ]:
+            rebuttal = await self.members[member_type].respond({
+                "chair_summary": chair_summary,
+                "round": -1,  # Signals rebuttal round
+            })
+            rebuttal_rounds.append(RebuttalRound(
+                round_num=-1,
+                member_type=member_type,
+                response_to_summary=rebuttal,
+                strength="moderate",
+            ))
+
         return Verdict(
-            score=round(avg_score, 2),
+            score=round(avg_score, 2) if avg_score is not None else None,
             recommendation=recommendation,
             summary=chair_verdict.get("summary", ""),
             key_strengths=chair_verdict.get("key_strengths", []),
             key_weaknesses=chair_verdict.get("key_weaknesses", []),
             debate_rounds=debate_rounds,
+            rebuttal_rounds=rebuttal_rounds,
+            disputed=disputed,
+            all_arguments=all_arguments,
         )
 
     def format_verdict(self, verdict: Verdict) -> str:
@@ -644,12 +1385,26 @@ class AIParliament:
         # Header
         score_icon = "🟢" if verdict.score >= 4 else ("🟡" if verdict.score >= 2.5 else "🔴")
         rec_icon = {"accept": "✅", "revision": "🔄", "reject": "❌"}.get(verdict.recommendation, "")
+        disputed_icon = "⚠️" if verdict.disputed else ""
 
-        lines.append(f"# AI Parliament 评审结果 {score_icon}")
+        lines.append(f"# AI Parliament 评审结果 {score_icon} {disputed_icon}")
         lines.append("")
         lines.append(f"**评分**: {verdict.score}/5")
         lines.append(f"**建议**: {rec_icon} {verdict.recommendation.upper()}")
+        if verdict.disputed:
+            lines.append("**状态**: ⚠️ 存在显著分歧（评分差异 > 1.0）")
         lines.append("")
+
+        # Error info — collect errors from debate rounds
+        error_info: list[str] = []
+        for round_obj in verdict.debate_rounds:
+            content = str(round_obj.content)
+            if content.startswith("[ERROR:") and content not in [a for a in all_arguments[:all_arguments.index(content)] if str(a).startswith("[ERROR:")]:
+                # Show unique error content snippets
+                error_info.append(f"{round_obj.speaker.value}: {content[7:60]}")
+        if error_info:
+            lines.append("**Member Errors**: " + ", ".join(error_info[:3]))
+            lines.append("")
 
         # Key points
         if verdict.key_strengths:
@@ -670,18 +1425,34 @@ class AIParliament:
             lines.append(verdict.summary[:500])
             lines.append("")
 
+        # Member type name mapping
+        member_names = {
+            MemberType.CHAIR: "主持人",
+            MemberType.MEMBER_ENGINEERING: "工程委员",
+            MemberType.MEMBER_FINANCE: "理论委员",
+            MemberType.MEMBER_METHODOLOGY: "方法论委员",
+            MemberType.MEMBER_STATISTICS: "统计委员",
+            MemberType.MEMBER_WRITING: "写作委员",
+        }
+
         # Debate transcript (condensed)
         lines.append("## 辩论摘要")
-        for i, round_obj in enumerate(verdict.debate_rounds[:6]):  # First 6 rounds
-            speaker_name = {
-                MemberType.CHAIR: "主持人",
-                MemberType.MEMBER_ENGINEERING: "工程委员",
-                MemberType.MEMBER_FINANCE: "理论委员",
-            }.get(round_obj.speaker, "Unknown")
+        for i, round_obj in enumerate(verdict.debate_rounds[:9]):  # First 9 rounds
+            speaker_name = member_names.get(round_obj.speaker, "Unknown")
 
             lines.append(f"**Round {round_obj.round_number} - {speaker_name}**:")
             lines.append(f"{round_obj.content[:200]}...")
             lines.append("")
+
+        # Rebuttal rounds
+        if verdict.rebuttal_rounds:
+            lines.append("## 反驳轮次")
+            for rebuttal in verdict.rebuttal_rounds:
+                speaker_name = member_names.get(rebuttal.member_type, "Unknown")
+                lines.append(f"**{speaker_name} 对主席总结的回应**:")
+                lines.append(f"{rebuttal.response_to_summary[:200]}...")
+                lines.append(f"[论证强度: {rebuttal.strength}]")
+                lines.append("")
 
         return "\n".join(lines)
 
@@ -739,6 +1510,8 @@ class AIParliamentHITLIntegration:
             "key_strengths": verdict.key_strengths,
             "key_weaknesses": verdict.key_weaknesses,
             "confidence": self._calculate_confidence(verdict),
+            "disputed": getattr(verdict, 'disputed', False),
+            "rebuttal_count": len(getattr(verdict, 'rebuttal_rounds', [])),
         }
 
         # 记录历史
@@ -749,7 +1522,28 @@ class AIParliamentHITLIntegration:
         })
 
         # 决定是否需要人工确认
-        need_human_review = verdict.score < auto_threshold
+        # Force human review if verdict is disputed (significant disagreement between members)
+        need_human_review = verdict.score < auto_threshold or getattr(verdict, 'disputed', False)
+
+        # Run specialized agents if available
+        if _SPECIALIZED_AGENTS_AVAILABLE:
+            try:
+                agent_results = await run_all_agents(
+                    paper_text=paper.get("text", ""),
+                    latex_tables=paper.get("latex_tables", {}),
+                    code_blocks=paper.get("code_blocks", {}),
+                    contribution=paper.get("contribution", ""),
+                    lit_review=paper.get("lit_review", ""),
+                    regression_outputs=paper.get("regression_outputs", {}),
+                    journal=paper.get("journal", "JF"),
+                )
+                verdict_dict = verdict.__dict__ if hasattr(verdict, "__dict__") else dict(verdict)
+                verdict_dict["specialized_reviews"] = {
+                    name: r.to_dict() for name, r in agent_results.items() if isinstance(r, AgentReviewResult)
+                }
+                logger.info(f"Specialized agent reviews: {[name for name in agent_results]}")
+            except Exception as exc:
+                logger.warning(f"Specialized agent review failed: {exc}")
 
         return verdict_dict, need_human_review
 
@@ -818,6 +1612,7 @@ class AIParliamentHITLIntegration:
         - 评分方差（多方一致→高置信）
         - 有效辩论轮数（轮数越多→置信越高，但TIMEOUT/ERROR轮不计入）
         - 建议类型（accept/reject→高置信，revision→中等置信）
+        - 观点分歧（disputed→轻微降权）
         """
         base_confidence = 0.7
 
@@ -838,7 +1633,10 @@ class AIParliamentHITLIntegration:
             "reject": 0.1,
         }.get(verdict.recommendation, 0)
 
-        return min(base_confidence + round_bonus + rec_bonus, 0.99)
+        # Perspective disagreement penalty
+        disagreement_penalty = 0.1 if getattr(verdict, 'disputed', False) else 0.0
+
+        return min(base_confidence + round_bonus + rec_bonus - disagreement_penalty, 0.99)
 
     def get_decision_stats(self) -> dict:
         """获取决策统计"""

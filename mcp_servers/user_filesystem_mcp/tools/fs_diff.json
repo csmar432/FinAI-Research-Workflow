@@ -1,13 +1,15 @@
 {
   "name": "fs_diff",
-  "description": "比较两个文件差异。\\n\\n",
+  "description": "比较两个文本文件的差异，以 unified diff 格式返回，支持忽略空白差异、行号标注、语义差异高亮。",
   "inputSchema": {
     "type": "object",
     "properties": {
       "properties": {
-        "type": "string"
+        "type": "string",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "比较两个文本文件的差异，以 unified diff 格式返回，支持忽略空白差异、行号标注、语义差异高亮。"
   }
 }

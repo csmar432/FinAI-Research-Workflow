@@ -29,6 +29,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+# Add project root to path so scripts/ can be imported as a module
+_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 # =============================================================================
 # ANSI Color Codes
 # =============================================================================
@@ -140,7 +145,7 @@ ALL_CONFIGS: list[ConfigStatus] = [
         is_sensitive=True,
         current_value=None,
         priority="should",
-        description="B.AI 中转 API Key（GPT/Claude 英文模型）",
+        description="Relay 中转 API Key（GPT/Claude 等英文模型）",
         for_directions=["empirical_paper", "financial_report", "a_share"],
         placeholder="ba-xxxxxxxxxxxxxxxxxxxxxxxx"
     ),
@@ -862,6 +867,18 @@ def status_check() -> None:
                 print(f"  - {s.var_name}: {s.description}")
 
 
+def health_check_mode() -> None:
+    """运行完整系统健康检查（集成 health_check 模块）。"""
+    try:
+        from scripts.health_check import run_diagnostic, print_diagnostic
+        result = run_diagnostic()
+        print_diagnostic(result, compact=False)
+    except ImportError as e:
+        print(red(f"❌ 无法导入 health_check 模块: {e}"))
+        print(dim("请确认 scripts/health_check.py 存在"))
+        sys.exit(1)
+
+
 def quick_setup(direction: str, configs: dict[str, str]) -> None:
     """快速配置模式"""
     if direction not in DIRECTION_REQUIREMENTS:
@@ -916,7 +933,7 @@ def save_configs(configs: dict[str, str]) -> None:
     # 生成注释
     comments = {
         "DEEPSEEK_API_KEY": "DeepSeek 直连（中文LLM推荐）",
-        "RELAY_API_KEY": "B.AI 中转（GPT/Claude英文模型）",
+        "RELAY_API_KEY": "Relay 中转（GPT/Claude英文模型）",
         "TUSHARE_TOKEN": "Tushare Pro A股数据",
         "EODHD_API_KEY": "EODHD全球宏观数据",
         "BRAVE_SEARCH_API_KEY": "Brave Search网络搜索",
@@ -948,7 +965,7 @@ def generate_env_template(direction: Optional[str] = None) -> str:
     lines.append("# DeepSeek 直连（中文LLM，核心必需）")
     lines.append("DEEPSEEK_API_KEY=your_deepseek_key_here")
     lines.append("")
-    lines.append("# B.AI 中转（GPT/Claude英文模型）")
+    lines.append("# Relay 中转（GPT/Claude英文模型）")
     lines.append("RELAY_API_KEY=your_relay_key_here")
     lines.append("")
     lines.append("# ─── 金融数据 API Keys ───")
@@ -1042,6 +1059,7 @@ def main():
 
     parser.add_argument("--guided", action="store_true", help="引导式配置")
     parser.add_argument("--status", action="store_true", help="显示配置状态")
+    parser.add_argument("--health-check", action="store_true", help="运行完整系统健康检查")
     parser.add_argument("--direction", "-d", type=str, help="研究方向 (a_share/macro/empirical_paper/quantitative/financial_report)")
     parser.add_argument("--key", "-k", action="append", type=str, help="快速配置键值对 (KEY=value)")
     parser.add_argument("--validate", action="store_true", help="验证配置")
@@ -1058,7 +1076,9 @@ def main():
                 configs[k.strip()] = v.strip()
 
     # 根据参数选择模式
-    if args.status:
+    if args.health_check:
+        health_check_mode()
+    elif args.status:
         status_check()
     elif args.validate:
         validate_configs()

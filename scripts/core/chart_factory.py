@@ -27,6 +27,15 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "ChartRecord",
+    "ChartRegistry",
+    "AdvancedChartFactory",
+    "CHART_TYPES",
+    "ACADEMIC_STYLE",
+    "CB_PALETTE",
+]
+
 import json
 import uuid
 from dataclasses import dataclass, field

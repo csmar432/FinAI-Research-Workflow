@@ -381,7 +381,10 @@ class PRISMATracker:
 
     def import_json(self, path: str):
         """Import PRISMA data from JSON."""
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        try:
+            data = json.loads(Path(path).read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in {path}: {e}") from e
         self.topic = data.get("topic", self.topic)
         self.created_at = datetime.fromisoformat(data["created_at"])
         self.updated_at = datetime.fromisoformat(data["updated_at"])

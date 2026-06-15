@@ -1,0 +1,15 @@
+{
+  "name": "Chinese Customs",
+  "version": "1.0.0",
+  "is_mock": false,
+  "requires_api_key": true,
+  "server_name": "user-chinese-customs",
+  "serverIdentifier": "user-chinese-customs",
+  "description": "中国海关进出口数据。通过中国海关统计数据在线查询系统（https://stats.customs.gov.cn）查询。按商品编码、企业、贸易伙伴等维度获取进出口金额、数量、贸易顺差/逆差数据。需注册。",
+  "tools": [
+    "get_customs_import",
+    "get_customs_export",
+    "get_customs_trade_balance",
+    "get_customs_by_country"
+  ]
+}

@@ -5,18 +5,23 @@
     "type": "object",
     "properties": {
       "ts_code": {
-        "type": "string"
+        "type": "string",
+        "description": "股票代码（格式：000001.SZ 或 600000.SH）"
       },
       "start_date": {
-        "type": "string"
+        "type": "string",
+        "description": "起始日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "end_date": {
-        "type": "string"
+        "type": "string",
+        "description": "结束日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "max_results": {
         "type": "integer",
-        "default": 20
+        "default": 20,
+        "description": "最大返回结果数量"
       }
-    }
+    },
+    "description": "获取个股新闻/公告。使用 akshare 东方财富接口，无需 API Key。"
   }
 }

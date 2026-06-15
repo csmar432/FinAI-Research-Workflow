@@ -9,6 +9,7 @@
         "description": "贸易类型: imports/exports/balance",
         "default": "balance"
       }
-    }
+    },
+    "description": "获取贸易数据（CEIC风格）。"
   }
 }

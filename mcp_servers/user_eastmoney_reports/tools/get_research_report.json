@@ -16,6 +16,7 @@
         "type": "string",
         "description": "结束日期 YYYYMMDD"
       }
-    }
+    },
+    "description": "Search parameters for 东方财富研报与宏观数据 — 券商研报摘要/宏观指标 query"
   }
 }

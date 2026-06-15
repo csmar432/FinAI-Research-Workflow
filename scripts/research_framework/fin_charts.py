@@ -327,21 +327,37 @@ class FinancialChartFactory:
         self._setup_matplotlib()
 
     def _setup_matplotlib(self):
-        """Configure matplotlib for academic paper standards."""
+        """Configure matplotlib for academic paper standards.
+
+        Font setup:
+        - Chinese: try candidates in order; verify availability with font_manager
+        - English: "Times New Roman" via font_manager (not hardcoded rcParam)
+        - Final fallback: DejaVu Sans (matplotlib built-in, guaranteed available)
+        """
         import matplotlib as mpl
+        import matplotlib.font_manager as fm
         import matplotlib.pyplot as plt
 
         mpl.use("Agg")  # Non-interactive backend
         plt.style.use(self.config.style)
 
-        # Try to set Chinese font
-        for font in self.CHINESE_FONT_CANDIDATES:
-            try:
-                plt.rcParams["font.sans-serif"] = [font, self.ENGLISH_FONT]
-                plt.rcParams["axes.unicode_minus"] = False
-                break
-            except Exception:
-                continue
+        # Build font list: [Chinese candidates, ENGLISH_FONT, DejaVu Sans]
+        chinese = self.CHINESE_FONT_CANDIDATES
+        english = self.ENGLISH_FONT
+        fallback = "DejaVu Sans"
+        candidate_fonts = chinese + [english, fallback]
+
+        # Verify each font is available before adding to rcParams
+        available = {f.name for f in fm.fontManager.ttflist}
+        font_list = [f for f in candidate_fonts if f in available]
+
+        if font_list:
+            plt.rcParams["font.sans-serif"] = font_list
+        else:
+            # Fallback: DejaVu Sans should always be available
+            plt.rcParams["font.sans-serif"] = [fallback]
+
+        plt.rcParams["axes.unicode_minus"] = False
 
         plt.rcParams.update({
             "font.family": "sans-serif",
@@ -588,7 +604,7 @@ class FinancialChartFactory:
         ax = axes[1]
         sns.histplot(res, kde=True, stat="density", ax=ax, color="steelblue", alpha=0.6)
         x_range = np.linspace(res.min(), res.max(), 200)
-        ax.plot(x_range, stats.norm.pdf(x_range, res.mean(), res.std()),
+        ax.plot(x_range, stats.norm.pdf(x_range, float(res.mean()), float(res.std())),
                 "r--", linewidth=1.5, label="正态分布")
         ax.set_title("残差分布", fontsize=self.config.title_fontsize)
         ax.set_xlabel("残差", fontsize=self.config.label_fontsize)
@@ -866,11 +882,18 @@ class FinancialChartFactory:
         df_ = df_.sort_values(date_col)
 
         if group_col:
-            sns.lineplot(data=df_, x=date_col, y=value_col, hue=group_col, ax=ax,
-                         palette=self.config.color_palette, linewidth=1.2)
+            # Pre-aggregate: mean per (date, group) to avoid seaborn auto-aggregation
+            # (which uses hue_stats_estimator and can produce unexpected confidence intervals)
+            agg_col = df_.groupby([date_col, group_col])[value_col].mean().reset_index()
+            sns.lineplot(data=agg_col, x=date_col, y=value_col, hue=group_col, ax=ax,
+                         palette=self.config.color_palette, linewidth=1.2,
+                         errorbar=None)   # no CI bands — already aggregated
         else:
-            sns.lineplot(data=df_, x=date_col, y=value_col, ax=ax,
-                         color="steelblue", linewidth=1.5)
+            # Pre-aggregate: mean per date
+            agg_col = df_.groupby(date_col)[value_col].mean().reset_index()
+            sns.lineplot(data=agg_col, x=date_col, y=value_col, ax=ax,
+                         color="steelblue", linewidth=1.5,
+                         errorbar=None)
 
         ax.set_xlabel("日期", fontsize=self.config.label_fontsize)
         ax.set_ylabel(value_col, fontsize=self.config.label_fontsize)

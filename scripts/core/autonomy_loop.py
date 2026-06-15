@@ -43,6 +43,19 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = [
+    "ExecutionStatus",
+    "DebugAction",
+    "ExperimentCode",
+    "ExecutionResult",
+    "FigureEvaluation",
+    "AutonomyLoopResult",
+    "AutoDebugger",
+    "FigureGenerator",
+    "AutonomyLoop",
+    "main",
+]
+
 import json
 import logging
 import re
@@ -185,27 +198,40 @@ class AutoDebugger:
         return self._add_debug_print(code), DebugAction.NONE
 
     def _fix_syntax(self, code: str, error: str) -> str:
-        """修复常见语法错误。"""
-        # 修复反斜杠转义
-        code = code.replace("\\'", "'")
-        code = code.replace('\\"', '"')
-        code = code.replace("\\n", "\n")
-        code = code.replace("\\t", "\t")
+        """修复常见语法错误。
 
-        # 修复 f-string 中的单引号问题
+        注意：DO NOT replace escaped sequences (\\n, \\t, \\") in the source code.
+        Those escapes exist only in the error message representation, not in the actual
+        source code. Replacing them corrupts string literals like "C:\\Users\\file".
+        """
+        # 修复 f-string 中的单引号问题：转换 f'{x}' 为 f"{x}"
+        # 注意：不需要 escape 内部引号，因为 f-string 支持混合引号
         if "f-string" in error.lower():
             lines = code.split("\n")
             for i, line in enumerate(lines):
-                if "f'" in line and 'f"' not in line:
-                    lines[i] = line.replace("f'", 'f"').replace("'", '\\')
-                elif 'f"' in line and "f'" not in line:
-                    lines[i] = line.replace('f"', "f'").replace('"', "\\")
+                # f-string 用单引号但内部没有双引号 → 可以安全转为双引号
+                stripped = line.strip()
+                if stripped.startswith("f'") and 'f"' not in stripped:
+                    # f'...' 改为 f"..."  (内部双引号自动有效)
+                    parts = line.split("f'", 1)
+                    rest = parts[1]
+                    # 找到最后的单引号
+                    last_q = rest.rfind("'")
+                    if last_q > 0:
+                        lines[i] = parts[0] + 'f"' + rest[:last_q] + '"' + rest[last_q+1:]
+                elif stripped.startswith('f"') and "f'" not in stripped:
+                    # f"..." 改为 f'...' (内部单引号自动有效)
+                    parts = line.split('f"', 1)
+                    rest = parts[1]
+                    last_q = rest.rfind('"')
+                    if last_q > 0:
+                        lines[i] = parts[0] + "f'" + rest[:last_q] + "'" + rest[last_q+1:]
             code = "\n".join(lines)
 
         # 修复缺少冒号
-        if ":" not in error:
+        if "expected ':'" in error:
             # 查找 if/for/while/def/class 后缺少冒号的情况
-            for pattern in [r"(if .+[^:])\n", r"(for .+[^:])\n", r"(while .+[^:])\n", r"(def .+[^:])\n"]:
+            for pattern in [r"(if .+[^:])\n", r"(for .+[^:])\n", r"(while .+[^:])\n", r"(def .+[^:])\n", r"(class .+[^:])\n"]:
                 code = re.sub(pattern, r"\1:\n", code)
 
         return code
@@ -213,7 +239,7 @@ class AutoDebugger:
     def _fix_import(self, code: str, error: str) -> str:
         """修复导入错误。"""
         # 提取缺失的模块名
-        match = re.search(r"(?:No module named|import |from )['\"](\w+)['\"]", error)
+        match = re.search(r"(?:No module named |import |from )'(\w+)'", error)
         if match:
             missing_module = match.group(1)
             # 常见依赖映射
@@ -239,21 +265,32 @@ class AutoDebugger:
         return code
 
     def _fix_undefined(self, code: str, error: str) -> str:
-        """修复未定义变量。"""
+        """修复未定义变量。
+
+        注意：此方法只能添加占位符（raise NotImplementedError），不能真正定义变量。
+        真正的修复需要用户提供实际的变量定义或数据加载逻辑。
+        这里添加占位符仅用于让代码继续运行到下一个错误检查点。
+        """
         # 提取未定义的变量名
         match = re.search(r"name '(\w+)' is not defined", error)
         if match:
             var_name = match.group(1)
-            # 常见未定义变量的默认值
-            defaults = {
-                "df": "# df = pd.DataFrame()  # TODO: load your data\n",
-                "result": "# result = None  # TODO: compute result\n",
-                "X": "# X = None  # TODO: define features\n",
-                "y": "# y = None  # TODO: define target\n",
-                "model": "# model = None  # TODO: define model\n",
+            # 添加实际的占位符定义（不是注释），让代码至少可以通过语法检查
+            # 但运行时仍会报错，用户需要手动替换
+            placeholders = {
+                "df": "df = pd.DataFrame()  # WARNING: placeholder — replace with actual data\n",
+                "result": "result = None  # WARNING: placeholder — replace with actual computation\n",
+                "X": "X = None  # WARNING: placeholder — replace with feature matrix definition\n",
+                "y": "y = None  # WARNING: placeholder — replace with target variable definition\n",
+                "model": "model = None  # WARNING: placeholder — replace with model definition\n",
             }
-            if var_name in defaults:
-                code = defaults[var_name] + code
+            if var_name in placeholders:
+                code = placeholders[var_name] + code
+                import logging as _alog
+                _alog.getLogger("autonomy.debug").warning(
+                    "Undefined variable '%s' replaced with placeholder. "
+                    "Fix the actual data/model definition in your script.", var_name
+                )
         return code
 
     def _reduce_scope(self, code: str) -> str:
@@ -654,7 +691,7 @@ else:
     print("Loading real Tushare data...")
     import tushare as ts
     pro = ts.pro_api(token)
-    # TODO: replace with actual data query
+    # 请替换为实际数据查询
     df = pd.DataFrame({"y": [1,2,3], "treatment": [0,1,0], "firm_id": [1,1,2], "year": [2018,2019,2020]})
 '''
 
@@ -953,8 +990,8 @@ xtreg ln_wage age tenuren union, fe robust
             "Control": [1.0, 1.05, 1.1, 1.12],
         }
         post_treatment = {
-            "Treatment (post)": [1.5, 1.6, 1.7],
-            "Control (post)": [1.15, 1.2, 1.22],
+            "Treatment (post)": [1.5, 1.6, 1.7, 1.8],
+            "Control (post)": [1.15, 1.2, 1.22, 1.25],
         }
         path = self.figure_gen.generate_did_plot(
             pre_treatment, post_treatment,

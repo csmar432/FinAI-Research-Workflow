@@ -1,0 +1,25 @@
+{
+  "name": "get_macro_germany",
+  "description": "获取德国宏观经济指标。使用 akshare 接口，无需 API Key。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "indicator": {
+        "type": "string",
+        "description": "指标名称",
+        "enum": [
+          "cpi",
+          "gdp",
+          "trade",
+          "zew",
+          "ifo",
+          "retail_monthly"
+        ]
+      }
+    },
+    "required": [
+      "indicator"
+    ],
+    "description": "获取德国宏观经济指标。使用 akshare 接口，无需 API Key。"
+  }
+}

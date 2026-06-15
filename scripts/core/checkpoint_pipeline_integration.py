@@ -76,12 +76,15 @@ class CheckpointedEnhancedPipeline:
         checkpoint_dir: str = "data/checkpoints",
         checkpoint_every: int = 1,
         auto_resume: bool = True,
+        on_gate_approved: callable | None = None,
     ):
         self.config = config or {}
         self.enable_checkpoint = enable_checkpoint
         self.checkpoint_dir = checkpoint_dir
         self.checkpoint_every = checkpoint_every
         self.auto_resume = auto_resume
+        # 可视化审批回调：在 HITL gate 审批通过后触发可视化推送
+        self._on_gate_approved = on_gate_approved
 
         # Lazy import to avoid circular dependencies
         self._checkpoint_manager = None
@@ -98,7 +101,22 @@ class CheckpointedEnhancedPipeline:
     def pipeline(self):
         if self._pipeline is None:
             from scripts.research_framework.enhanced_pipeline import EnhancedPipeline
-            self._pipeline = EnhancedPipeline(config=self.config)
+            cfg = self.config or {}
+            self._pipeline = EnhancedPipeline(
+                topic=cfg.get("topic", ""),
+                language=cfg.get("language", "zh"),
+                output_dir=cfg.get("output_dir", "output/"),
+                enable_modern_did=cfg.get("enable_modern_did", True),
+                enable_validation_gates=cfg.get("enable_validation_gates", True),
+                enable_latex_lint=cfg.get("enable_latex_lint", True),
+                enable_latex_diff=cfg.get("enable_latex_diff", True),
+                enable_pdf_vision=cfg.get("enable_pdf_vision", False),
+                enable_sandbox=cfg.get("enable_sandbox", True),
+                enable_self_evolution=cfg.get("enable_self_evolution", False),
+                enable_hitl=cfg.get("enable_hitl", True),
+                hitl_timeout=cfg.get("hitl_timeout", 600),
+                on_gate_approved=self._on_gate_approved,
+            )
         return self._pipeline
 
     def run(
@@ -180,6 +198,24 @@ class CheckpointedEnhancedPipeline:
             latest.completed_stages,
         )
 
+        # 恢复 HITL 状态（pending 请求）
+        if latest.hitl_state:
+            restored_count = 0
+            try:
+                from scripts.core.agent_state import HITLManager
+                hm = HITLManager()
+                restored_count = hm.restore_from_checkpoint(latest.hitl_state)
+                if restored_count > 0:
+                    logger.info(
+                        "[CheckpointPipeline] Restored %d HITL pending requests from checkpoint",
+                        restored_count,
+                    )
+            except Exception as e:
+                logger.warning(
+                    "[CheckpointPipeline] Failed to restore HITL state: %s",
+                    e,
+                )
+
         # 恢复 topic（如果未指定）
         if topic is None:
             topic = context.get("topic", "")
@@ -246,6 +282,9 @@ class CheckpointedEnhancedPipeline:
             context[f"{step_name}_completed_at"] = time.time()
             stage_results[step_name] = stage_output
 
+            # 收集 HITL 状态（来自全局 HITLManager）
+            hitl_state = self._collect_hitl_state()
+
             # Checkpoint
             if self.enable_checkpoint:
                 self.checkpoint_manager.save(
@@ -254,7 +293,7 @@ class CheckpointedEnhancedPipeline:
                     completed_stage=step_name,
                     context=context,
                     stage_results=dict(stage_results),
-                    hitl_state=None,
+                    hitl_state=hitl_state,
                     config_hash=config_hash,
                     metadata={
                         "topic": topic,
@@ -267,15 +306,201 @@ class CheckpointedEnhancedPipeline:
         logger.info("[CheckpointPipeline] Completed '%s': all %d stages done", pipeline_name, len(steps))
         return self._make_result(context, stage_results, pipeline_name)
 
+    def _collect_hitl_state(self) -> dict | None:
+        """
+        从全局 HITLManager 收集当前的 HITL 状态。
+
+        用于在 checkpoint 时序列化所有待处理的 HITL 请求，
+        以便 resume 时能正确恢复交互状态。
+        """
+        try:
+            from scripts.core.agent_state import HITLManager
+            hm = HITLManager()
+            pending = hm.get_pending()
+            if not pending:
+                return None
+            return {
+                "pending_requests": [
+                    {
+                        # Use getattr with fallbacks to handle potential field name variations
+                        "request_id": r.request_id,
+                        "agent_name": getattr(r, "agent_name", r.agent_id),
+                        "task_id": getattr(r, "task_id", ""),
+                        "step_name": getattr(r, "step_name", getattr(r, "decision_point", "")),
+                        "created_at": r.created_at,
+                        # Persist full context so resume can reconstruct intent
+                        "context_summary": str(getattr(r, "context", {}))[:500],
+                    }
+                    for r in pending
+                ],
+                "collected_at": time.time(),
+            }
+        except Exception:
+            return None
+
     def _execute_stage(self, step_name: str, context: dict, **kwargs) -> dict:
-        """执行单个 stage。"""
-        # 这里应该调用实际的 EnhancedPipeline 或 AgentOrchestrator
-        # 简化实现：返回占位结果
+        """
+        执行单个 stage，委托给真实的 pipeline。
+
+        调度策略：
+        1. Resume 场景（context 中有缓存结果）→ 直接返回
+        2. step_name == "full_run" → 调用 pipeline.run()（继承全部 HITL gates）
+        3. 否则调用单个具名 step（需要显式创建 HITL gate）
+
+        注意：CheckpointedEnhancedPipeline 应优先使用 full_run 模式，
+        以获得 EnhancedPipeline.run() 中嵌入的 ④ 个经济学专属 HITL gates。
+        """
+        # 1. Resume 场景：复用已缓存结果
+        result = context.get(f"{step_name}_result")
+        if result is not None:
+            return result
+
+        pipeline = self.pipeline
+        topic = context.get("topic", "")
+        stage_output = None
+        dispatch_source = None
+
+        # 2. Full pipeline run: inherit all 4 HITL gates from EnhancedPipeline.run()
+        if step_name == "full_run":
+            dispatch_source = "EnhancedPipeline.run()"
+            try:
+                stage_output = pipeline.run()
+                # PipelineContext may not be imported at module level
+                try:
+                    if isinstance(stage_output, PipelineContext):
+                        stage_output = stage_output.to_dict()
+                except NameError:
+                    if hasattr(stage_output, "to_dict"):
+                        stage_output = stage_output.to_dict()
+            except Exception as e:
+                stage_output = {"error": str(e), "stage": step_name}
+            dispatch_source = "EnhancedPipeline.run()"
+
+        # 3. Individual step: wrap with local HITL gate
+        else:
+            enhanced_step_map = {
+                "load_data": "step1_load_data",
+                "modern_did": "step2_modern_did",
+                "robustness": "step3_robustness",
+                "validation_gates": "step4_validation_gates",
+                "latex_and_validation": "step5_latex_and_validation",
+                "pdf_vision": "step6_pdf_vision_check",
+            }
+
+            method_name = enhanced_step_map.get(step_name)
+            if method_name and hasattr(pipeline, method_name):
+                method = getattr(pipeline, method_name)
+                dispatch_source = "EnhancedPipeline.step"
+
+                # 创建局部 HITL gate（经济学专属问题）
+                hitl_content = self._build_step_content(step_name, context, pipeline)
+                hitl_question = self._get_econ_gate_question(step_name)
+                gate_result = self._hitl_hold(step_name, hitl_content, hitl_question)
+
+                # 若 gate 拒绝，直接返回
+                if gate_result and gate_result.get("decision") == "rejected":
+                    return {
+                        "stage": step_name,
+                        "status": "hitl_rejected",
+                        "feedback": gate_result.get("feedback", ""),
+                        "_dispatched_via": dispatch_source,
+                    }
+
+                try:
+                    stage_output = method(topic=topic, context=context, **kwargs)
+                except TypeError:
+                    try:
+                        stage_output = method(topic=topic, context=context)
+                    except TypeError:
+                        try:
+                            stage_output = method(topic=topic)
+                        except TypeError:
+                            stage_output = method()
+                except Exception as e:
+                    stage_output = {"error": str(e), "stage": step_name}
+            else:
+                # 4. 兜底：AgentOrchestrator
+                dispatch_source = "AgentOrchestrator"
+                try:
+                    from scripts.core.orchestrator import AgentOrchestrator
+                    orch = AgentOrchestrator()
+                    orch_result = orch.run(topic=topic, steps=[step_name])
+                    stage_output = {"orchestrator_result": orch_result, "step": step_name, "topic": topic}
+                except Exception:
+                    stage_output = {
+                        "stage": step_name,
+                        "status": "skipped",
+                        "timestamp": time.time(),
+                        "message": f"Stage '{step_name}' could not be dispatched. Topic: {topic}",
+                        "context_keys": list(context.keys()),
+                    }
+
+        # 统一打包结果
+        if isinstance(stage_output, dict) and "stage" not in stage_output:
+            stage_output["stage"] = step_name
+        if isinstance(stage_output, dict):
+            stage_output["_dispatched_via"] = dispatch_source or "fallback"
+        return stage_output
+
+    def _hitl_hold(self, stage_name: str, content: dict, question: str) -> dict | None:
+        """
+        在 CheckpointedEnhancedPipeline 层面创建 HITL gate。
+
+        若 enable_hitl=False 或 HITLGate 不可用，自动跳过（返回 None）。
+        """
+        if not getattr(self, "enable_checkpoint", True):
+            return None
+        try:
+            from scripts.core.hitl_gate import HITLGate, GateState
+            gate = HITLGate()
+            record = gate.hold(stage=stage_name, content=content, question=question)
+            return {
+                "gate_id": record.gate_id,
+                "state": record.state.value,          # Bug fix: ApprovalRecord has `state`, not `status`
+                "feedback": record.feedback or "",
+                "decision": record.state.value,       # GateState value: "pending"/"approved"/"rejected"
+            }
+        except Exception:
+            return None
+
+    def _get_econ_gate_question(self, step_name: str) -> str:
+        """返回经济学实证各步骤的专属审核问题。"""
+        questions = {
+            "load_data": (
+                "【数据质量审核】请确认：样本量是否充足？N/A 比例是否合理？"
+                "处理组/控制组划分是否符合研究设计？"
+            ),
+            "modern_did": (
+                "【DID 识别策略审核】请确认：处理变量定义是否合理？"
+                "控制组选择是否恰当？平行趋势假设是否可检验？"
+            ),
+            "robustness": (
+                "【稳健性检验审核】请确认稳健性检验计划：① 是否覆盖核心识别威胁？"
+                "② 是否防止 p-hacking？③ 是否有遗漏的关键检验？"
+            ),
+            "validation_gates": (
+                "【Validation Gate 审核】算法评估结果：新颖性/可行性/质量评分是否可接受？"
+            ),
+            "latex_and_validation": (
+                "【LaTeX 草稿审核】请在生成最终草稿前确认实证结果：主系数、稳健性、异质性是否可接受？"
+            ),
+            "pdf_vision": (
+                "【PDF 视觉检查审核】图表/表格排版是否符合期刊要求？"
+            ),
+        }
+        return questions.get(step_name, f"请审核 step '{step_name}' 的结果。")
+
+    def _build_step_content(self, step_name: str, context: dict, pipeline) -> dict:
+        """构建各步骤的审核内容摘要。"""
+        ctx = getattr(pipeline, "ctx", None)
+        if ctx is None:
+            return {"step": step_name, "topic": context.get("topic", "")}
         return {
-            "stage": step_name,
-            "status": "completed",
-            "timestamp": time.time(),
-            "message": f"Stage '{step_name}' completed",
+            "step": step_name,
+            "topic": context.get("topic", ""),
+            "n_obs": len(ctx.df) if ctx.df is not None else 0,
+            "n_did_results": len(ctx.modern_did_results) if ctx.modern_did_results else 0,
+            "n_robustness": len(ctx.robustness_report) if ctx.robustness_report else 0,
         }
 
     def _get_default_steps(self, topic: str) -> list[str]:
@@ -378,6 +603,7 @@ class CheckpointCLI:
         pipeline = CheckpointedEnhancedPipeline(
             enable_checkpoint=True,
             checkpoint_dir=self.checkpoint_dir,
+            on_gate_approved=self._on_gate_approved,
         )
         return pipeline.run_from_checkpoint(pipeline_name, topic=topic, **kwargs)
 

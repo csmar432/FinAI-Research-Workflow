@@ -1,0 +1,9 @@
+{
+  "name": "get_all_provinces_summary",
+  "description": "获取所有省份的概览信息（包含哪些省份、哪些数据已收录、哪些指标有序列数据）。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "description": "获取所有省份的概览信息（包含哪些省份、哪些数据已收录、哪些指标有序列数据）。"
+  }
+}

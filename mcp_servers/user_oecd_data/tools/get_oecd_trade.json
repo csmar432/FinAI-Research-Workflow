@@ -15,6 +15,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取OECD贸易数据。"
   }
 }

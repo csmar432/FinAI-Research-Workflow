@@ -20,6 +20,29 @@ Enhancements (2026-05-25):
 
 from __future__ import annotations
 
+__all__ = [
+    "AnalystType",
+    "AnalystConfig",
+    "AnalystResult",
+    "CompositeAnalysis",
+    "DupontDecomposition",
+    "EnhancedFinancialAnalyst",
+    "DCFScenario",
+    "EnhancedValuationAnalyst",
+    "AccrualsAnalysis",
+    "EnhancedEarningsQualityAnalyst",
+    "BaseAnalystAgent",
+    "EnhancedFundamentalFinancialAgent",
+    "EnhancedValuationAgent",
+    "EnhancedEarningsQualityAgent",
+    "EnhancedMarketAnalyst",
+    "EnhancedCompetitiveAnalyst",
+    "EnhancedRiskAnalyst",
+    "AnalystFactory",
+    "ParallelAnalystOrchestrator",
+    "TushareDataAgent",
+]
+
 import asyncio
 import json
 import logging
@@ -2402,7 +2425,7 @@ class TushareDataAgent:
         result = call_mcp_tool(
             "user-tushare",
             "get_concept_stocks",
-            {"category": category},
+            {"concept_name": category},
         )
         return self._handle_result(result, "概念股")
 

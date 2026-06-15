@@ -1,13 +1,26 @@
 {
   "name": "pd_read",
-  "description": "读取CSV/JSON/Excel/Parquet文件到DataFrame并注册到会话。\\n\\n",
+  "description": "读取CSV/JSON/Excel/Parquet文件到DataFrame并注册到会话。\\n\\nArgs:\\n  path: 文件路径\\n  name: 数据框名称（可选，默认用文件名）\\n  encoding: 文件编码\\n\\nReturns: 数据框摘要",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "path": {
+        "type": "string",
+        "description": "文件路径（.csv/.json/.xlsx/.parquet/.tsv）"
+      },
+      "name": {
+        "type": "string",
+        "description": "数据框名称（默认用文件名）"
+      },
+      "encoding": {
+        "type": "string",
+        "description": "文件编码",
+        "default": "utf-8"
       }
     },
-    "required": []
+    "required": [
+      "path"
+    ],
+    "description": "读取CSV/JSON/Excel/Parquet文件到DataFrame并注册到会话。"
   }
 }

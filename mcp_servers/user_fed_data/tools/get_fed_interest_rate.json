@@ -16,6 +16,7 @@
         "type": "string",
         "description": "结束日期"
       }
-    }
+    },
+    "description": "获取联邦基金利率或指定FRED指标时间序列。"
   }
 }

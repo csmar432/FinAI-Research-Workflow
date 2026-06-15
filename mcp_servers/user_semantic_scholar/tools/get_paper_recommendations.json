@@ -14,6 +14,9 @@
         "default": 10
       }
     },
-    "required": ["paper_id"]
+    "required": [
+      "paper_id"
+    ],
+    "description": "获取与给定论文相似的推荐论文（基于AI推荐算法）。"
   }
 }

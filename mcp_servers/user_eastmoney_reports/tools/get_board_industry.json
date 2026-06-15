@@ -10,17 +10,22 @@
           "names",
           "spot",
           "hist"
-        ]
+        ],
+        "description": "数据类型（如 spot/daily/weekly 等）"
       },
       "industry_name": {
-        "type": "string"
+        "type": "string",
+        "description": "行业名称"
       },
       "start_date": {
-        "type": "string"
+        "type": "string",
+        "description": "起始日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "end_date": {
-        "type": "string"
+        "type": "string",
+        "description": "结束日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       }
-    }
+    },
+    "description": "获取行业板块数据（行业列表/行情/历史走势）。使用 akshare 东方财富接口，无需 API Key。"
   }
 }

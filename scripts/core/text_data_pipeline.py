@@ -18,6 +18,12 @@ text_data_pipeline.py — 金融文本数据管道
 
 from __future__ import annotations
 
+__all__ = [
+    "TextSource",
+    "TextRecord",
+    "SentimentAnalyzer",
+]
+
 import json
 import logging
 import os

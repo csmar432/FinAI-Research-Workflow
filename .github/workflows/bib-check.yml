@@ -1,0 +1,49 @@
+name: BibTeX Reference Check
+
+# 检查所有 .tex 中 \cite{} 引用的 key 是否都在 .bib 中存在
+# 防止"undefined citation"这种常见但难发现的错误
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "**/*.tex"
+      - "**/*.bib"
+      - "scripts/check_bib.py"
+      - ".github/workflows/bib-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.tex"
+      - "**/*.bib"
+  workflow_dispatch:
+
+concurrency:
+  group: bibcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bib-check:
+    name: BibTeX Reference Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run BibTeX reference check
+        run: python scripts/check_bib.py
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bib-check-report
+          path: bib_check_report.md
+          if-no-files-found: ignore
+          retention-days: 7

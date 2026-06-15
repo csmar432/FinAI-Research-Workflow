@@ -1,3 +1,19 @@
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ⚠️  DEPRECATED — 此脚本已被废弃
+#
+# 废弃时间：2026-06-09
+# 替代版本：见 scripts/DEPRECATED.md
+#
+# 如需使用，请改用对应的新版本脚本。
+# 本文件仅保留用于历史参考，不建议在实际研究流程中使用。
+#
+# 强制退出：导入此模块时立即终止，防止误用
+import sys as _sys
+_sys.exit(1)
+# ─────────────────────────────────────────────────────────────────────────────
+# [原文件内容继续]
+
 #!/usr/bin/env python3
 """
 计量经济学与实证分析工具
@@ -33,6 +49,7 @@
   print(desc.to_markdown())
 """
 
+import logging
 import re
 import sys
 import warnings
@@ -40,6 +57,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore")
 
@@ -384,8 +403,8 @@ class OLSRegression:
                     if se_arr[i] > 0:
                         t_arr[i] = fit_result.params[i] / se_arr[i]
                         p_arr[i] = 2 * (1 - scipy_stats.t.cdf(abs(t_arr[i]), df=n - k))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"[DIDRegression.fit] Failed to compute cluster SE: {exc}")
 
         # 构建系数表
         coef_data = {}
@@ -559,8 +578,8 @@ class DIDRegression:
                     if se_arr[i] > 0:
                         t_arr[i] = p / se_arr[i]
                         p_arr[i] = 2 * (1 - scipy_stats.t.cdf(abs(t_arr[i]), df=n - len(X_vars) - 1))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"[DIDRegression.fit] Failed to compute cluster SE: {exc}")
 
         names = ["const"] + X_vars
         coef_data = {}
@@ -643,8 +662,8 @@ class DIDRegression:
                     if se_arr[i] > 0:
                         t_arr[i] = p / se_arr[i]
                         p_arr[i] = 2 * (1 - scipy_stats.t.cdf(abs(t_arr[i]), df=n - len(X_vars) - 1))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"[DIDRegression.fit] Failed to compute cluster SE: {exc}")
 
         coef_data = {}
         for i, nm in enumerate(names):
@@ -961,7 +980,8 @@ def vif_test(data: pd.DataFrame, x_vars: list[str]) -> dict:
         try:
             r2 = sm.OLS(y_var.values, X_others.values).fit(disp=False).rsquared
             vif = 1.0 / (1.0 - r2) if r2 < 0.9999 else float("inf")
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[DiagnosticSuite._compute_vif] VIF computation failed for {var}: {exc}")
             vif = float("nan")
         severity = "low" if vif < 5 else "medium" if vif < 10 else "high"
         vif_data.append({"Variable": var, "VIF": round(vif, 4), "severity": severity})
@@ -1314,8 +1334,8 @@ class LogitProbit:
                     se_arr = fit_result.bse.values
                     t_arr = fit_result.tvalues.values
                     p_arr = fit_result.pvalues.values
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning(f"[PSMDID.balance_table] SE computation failed: {exc}")
 
             names = ["const"] + self.x
             coef_data = {}
@@ -1603,7 +1623,8 @@ class CallawaySantAnnaDID:
         try:
             from scipy import stats as scipy_stats
             p_value = float(2 * (1 - scipy_stats.t.cdf(abs(t_stat), df=max(len(results_df) - 1, 1))))
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[CallawaySantAnnaDID.fit] p-value computation failed: {exc}")
             p_value = np.nan
 
         self._results = {
@@ -2008,7 +2029,8 @@ class HeckmanTwoStep:
                     phi = scipy_stats.norm.pdf(fitted_z)
                     Phi = scipy_stats.norm.cdf(fitted_z)
                     df["_imr"] = phi / np.maximum(Phi, 1e-10)
-                except Exception:
+                except Exception as exc:
+                    logger.warning(f"[HeckmanTwoStep.predict] IMR computation failed: {exc}")
                     df["_imr"] = self._imr.mean()
 
         # 构建系数映射
@@ -2476,8 +2498,8 @@ class PSMDID:
                         t_stat = diff_before / se
                         from scipy import stats as scipy_stats
                         p_val = float(2 * (1 - scipy_stats.t.cdf(abs(t_stat), df=len(treat_b) + len(ctrl_b) - 2)))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"[DIDRegression.fit] Failed to compute cluster SE: {exc}")
 
             rows.append({
                 "covariate": cov,
@@ -2786,7 +2808,8 @@ class BorusyakHullJarrell:
         t_stat = att_post / se_post if se_post > 1e-10 else 0.0
         try:
             p_val = float(2 * (1 - scipy_stats.t.cdf(abs(t_stat), df=n - k)))
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[BorusyakHullJarrell.fit] p-value computation failed: {exc}")
             p_val = np.nan
 
         # Overall post-event ATT (weighted by sample size in each period)
@@ -3381,7 +3404,8 @@ class RegressionDiscontinuity:
             mse_left = float(np.mean(resid_left ** 2))
             cov_left = np.linalg.inv(XtWX + np.eye(X_left.shape[1]) * 1e-8) * mse_left
             se_left = np.sqrt(np.diag(cov_left))
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[RegressionDiscontinuity._fit_local] Left-side regression failed: {exc}")
             beta_left = np.array([y_left.mean(), 0.0])
             se_left = np.array([y_left.std() / np.sqrt(len(y_left)), 0.0])
 
@@ -3399,7 +3423,8 @@ class RegressionDiscontinuity:
             mse_right = float(np.mean(resid_right ** 2))
             cov_right = np.linalg.inv(XtWX + np.eye(X_right.shape[1]) * 1e-8) * mse_right
             se_right = np.sqrt(np.diag(cov_right))
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[RegressionDiscontinuity._fit_local] Right-side regression failed: {exc}")
             beta_right = np.array([y_right.mean(), 0.0])
             se_right = np.array([y_right.std() / np.sqrt(len(y_right)), 0.0])
 
@@ -3410,7 +3435,8 @@ class RegressionDiscontinuity:
 
         try:
             p_value = float(2 * (1 - scipy_stats.norm.cdf(abs(z_stat))))
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[RegressionDiscontinuity._fit_local] p-value computation failed: {exc}")
             p_value = np.nan
 
         # ── Step 3: CCT Bandwidth (bias-corrected) ───────────────────────────
@@ -3495,7 +3521,8 @@ class RegressionDiscontinuity:
             kde = gaussian_kde(x_centered)
             f_c = float(kde(0.0)[0])
             f_c = max(f_c, 1e-6)
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[RegressionDiscontinuity._ik_bandwidth] KDE failed: {exc}")
             f_c = 1.0 / (np.std(x_centered) + 1e-6)
 
         # Local variance estimation on each side
@@ -3574,7 +3601,8 @@ class RegressionDiscontinuity:
                 "p_value": float(p_val),
                 "density_test": abs(z_stat) < 1.96,
             }
-        except Exception:
+        except Exception as exc:
+            logger.warning(f"[RegressionDiscontinuity.density_test] Density test failed: {exc}")
             return None
 
     def _stars(self, pval: float) -> str:

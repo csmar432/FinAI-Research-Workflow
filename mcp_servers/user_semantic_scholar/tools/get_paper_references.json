@@ -19,6 +19,9 @@
         "default": 0
       }
     },
-    "required": ["paper_id"]
+    "required": [
+      "paper_id"
+    ],
+    "description": "获取论文的参考文献（逆向引文），追溯理论基础。"
   }
 }

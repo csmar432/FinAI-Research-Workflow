@@ -1,0 +1,24 @@
+{
+  "name": "get_macro_canada",
+  "description": "获取加拿大宏观经济指标。使用 akshare 接口，无需 API Key。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "indicator": {
+        "type": "string",
+        "description": "指标名称",
+        "enum": [
+          "cpi",
+          "unemployment_rate",
+          "bank_rate",
+          "gdp_monthly",
+          "trade"
+        ]
+      }
+    },
+    "required": [
+      "indicator"
+    ],
+    "description": "获取加拿大宏观经济指标。使用 akshare 接口，无需 API Key。"
+  }
+}

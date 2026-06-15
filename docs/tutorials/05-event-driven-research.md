@@ -419,4 +419,4 @@ for event in events:
 
 - [API Reference: EventMonitor](../api_reference.md#eventmonitor)
 - [Tutorial 2: Financial Research Report](02-financial-report.md)
-- [Setup Guide: MCP Server Configuration](../SETUP_GUIDE.md)
+- [Setup Guide: MCP Server Configuration](../../SETUP_GUIDE.md)

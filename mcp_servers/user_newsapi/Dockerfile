@@ -1,6 +1,53 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NewsAPI MCP Server
+# 数据源：财经新闻聚合（基于 NewsAPI，支持检索全球财经新闻，免费tier每月100次）
+# ─────────────────────────────────────────────────────────────────────────────
+
 FROM python:3.12-slim
+
 WORKDIR /app
-ENV NEWSAPI_API_KEY=${NEWSAPI_API_KEY:-}
-RUN pip install --no-cache-dir mcp requests
-COPY server.py /app/
+
+# Security: create non-root user
+RUN groupadd --gid 1000 mcpuser \
+    && useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home mcpuser
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy server code
+COPY server.py .
+COPY SERVER_METADATA.json .
+COPY tools/ ./tools/
+
+# Install Python dependencies (version-pinned)
+RUN pip install --no-cache-dir --break-system-packages \
+    mcp>=1.1.0 \
+    requests>=2.31.0
+
+# Environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONFAULTHANDLER=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)" || exit 1
+
+# Labels
+LABEL org.opencontainers.image.title="NewsAPI MCP Server" \
+      org.opencontainers.image.description="财经新闻聚合（基于 NewsAPI，支持检索全球财经新闻，免费tier每月100次）" \
+      org.opencontainers.image.source="https://github.com/xuzheyi/finresearch" \
+      org.opencontainers.image.version="1.0.0" \
+      finresearch.mcp.server="user_newsapi" \
+      finresearch.mcp.api="API" \
+      finresearch.mcp.apikey="none"
+
+EXPOSE 8000
+
+# Switch to non-root user
+USER mcpuser
+
 CMD ["python", "server.py"]

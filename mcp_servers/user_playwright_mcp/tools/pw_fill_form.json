@@ -1,13 +1,15 @@
 {
   "name": "pw_fill_form",
-  "description": "填写表单字段。\\n\\n",
+  "description": "自动填写 HTML 表单字段，支持文本/复选框/下拉菜单/日期选择器，自动触发 change/input 事件，提交后等待页面响应。",
   "inputSchema": {
     "type": "object",
     "properties": {
       "properties": {
-        "type": "object"
+        "type": "object",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "自动填写 HTML 表单字段，支持文本/复选框/下拉菜单/日期选择器，自动触发 change/input 事件，提交后等待页面响应。"
   }
 }

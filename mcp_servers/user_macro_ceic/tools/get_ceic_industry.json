@@ -9,6 +9,7 @@
         "description": "行业类型: manufacturing/production/capacity",
         "default": "manufacturing"
       }
-    }
+    },
+    "description": "获取工业产出数据（CEIC风格）。"
   }
 }

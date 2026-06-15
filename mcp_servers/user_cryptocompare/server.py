@@ -18,6 +18,8 @@ except ImportError:
     warnings.warn("mcp library not installed. Install with: pip install mcp")
     raise
 
+import requests
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cryptocompare-mcp")
 
@@ -46,10 +48,9 @@ async def handle_get_price(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "symbol is required")
 
     try:
-        import requests
         url = f"{BASE_URL}/price"
         params = {"fsym": symbol, "tsyms": "USD,CNY,EUR,BTC,ETH"}
-        resp = requests.get(url, params=params, timeout=10)
+        resp = _SESSION.get(url, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
         return _safe_json_response({"symbol": symbol, "prices": data})
@@ -68,7 +69,6 @@ async def handle_get_historical(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "symbol, start_date, end_date are required")
 
     try:
-        import requests
         from datetime import datetime
 
         tsym = "USD"
@@ -81,7 +81,7 @@ async def handle_get_historical(args: dict) -> list[TextContent]:
             url = f"{BASE_URL}/v2/histoday"
             params = {"fsym": symbol, "tsym": tsym, "limit": min(limit, 2000)}
 
-        resp = requests.get(url, params=params, timeout=15)
+        resp = _SESSION.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 
@@ -100,10 +100,9 @@ async def handle_get_historical(args: dict) -> list[TextContent]:
 async def handle_get_top_coins(args: dict) -> list[TextContent]:
     limit = min(int(args.get("limit", 20)), 100)
     try:
-        import requests
         url = f"{BASE_URL}/top/totalvolfull"
         params = {"limit": limit, "tsym": "USD"}
-        resp = requests.get(url, params=params, timeout=15)
+        resp = _SESSION.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 
@@ -127,10 +126,9 @@ async def handle_get_top_coins(args: dict) -> list[TextContent]:
 async def handle_get_news(args: dict) -> list[TextContent]:
     categories = args.get("categories", "")
     try:
-        import requests
         url = f"{BASE_URL}/news/"
         params = {"categories": categories} if categories else {}
-        resp = requests.get(url, params=params, timeout=15)
+        resp = _SESSION.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 

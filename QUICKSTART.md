@@ -32,7 +32,9 @@ TIINGO_API_KEY=xxx         # 美股基本面数据
 "润色这篇论文的英文"
 ```
 
-脚本对应：`scripts/paper_write.py` + `scripts/paper_submit.py`
+脚本对应：`scripts/agent_pipeline.py` 或直接用 AI Agent 自然语言交互
+
+> 推荐直接用 AI Agent，只需描述研究方向即可。
 
 ---
 
@@ -44,7 +46,7 @@ TIINGO_API_KEY=xxx         # 美股基本面数据
 "用 Finviz 筛选 PE<30 的科技股"
 ```
 
-MCP 对应：`financial-mcp`（yfinance） + `akshare`（`scripts/data_pipeline.py`）
+MCP 对应：`user-tushare`（A股）+ `user-yfinance`（美股）+ `user-financial`（中国宏观）
 
 ---
 
@@ -55,7 +57,7 @@ MCP 对应：`financial-mcp`（yfinance） + `akshare`（`scripts/data_pipeline.
 "帮我下载并总结这篇论文的核心贡献"
 ```
 
-MCP 对应：`arxiv-mcp` + `fetch-mcp`
+MCP 对应：`user-arxiv` + `fetch`
 
 ---
 
@@ -104,7 +106,7 @@ router.chat("任务", model="claude-opus")    # 强制 Claude Opus
 | 你说什么 | MCP 工具 |
 |---------|----------|
 | "搜索财经新闻" | `brave-search` |
-| "获取某只股票数据" | `financial` / `finviz-sec` |
+| "获取某只股票数据" | `user-tushare` / `user-yfinance` / `user-financial` |
 | "检索 arXiv 论文" | `arxiv` |
 | "抓取这个网页内容" | `fetch` |
 | "查询官方 API 文档" | `context7` |
@@ -121,7 +123,7 @@ router.chat("任务", model="claude-opus")    # 强制 Claude Opus
 A: 不需要。Cursor 的规则（`.cursor/rules/`）已保存角色设定。
 
 **Q: 如何获取 A股数据？**
-A: `python scripts/data_pipeline.py` 直接运行，输入数字 1 即获取演示数据。
+A: 直接在 Cursor 中描述需求，例如 `"获取茅台2024年的日线数据"`，AI Agent 会自动调用 `user-tushare` MCP 获取真实数据。
 
 **Q: 如何更换中转 API 厂商？**
 A: 修改 `.env` 中的 `RELAY_BASE_URL`，可以是 B.AI、Groq、OpenRouter 等任何兼容 OpenAI 格式的服务。

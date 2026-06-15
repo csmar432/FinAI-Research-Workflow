@@ -22,6 +22,13 @@ dual_reviewer.py — 对偶评审器（Generator-Evaluator 严格分离）
 
 from __future__ import annotations
 
+__all__ = [
+    "ReviewDimension",
+    "DimensionScore",
+    "ReviewReport",
+    "DualReviewer",
+]
+
 import json
 import logging
 import os

@@ -1,24 +1,36 @@
 {
   "name": "get_openalex_works",
-  "description": "通过关键词或过滤条件检索学术论文元数据（OpenAlex，2亿+学术成果）",
-  "parameters": {
+  "description": "OpenAlex 学术论文元数据搜索。OpenAlex 是全球最大的开放学术知识图谱，涵盖 2亿+ 论文、作者、机构、期刊。完全免费，无需 API Key。支持布尔搜索、过滤、排序，返回被引次数、开放获取状态、出版商信息和相关论文推荐。",
+  "inputSchema": {
     "type": "object",
     "properties": {
       "query": {
         "type": "string",
-        "description": "搜索关键词，例如 'carbon trading innovation'"
-      },
-      "filter": {
-        "type": "string",
-        "description": "OpenAlex 过滤表达式，例如 'publication_year:>2022,type:journal-article'",
-        "default": ""
+        "description": "搜索查询词（支持 OpenAlex 高级语法，如 title:carbon AND year:2024）"
       },
       "per_page": {
         "type": "integer",
-        "description": "每页返回数量",
+        "description": "每页结果数（最大200）",
         "default": 25
+      },
+      "page": {
+        "type": "integer",
+        "description": "页码",
+        "default": 1
+      },
+      "filter": {
+        "type": "string",
+        "description": "过滤条件（如 type:article, year:2024, is_open_access:true）"
+      },
+      "sort": {
+        "type": "string",
+        "description": "排序字段（格式：字段:asc|desc）",
+        "default": "cited_by_count:desc"
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ],
+    "description": "OpenAlex 学术论文元数据搜索。OpenAlex 是全球最大的开放学术知识图谱，涵盖2亿+论文、作者、机构。完全免费，无需 API Key。"
   }
 }

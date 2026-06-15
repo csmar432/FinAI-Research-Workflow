@@ -1,0 +1,23 @@
+{
+  "name": "get_cnki_citations",
+  "description": "获取引用某篇 CNKI 论文的所有施引文献。\n\n返回施引文献列表，包括标题、作者、期刊、年份、被引次数等信息。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "cnki_id": {
+        "type": "string",
+        "description": "CNKI 论文 ID"
+      },
+      "paper_title": {
+        "type": "string",
+        "description": "论文标题（用于先搜索再查引用）"
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "最大结果数（默认50）",
+        "default": 50
+      }
+    },
+    "description": "Get citing papers for a CNKI paper. 数据源：中国知网引文页面。"
+  }
+}

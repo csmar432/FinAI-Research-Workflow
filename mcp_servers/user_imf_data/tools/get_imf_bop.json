@@ -15,6 +15,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取IMF国际收支(BOP)数据。"
   }
 }

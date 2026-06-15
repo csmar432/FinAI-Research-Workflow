@@ -11,6 +11,8 @@ import logging
 import os
 from typing import Any
 
+import requests
+
 try:
     from mcp.server import Server
     from mcp.types import Tool, TextContent
@@ -27,6 +29,7 @@ APP_NAME = "newsapi-mcp"
 APP_VERSION = "1.0.0"
 BASE_URL = "https://newsapi.org/v2"
 server = Server(APP_NAME)
+_SESSION = requests.Session()
 
 
 def _safe_json_response(data: Any, error: str | None = None) -> list[TextContent]:
@@ -69,7 +72,7 @@ async def handle_news_search(args: dict) -> list[TextContent]:
         # Remove empty params
         params = {k: v for k, v in params.items() if v}
 
-        resp = requests.get(f"{BASE_URL}/everything", params=params, timeout=15)
+        resp = _SESSION.get(f"{BASE_URL}/everything", params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 
@@ -104,7 +107,7 @@ async def handle_top_headlines(args: dict) -> list[TextContent]:
             "country": args.get("country", "us"),
             "pageSize": min(int(args.get("page_size", 20)), 50),
         }
-        resp = requests.get(f"{BASE_URL}/top-headlines", params=params, timeout=15)
+        resp = _SESSION.get(f"{BASE_URL}/top-headlines", params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 
@@ -136,7 +139,7 @@ async def handle_news_sources(args: dict) -> list[TextContent]:
         if args.get("category"):
             params["category"] = args["category"]
 
-        resp = requests.get(f"{BASE_URL}/sources", params=params, timeout=15)
+        resp = _SESSION.get(f"{BASE_URL}/sources", params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
 

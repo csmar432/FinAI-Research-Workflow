@@ -1,13 +1,24 @@
 {
   "name": "latex_count_words",
-  "description": "统计LaTeX文档字数（排除命令、公式、参考文献）。适合AEA/RFS等字数限制。\\n\\n",
+  "description": "统计LaTeX文档字数（排除命令、公式、参考文献）。适合AEA/RFS等字数限制。\\n\\nArgs:\\n  tex_file: .tex文件路径\\n  exclude_commands: 排除的命令列表\\n\\nReturns: 字数统计（含摘要、正文、参考文献分别统计）",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "tex_file": {
+        "type": "string",
+        "description": ".tex文件路径"
+      },
+      "exclude_commands": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "排除的命令列表"
       }
     },
-    "required": []
+    "required": [
+      "tex_file"
+    ],
+    "description": "统计LaTeX文档字数（排除命令、公式、参考文献）。适合AEA/RFS等字数限制。"
   }
 }

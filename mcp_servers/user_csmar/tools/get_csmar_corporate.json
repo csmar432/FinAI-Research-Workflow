@@ -16,6 +16,7 @@
     },
     "required": [
       "ts_code"
-    ]
+    ],
+    "description": "获取CSMAR公司治理数据。"
   }
 }

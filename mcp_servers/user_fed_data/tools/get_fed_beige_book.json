@@ -12,6 +12,7 @@
         "type": "string",
         "description": "季度"
       }
-    }
+    },
+    "description": "获取美联储褐皮书（Beige Book）元数据。"
   }
 }

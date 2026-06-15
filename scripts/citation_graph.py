@@ -46,7 +46,7 @@ SS_HEADERS = {
 }
 SS_API_KEY = ""
 OPENALEX_BASE = "https://api.openalex.org"
-OA_HEADERS = {"User-Agent": "FinResearch-Agent/1.0 (mailto:xuzheyi@example.com)"}
+OA_HEADERS = {"User-Agent": "FinResearch-Agent/1.0 (mailto:research@example.com)"}
 
 # 免费层限流
 _SS_RATE_LIMIT = 3.0  # seconds between calls
@@ -547,14 +547,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"✅ Graph built: {len(graph.nodes)} nodes, {len(graph.edges)} edges")
 
     if args.output or args.format in ("json", "both"):
-        out = args.output or f"output/citation_graph_{hash(query) % 1e6}.json"
+        out = args.output or f"output/citation_graph_{int(hash(query) % 1e6)}.json"
         Path(out).parent.mkdir(parents=True, exist_ok=True)
         with open(out, "w", encoding="utf-8") as f:
             json.dump(graph.to_dict(), f, ensure_ascii=False, indent=2)
         print(f"📊 JSON: {out}")
 
     if args.report or args.format in ("report", "both"):
-        rep_out = args.report or f"output/citation_graph_report_{hash(query) % 1e6}.md"
+        rep_out = args.report or f"output/citation_graph_report_{int(hash(query) % 1e6)}.md"
         Path(rep_out).parent.mkdir(parents=True, exist_ok=True)
         report = generate_report(graph)
         with open(rep_out, "w", encoding="utf-8") as f:

@@ -17,6 +17,15 @@ hypothesis_explorer.py — 研究假设探索器（Tree Search + Pilot实验）
 
 from __future__ import annotations
 
+__all__ = [
+    "IdeaSignal",
+    "HypothesisNode",
+    "PilotResult",
+    "ExplorationReport",
+    "PilotExperimentGenerator",
+    "HypothesisExplorer",
+]
+
 import json
 import logging
 import os

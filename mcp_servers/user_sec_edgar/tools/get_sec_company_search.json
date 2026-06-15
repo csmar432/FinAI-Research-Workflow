@@ -1,11 +1,17 @@
 {
   "name": "get_sec_company_search",
   "description": "通过公司名称或 ticker 搜索 SEC 公司信息",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "company": { "type": "string", "description": "公司名称或 ticker，例如 'Apple Inc' 或 'AAPL'" }
+      "company": {
+        "type": "string",
+        "description": "公司名称关键字"
+      }
     },
-    "required": ["company"]
+    "required": [
+      "company"
+    ],
+    "description": "Search parameters for 美国SEC EDGAR公告获取。支持10-K年报、10-Q季报、8-K重大事件、DEF14A委托声明书。SEC数据免费公开，无需API Key。 query"
   }
 }

@@ -11,6 +11,7 @@
     },
     "required": [
       "coin"
-    ]
+    ],
+    "description": "获取加密货币实时行情数据。使用 akshare + CoinGecko 接口，无需 API Key。"
   }
 }

@@ -828,10 +828,19 @@ async def arxiv_search(
 
     Returns:
         List of paper metadata dictionaries with title, authors, abstract, and URL.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-arxiv
+        Tool: semantic_search
     """
     # MCP adapter would call the actual ArXiv tool here
     # This is a placeholder signature for the decorator
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "arxiv_search must be called via MCP adapter. "
+        "Use call_mcp_tool('user-arxiv', 'semantic_search', ...) instead."
+    )
 
 
 @tool(
@@ -858,8 +867,17 @@ async def brave_search(
 
     Returns:
         List of search results with title, url, and description.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-brave-search
+        Tool: brave_web_search
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "brave_search must be called via MCP adapter. "
+        "Use call_mcp_tool('user-brave-search', 'brave_web_search', ...) instead."
+    )
 
 
 @tool(
@@ -886,8 +904,17 @@ async def fetch_webpage(
 
     Returns:
         Dictionary with url, title, content, and metadata.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-playwright-mcp
+        Tool: (browser automation)
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "fetch_webpage must be called via MCP adapter. "
+        "Use call_mcp_tool('user-playwright-mcp', '...', ...) instead."
+    )
 
 
 @tool(
@@ -918,8 +945,17 @@ async def get_stock_price(
 
     Returns:
         Dictionary with price data, volume, and metadata.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-yfinance
+        Tool: get_yf_historical
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "get_stock_price must be called via MCP adapter. "
+        "Use call_mcp_tool('user-yfinance', 'get_yf_historical', ...) instead."
+    )
 
 
 @tool(
@@ -950,8 +986,17 @@ async def get_macro_indicator(
 
     Returns:
         Dictionary with indicator values and metadata.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-financial / user-wb-data / user-imf-data
+        Tool: get_macro_china / get_wb_indicator / get_imf_ifs
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "get_macro_indicator must be called via MCP adapter. "
+        "Use call_mcp_tool('user-financial', 'get_macro_china', ...) instead."
+    )
 
 
 @tool(
@@ -984,8 +1029,17 @@ async def run_regression(
 
     Returns:
         Dictionary with regression results, coefficients, and statistics.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-e2b-mcp
+        Tool: (code execution for statistical analysis)
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "run_regression must be called via MCP adapter. "
+        "Use call_mcp_tool('user-e2b-mcp', '...', ...) instead."
+    )
 
 
 @tool(
@@ -1018,8 +1072,17 @@ async def generate_report(
 
     Returns:
         Dictionary with report content and file path.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-latex-mcp
+        Tool: latex_compile / latex_to_pdf
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "generate_report must be called via MCP adapter. "
+        "Use call_mcp_tool('user-latex-mcp', 'latex_compile', ...) instead."
+    )
 
 
 @tool(
@@ -1050,8 +1113,17 @@ async def get_research_report(
 
     Returns:
         List of research report metadata and summaries.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-eastmoney-reports
+        Tool: get_research_report
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "get_research_report must be called via MCP adapter. "
+        "Use call_mcp_tool('user-eastmoney-reports', 'get_research_report', ...) instead."
+    )
 
 
 @tool(
@@ -1082,8 +1154,17 @@ async def analyze_sentiment(
 
     Returns:
         Dictionary with sentiment scores and labels.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-openalex / user-newsapi
+        Tool: (sentiment analysis via LLM)
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "analyze_sentiment must be called via MCP adapter. "
+        "Use call_mcp_tool('user-openalex', '...', ...) instead."
+    )
 
 
 @tool(
@@ -1116,8 +1197,17 @@ async def document_qa(
 
     Returns:
         Dictionary with answer and supporting context.
+
+    Note:
+        This function must be called via MCP adapter, not directly.
+        Direct invocation will raise NotImplementedError.
+        Server: user-context7 / user-filesystem-mcp
+        Tool: (RAG document QA)
     """
-    raise NotImplementedError("Use via MCP adapter or ToolRegistry")
+    raise NotImplementedError(
+        "document_qa must be called via MCP adapter. "
+        "Use call_mcp_tool('user-context7', '...', ...) instead."
+    )
 
 
 # ─── Utility Functions ────────────────────────────────────────────────────────

@@ -83,6 +83,7 @@ __all__ = [
     "PipelineCheckpoint",
     "CheckpointManager",
     "CheckpointableOrchestrator",
+    "PipelineTelemetry",
 ]
 
 logger = logging.getLogger(__name__)
@@ -135,6 +136,7 @@ class PipelineCheckpoint:
     hitl_state: dict | None = None
     config_hash: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
+    random_seeds: dict[str, Any] = field(default_factory=dict)
 
     # ── Serialisation ────────────────────────────────────────────────────────
 
@@ -151,6 +153,7 @@ class PipelineCheckpoint:
             "hitl_state": self.hitl_state,
             "config_hash": self.config_hash,
             "metadata": self.metadata,
+            "random_seeds": self.random_seeds,
         }
 
     @classmethod
@@ -167,14 +170,15 @@ class PipelineCheckpoint:
             hitl_state=data.get("hitl_state"),
             config_hash=data.get("config_hash", ""),
             metadata=data.get("metadata", {}),
+            random_seeds=data.get("random_seeds", {}),
         )
 
     # ── Convenience ──────────────────────────────────────────────────────────
 
     @property
     def checkpoint_id(self) -> str:
-        """Stable ID for this checkpoint (derived from pipeline_id + timestamp)."""
-        return f"{self.pipeline_id}_{int(self.timestamp * 1000)}"
+        """Stable ID for this checkpoint (derived from pipeline_id + timestamp in microseconds)."""
+        return f"{self.pipeline_id}_{int(self.timestamp * 1_000_000)}"
 
     @property
     def is_empty(self) -> bool:
@@ -266,7 +270,8 @@ class CheckpointManager:
 
     def _checkpoint_path(self, pipeline_id: str, ts: float) -> Path:
         safe_id = _sanitise(pipeline_id)
-        return self.base_dir / f"checkpoint_{safe_id}_{int(ts * 1000)}.json"
+        suffix = int(ts * 1_000_000)  # microseconds: avoids millisecond collision in fast loops
+        return self.base_dir / f"checkpoint_{safe_id}_{suffix}.json"
 
     def _latest_path(self, pipeline_id: str) -> Path:
         safe_id = _sanitise(pipeline_id)
@@ -281,14 +286,28 @@ class CheckpointManager:
     def _lock_index(self, pipeline_id: str) -> tuple:
         """Acquire an exclusive lock on the index for this pipeline.
 
-        Creates the lock file if it doesn't exist so that concurrent processes
-        starting simultaneously all succeed.
+        Uses LOCK_NB (non-blocking) with a timeout loop so that a crashed process
+        holding the lock does not deadlock other processes forever.
         """
         lock_path = self._index_path(pipeline_id).with_suffix(".lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
-        lock_file = open(lock_path, "w")   # create if absent; 'w' is safe
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        return lock_file
+        lock_file = open(lock_path, "w")   # create if absent
+        deadline = time.time() + self._lock_timeout
+        poll_interval = 0.1
+        while time.time() < deadline:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return lock_file
+            except BlockingIOError:
+                time.sleep(poll_interval)
+                poll_interval = min(poll_interval * 1.5, 1.0)   # cap at 1s backoff
+        lock_file.close()
+        raise TimeoutError(
+            f"Failed to acquire lock for pipeline '{pipeline_id}' "
+            f"after {self._lock_timeout}s. "
+            f"Another process may be holding the lock. "
+            f"Remove stale lock: {lock_path}"
+        )
 
     @staticmethod
     def _unlock_index(lock_file) -> None:
@@ -307,6 +326,7 @@ class CheckpointManager:
         hitl_state: dict | None = None,
         config_hash: str = "",
         metadata: dict[str, Any] | None = None,
+        random_seeds: dict[str, Any] | None = None,
     ) -> str:
         """
         Persist a checkpoint after a stage completes.
@@ -329,6 +349,9 @@ class CheckpointManager:
             SHA-256 of the pipeline definition (empty to skip config check).
         metadata : dict | None
             Extra information to store alongside.
+        random_seeds : dict | None
+            Optional random seed state captured before the stage ran.
+            If not provided, attempts to capture numpy.random.get_state().
 
         Returns
         -------
@@ -337,6 +360,15 @@ class CheckpointManager:
         """
         all_stages = list(stage_results.keys())
         stage_index = all_stages.index(completed_stage) if completed_stage in all_stages else len(all_stages) - 1
+
+        # Capture random seeds if not provided
+        seeds = dict(random_seeds) if random_seeds is not None else {}
+        if not seeds:
+            try:
+                import numpy as _np
+                seeds["numpy_random_state"] = str(_np.random.get_state())
+            except Exception:
+                pass
 
         checkpoint = PipelineCheckpoint(
             pipeline_id=pipeline_id,
@@ -349,6 +381,7 @@ class CheckpointManager:
             hitl_state=hitl_state,
             config_hash=config_hash,
             metadata=metadata or {},
+            random_seeds=seeds,
         )
 
         lock_file = self._lock_index(pipeline_id)
@@ -446,6 +479,7 @@ class CheckpointManager:
             if chk is not None:
                 checkpoints.append(chk)
 
+        checkpoints.sort(key=lambda c: c.timestamp, reverse=True)
         return checkpoints
 
     def restore_context(
@@ -781,7 +815,7 @@ class CheckpointableOrchestrator:
             # Decide whether to save a checkpoint
             if interval > 0 and (current_idx + 1) % interval == 0:
                 hitl_state = self._capture_hitl_state(hitl_gate)
-                self.checkpoint_manager.save(
+                checkpoint_id = self.checkpoint_manager.save(
                     pipeline_id=pipeline_id,
                     pipeline_name=pipeline_name,
                     completed_stage=step.stage.value,
@@ -796,10 +830,21 @@ class CheckpointableOrchestrator:
                     },
                 )
 
+                # Auto-export provenance report after each checkpoint
+                try:
+                    from scripts.core.provenance import get_chain
+                    chain = get_chain()
+                    if chain:
+                        report_path = Path(f"output/provenance/checkpoint_{checkpoint_id[:8]}.md")
+                        chain.export_report(report_path)
+                        logger.info(f"Provenance report saved: {report_path}")
+                except Exception as exc:
+                    logger.warning(f"Failed to export provenance report: {exc}")
+
             # If pipeline was paused at a HITL gate, stop checkpointing
             if result.hitl_paused_at is not None:
                 hitl_state = self._capture_hitl_state(hitl_gate)
-                self.checkpoint_manager.save(
+                checkpoint_id = self.checkpoint_manager.save(
                     pipeline_id=pipeline_id,
                     pipeline_name=pipeline_name,
                     completed_stage=step.stage.value,
@@ -814,6 +859,17 @@ class CheckpointableOrchestrator:
                         "hitl_paused": True,
                     },
                 )
+
+                # Auto-export provenance report after HITL pause checkpoint
+                try:
+                    from scripts.core.provenance import get_chain
+                    chain = get_chain()
+                    if chain:
+                        report_path = Path(f"output/provenance/checkpoint_{checkpoint_id[:8]}.md")
+                        chain.export_report(report_path)
+                        logger.info(f"Provenance report saved: {report_path}")
+                except Exception as exc:
+                    logger.warning(f"Failed to export provenance report: {exc}")
                 return result
 
         return result
@@ -931,3 +987,66 @@ def _sanitise(name: str) -> str:
     """Replace characters that are unsafe in filenames."""
     import re
     return re.sub(r"[^\w\-_.]", "_", name)
+
+
+# ─── Pipeline Telemetry ─────────────────────────────────────────────────────────
+
+
+@dataclass
+class PipelineTelemetry:
+    """Tracks execution metrics for a pipeline run."""
+    pipeline_id: str
+    stage_durations: dict[str, float] = field(default_factory=dict)
+    token_counts: dict[str, int] = field(default_factory=dict)
+    api_call_counts: dict[str, int] = field(default_factory=dict)
+    error_counts: dict[str, int] = field(default_factory=dict)
+    mcp_call_counts: dict[str, int] = field(default_factory=dict)
+    checkpoint_ids: list[str] = field(default_factory=list)
+    started_at: float = field(default_factory=time.time)
+    ended_at: float | None = None
+
+    def record_stage(self, stage: str, duration: float) -> None:
+        self.stage_durations[stage] = duration
+
+    def record_token(self, model: str, tokens: int) -> None:
+        self.token_counts[model] = self.token_counts.get(model, 0) + tokens
+
+    def record_api_call(self, tool_name: str) -> None:
+        self.api_call_counts[tool_name] = self.api_call_counts.get(tool_name, 0) + 1
+
+    def record_error(self, error_type: str) -> None:
+        self.error_counts[error_type] = self.error_counts.get(error_type, 0) + 1
+
+    def record_mcp_call(self, mcp_server: str) -> None:
+        self.mcp_call_counts[mcp_server] = self.mcp_call_counts.get(mcp_server, 0) + 1
+
+    def to_dict(self) -> dict:
+        return {
+            "pipeline_id": self.pipeline_id,
+            "stages": self.stage_durations,
+            "total_duration": sum(self.stage_durations.values()),
+            "tokens": self.token_counts,
+            "api_calls": self.api_call_counts,
+            "errors": self.error_counts,
+            "mcp_calls": self.mcp_call_counts,
+            "started_at": self.started_at,
+            "ended_at": self.ended_at,
+        }
+
+    def save(self, path: str | Path | None = None) -> Path:
+        path = Path(path) if path else Path("data/pipeline_telemetry.jsonl")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a") as f:
+            f.write(json.dumps(self.to_dict()) + "\n")
+        return path
+
+
+# Global telemetry instance
+_pipeline_telemetry: dict[str, PipelineTelemetry] = {}
+
+
+def get_telemetry(pipeline_id: str) -> PipelineTelemetry:
+    """Get or create telemetry for a pipeline run."""
+    if pipeline_id not in _pipeline_telemetry:
+        _pipeline_telemetry[pipeline_id] = PipelineTelemetry(pipeline_id=pipeline_id)
+    return _pipeline_telemetry[pipeline_id]

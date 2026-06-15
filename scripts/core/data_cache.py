@@ -188,20 +188,15 @@ class FallbackChain:
 
     DEFAULT_CHAINS: dict[str, list[FallbackTier]] = {
         "stock_info": [
-            FallbackTier("yfinance", "user-yfinance", "get_ticker_info", priority=1),
-            FallbackTier("finviz", "user-finviz-sec", "get_stock_fundamentals", priority=2),
-            FallbackTier("simulated", "user-simulated", "get_stock_info_sim", priority=99),
+            FallbackTier("yfinance", "user-yfinance", "get_yf_quote", priority=1),
         ],
         "financials": [
-            FallbackTier("yfinance", "user-yfinance", "get_financials", priority=1),
-            FallbackTier("finviz", "user-finviz-sec", "get_financial_snapshot", priority=2),
-            FallbackTier("simulated", "user-simulated", "get_financials_sim", priority=99),
+            FallbackTier("yfinance", "user-yfinance", "get_yf_financials", priority=1),
         ],
         "macro": [
-            FallbackTier("eodhd", "user-eodhd", "get_macro_indicator", priority=1),
+            FallbackTier("eodhd", "user-eodhd", "get_economic_indicators", priority=1),
             FallbackTier("financial", "user-financial", "get_macro_china", priority=2),
-            FallbackTier("wb", "user-wb-data", "get_wb_indicator", priority=3),
-            FallbackTier("simulated", "user-simulated", "get_macro_sim", priority=99),
+            FallbackTier("wb", "user-wb-data", "get_wb_gdp", priority=3),
         ],
     }
 
@@ -222,15 +217,9 @@ class FallbackChain:
 
     @classmethod
     def stockfeed_chain(cls) -> "FallbackChain":
-        """构建 stockfeed 7 层链（示例）。"""
+        """构建 stockfeed 链，仅使用存在的 MCP 服务器。"""
         chain = cls()
-        chain.add_tier(FallbackTier("yfinance", "user-yfinance", "get_ticker_info", priority=1))
-        chain.add_tier(FallbackTier("tiingo", "user-tiingo", "get_quote", priority=2))
-        chain.add_tier(FallbackTier("finnhub", "user-finnhub", "get_quote", priority=3))
-        chain.add_tier(FallbackTier("twelvedata", "user-twelvedata", "quote", priority=4))
-        chain.add_tier(FallbackTier("alpaca", "user-alpaca", "get_bars", priority=5))
-        chain.add_tier(FallbackTier("tradier", "user-tradier", "quote", priority=6))
-        chain.add_tier(FallbackTier("simulated", "user-simulated", "get_quote_sim", priority=99))
+        chain.add_tier(FallbackTier("yfinance", "user-yfinance", "get_yf_quote", priority=1))
         return chain
 
 
@@ -270,7 +259,7 @@ class DataCache:
         cache = DataCache()
         result = cache.get_or_fetch(
             server="user-yfinance",
-            tool="get_ticker_info",
+            tool="get_yf_quote",
             args={"ticker": "AAPL"},
             fetch_fn=lambda: call_mcp_tool("user-yfinance", ...),
             ttl_seconds=86400,
@@ -499,9 +488,9 @@ class DataCache:
         -------
             result = cache.get_or_fetch(
                 server="user-yfinance",
-                tool="get_ticker_info",
+                tool="get_yf_quote",
                 args={"ticker": "AAPL"},
-                fetch_fn=lambda: call_mcp_tool("user-yfinance", "get_ticker_info", args),
+                fetch_fn=lambda: call_mcp_tool("user-yfinance", "get_yf_quote", args),
             )
         """
         # Step 1: 检查缓存

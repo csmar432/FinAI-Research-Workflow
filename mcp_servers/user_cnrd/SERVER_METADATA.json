@@ -1,0 +1,15 @@
+{
+  "name": "CNRDS",
+  "version": "1.0.0",
+  "is_mock": false,
+  "requires_api_key": true,
+  "server_name": "user-cnrd",
+  "serverIdentifier": "user-cnrd",
+  "description": "中国研究数据服务平台（CNRDS）。提供专利数据库、研究论文、上市公司数据。需注册获取API Key：https://www.cnrds.com",
+  "tools": [
+    "get_cnrd_patent",
+    "search_cnrd_papers",
+    "get_cnrd_company",
+    "get_cnrd_financial"
+  ]
+}

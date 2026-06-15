@@ -12,6 +12,7 @@
         "type": "string",
         "description": "结束日期 YYYYMMDD"
       }
-    }
+    },
+    "description": "获取中国国债收益率曲线数据（模拟Wind风格）。"
   }
 }

@@ -249,4 +249,4 @@ params: { "ts_code": "000001.SZ", "max_results": 20 }
 
 - [Tutorial 5: Event-Driven Research](05-event-driven-research.md)
 - [API Reference: MCPToolRegistry](../api_reference.md#mcptoolregistry)
-- [Setup Guide: MCP Server Configuration](../SETUP_GUIDE.md)
+- [Setup Guide: MCP Server Configuration](../../SETUP_GUIDE.md)

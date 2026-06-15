@@ -10,7 +10,8 @@
     "get_openalex_works",
     "get_openalex_author",
     "get_openalex_institutions",
-    "get_openalex_concepts"
+    "get_openalex_concepts",
+    "get_openalex_authors"
   ],
   "_data_source": "OpenAlex API (https://api.openalex.org)",
   "_note": "无需 API Key，免费调用"

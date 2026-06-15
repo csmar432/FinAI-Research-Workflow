@@ -1,54 +1,103 @@
-# DEPRECATED: Use `pip install -e .` instead, which installs from pyproject.toml.
-# This file is kept for backward compatibility.
-# Last synced: 2026-06-02
-# See pyproject.toml for the authoritative dependency list.
+# requirements.txt — 论文-研报工作流
+# Generated: 2026-06-08
+# Install: pip install -r requirements.txt
+# Or use: pip install -e . (recommended)
+#
+# For extras groups:
+#   pip install -e ".[dev]"       # Dev dependencies
+#   pip install -e ".[econometrics]" # Econometrics extras
+#   pip install -e ".[rag]"       # RAG extras
+#   pip install -e ".[all]"        # All extras
 
-# ── 环境变量解析 ────────────────────────────────────────────────────────────
-python-dotenv
-PyYAML
+# ── Data Processing ────────────────────────────────────────────────────────────
+pandas>=2.0.0,<3.0
+numpy>=1.26.0,<2.0
+scikit-learn>=1.4.0,<2.0
+scipy>=1.13.0,<2.0
+statsmodels>=0.14.0,<1.0
+networkx>=3.2.0,<4.0
 
-# ── 数据处理 ───────────────────────────────────────────────────────────────
-pandas
-numpy
-scikit-learn
-scipy
-statsmodels
+# ── Visualization ─────────────────────────────────────────────────────────────
+matplotlib>=3.8.0,<4.0
+seaborn>=0.13.0,<1.0
+plotly>=5.21.0,<6.0
 
-# ── 深度学习 ────────────────────────────────────────────────────────────────
-torch
-transformers
-accelerate
+# ── Document Processing ───────────────────────────────────────────────────────
+pdfplumber>=0.11.0
+python-docx>=1.1.0
+python-pptx>=0.6.23
+Pillow>=10.3.0
 
-# ── AI 模型（OpenAI 兼容接口）───────────────────────────────────────────────
-openai
-anthropic
+# ── Text & Format ─────────────────────────────────────────────────────────────
+markdown>=3.4.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
 
-# ── 可视化 ─────────────────────────────────────────────────────────────────
-matplotlib
-seaborn
-plotly
+# ── Finance Data ─────────────────────────────────────────────────────────────
+akshare>=1.18.63
+yfinance>=0.2.0
+fastmcp>=0.1.0
+mcp>=1.0.0
 
-# ── 文档解析 ────────────────────────────────────────────────────────────────
-pdfplumber
-python-docx
-python-pptx
-Pillow
+# ── LLM / AI ─────────────────────────────────────────────────────────────────
+openai>=2.0.0
+anthropic>=7.0.0
+httpx>=0.27.0
+tiktoken>=0.7.0
 
-# ── 文本与格式 ──────────────────────────────────────────────────────────────
-markdown
-requests
-beautifulsoup4
+# ── Econometrics ──────────────────────────────────────────────────────────────
+linearmodels>=4.17,<5.0
 
-# ── 知识图谱 & RAG ──────────────────────────────────────────────────────────
-networkx
-faiss-cpu
-sentence-transformers
-jieba
+# ── Environment / Config ─────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+pydantic>=2.0.0
 
-# ── 金融数据 ────────────────────────────────────────────────────────────────
-akshare
-yfinance
+# ── Database ──────────────────────────────────────────────────────────────────
+duckdb>=0.9.0,<1.0
 
-# ── Web 服务 ────────────────────────────────────────────────────────────────
-fastapi
-uvicorn
+# ── Web Services ─────────────────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+streamlit>=1.32.0
+pypandoc>=0.8.0
+
+# ── Excel ─────────────────────────────────────────────────────────────────────
+openpyxl>=3.1.0
+
+# ── Dev Dependencies ─────────────────────────────────────────────────────────
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+ruff>=0.1.0
+jupyter>=1.0.0
+ipykernel>=6.28.0
+
+# ── RAG Extras ────────────────────────────────────────────────────────────────
+chromadb>=0.4.22
+faiss-cpu>=1.7.4
+sentence-transformers>=2.3.0
+jieba>=0.42.0
+
+# ── Deep Learning Extras ─────────────────────────────────────────────────────
+torch>=2.2.0
+accelerate>=0.30.0
+
+# ── Econometrics Extras ──────────────────────────────────────────────────────
+pandas-datareader>=0.10.0
+pandasql>=0.7.3
+diff-in-diff2>=1.0.0
+
+# ── Knowledge Graph Extras ────────────────────────────────────────────────────
+neo4j>=5.0.0
+pyvis>=0.3.0
+
+# ── Sandbox Extras ────────────────────────────────────────────────────────────
+e2b-code-interpreter>=2.0.0
+
+# ── Browser Extras ────────────────────────────────────────────────────────────
+playwright>=1.40.0
+
+# ── Monitor Extras ────────────────────────────────────────────────────────────
+apscheduler>=3.10.0

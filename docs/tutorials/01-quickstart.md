@@ -69,7 +69,7 @@ python scripts/agent_pipeline.py --help
 
 ---
 
-## 使用 Cursor Agent（推荐方式）
+## 使用 AI Agent（推荐方式）
 
 最简单的方式是直接在 Cursor 对话框中用自然语言描述你的研究需求：
 
@@ -77,7 +77,7 @@ python scripts/agent_pipeline.py --help
 帮我分析碳排放权交易对企业绿色创新的影响，设计一篇实证论文
 ```
 
-Cursor Agent 会自动调用所有必要的模块完成研究任务。
+AI Agent 会自动调用所有必要的模块完成研究任务。
 
 ---
 

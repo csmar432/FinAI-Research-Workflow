@@ -50,13 +50,23 @@ logger = logging.getLogger(__name__)
 
 # ── 延迟导入（可选依赖）────────────────────────────────────────────────────
 
+_IMPORT_WARNED = False
+
+
 def _try_import(name: str, package: str | None = None):
-    """延迟导入可选依赖。"""
+    """延迟导入可选依赖，每种依赖只警告一次。"""
     import importlib
+
+    global _IMPORT_WARNED
     try:
         return importlib.import_module(name)
     except ImportError:
-        logger.warning(f"  可选依赖 '{name}' 未安装，部分功能将不可用")
+        if not _IMPORT_WARNED:
+            logger.info(
+                "  可选依赖缺失（faiss/sentence-transformers/jieba），"
+                "RAG 向量检索功能不可用，运行 pip install faiss-cpu sentence-transformers jieba 安装"
+            )
+            _IMPORT_WARNED = True
         return None
 
 
@@ -109,6 +119,8 @@ class Embedder:
         self.model_name = model_name
         self.model = None
         self.dimension = 0
+        self._fallback_mode: str = "sentence-transformers"  # "st" | "openai" | "random"
+        self._user_warned_random: bool = False
         self._init_model()
 
     def _init_model(self):
@@ -117,17 +129,28 @@ class Embedder:
                 from sentence_transformers import SentenceTransformer
                 self.model = SentenceTransformer(self.model_name)
                 self.dimension = self.model.get_sentence_embedding_dimension()
+                self._fallback_mode = "sentence-transformers"
                 logger.info(f"  Embedder: {self.model_name} (dim={self.dimension})")
                 return
             except Exception as e:
                 logger.warning(f"  sentence-transformers 加载失败: {e}")
 
         if FAISS_AVAILABLE:
-            logger.info("  Embedder: 使用 OpenAI ada-002（需配置 API Key）")
+            logger.info("  Embedder: 使用 OpenAI text-embedding-3-small（需 OPENAI_API_KEY）")
             self.dimension = 1536
+            self._fallback_mode = "openai"
         else:
-            logger.warning("  Embedder: 无可用 embedding 模型，将使用随机向量（仅用于测试）")
+            logger.warning(
+                "  Embedder: 无可用 embedding 模型，将使用随机向量（检索功能降级）\n"
+                "  → 修复: pip install sentence-transformers faiss-cpu"
+            )
             self.dimension = 384
+            self._fallback_mode = "random"
+
+    @property
+    def is_random_fallback(self) -> bool:
+        """返回 True 表示当前使用随机向量（RAG 结果不可靠）。"""
+        return self._fallback_mode == "random"
 
     def encode(self, texts: list[str], batch_size: int = 32) -> np.ndarray:
         """
@@ -154,7 +177,17 @@ class Embedder:
                 )
                 return embeddings.astype("float32")
             except Exception as e:
-                logger.warning(f"  sentence-transformers encode 失败: {e}")
+                logger.warning(f"  sentence-transformers encode 失败: {e}, 降级到下一层")
+
+        if self._fallback_mode == "random":
+            if not self._user_warned_random:
+                logger.warning(
+                    "[⚠️ WARNING] ResearchRAG 使用随机向量 — 检索结果不可靠！\n"
+                    "  原因: sentence-transformers / OpenAI 均不可用\n"
+                    "  解决: pip install sentence-transformers faiss-cpu\n"
+                    "  或配置 OPENAI_API_KEY 环境变量"
+                )
+                self._user_warned_random = True
 
         return self._encode_openai_fallback(texts)
 
@@ -510,6 +543,24 @@ class ResearchRAG:
         self.overlap = overlap
         self._embedding_cache: dict[str, np.ndarray] = {}
         self._initialized = False
+        self._warned_random_fallback = False  # 防止重复警告
+
+    @property
+    def is_random_fallback(self) -> bool:
+        """RAG 降级到随机向量时返回 True（检索结果不可靠）。"""
+        return self.embedder.is_random_fallback
+
+    def check_fallback_warning(self) -> str | None:
+        """返回警告信息（如果使用了降级模式），否则返回 None。"""
+        if self.is_random_fallback and not self._warned_random_fallback:
+            self._warned_random_fallback = True
+            return (
+                "[⚠️ WARNING] ResearchRAG 当前使用随机向量（无 embedding 模型）\n"
+                "  检索结果不可靠，可能产生误导性结论\n"
+                "  修复: pip install sentence-transformers faiss-cpu\n"
+                "  或设置 OPENAI_API_KEY 环境变量"
+            )
+        return None
 
     # ── Chunking ───────────────────────────────────────────────────────────
 

@@ -1,13 +1,28 @@
 {
   "name": "pd_describe",
-  "description": "生成描述性统计（均值/标准差/分位数/极值等）。\\n\\n",
+  "description": "生成描述性统计（均值/标准差/分位数/极值等）。\\n\\nArgs:\\n  name: 数据框名称\\n  columns: 列名列表\\n  percentiles: 自定义分位数\\n\\nReturns: 描述性统计",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
         "type": "string"
+      },
+      "columns": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "percentiles": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
       }
     },
-    "required": []
+    "required": [
+      "name"
+    ],
+    "description": "生成描述性统计（均值/标准差/分位数/极值等）。"
   }
 }

@@ -1,14 +1,17 @@
 {
   "name": "get_openalex_concepts",
   "description": "获取主题概念树（用于发现研究领域层次结构）",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
       "concept_id": {
         "type": "string",
-        "description": "概念 ID，例如 'C168846120'"
+        "description": "概念 ID（如 C168846120）"
       }
     },
-    "required": ["concept_id"]
+    "required": [
+      "concept_id"
+    ],
+    "description": "获取主题概念树（用于发现研究领域层次结构）。无需 API Key。"
   }
 }

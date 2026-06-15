@@ -9,6 +9,7 @@
         "description": "期限: 1D/7D/14D/21D/1M",
         "default": "7D"
       }
-    }
+    },
+    "description": "获取债券回购数据（东方财富风格）。"
   }
 }

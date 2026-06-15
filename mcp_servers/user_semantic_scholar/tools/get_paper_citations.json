@@ -24,6 +24,9 @@
         "default": 0
       }
     },
-    "required": ["paper_id"]
+    "required": [
+      "paper_id"
+    ],
+    "description": "获取引用某论文的所有论文（正向引文），按引用量排序。"
   }
 }

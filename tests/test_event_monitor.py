@@ -4,7 +4,7 @@ Tests for EventMonitor — scripts/event_monitor.py
 Run with: pytest tests/test_event_monitor.py -v --tb=short
 """
 
-import sys
+import sys, os
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -26,6 +26,29 @@ from scripts.event_monitor import (
     _search_policy_keywords_mock,
     trigger_research_pipeline,
 )
+
+
+# ─── Cleanup: remove dedup state file before/after test run ─────────────────────
+import atexit
+
+_DEDUP_STATE = Path("data/event_trigger_state.json")
+_DEDUP_BACKUP = Path("data/event_trigger_state.json.bak")
+
+
+def _cleanup_dedup():
+    if _DEDUP_STATE.exists():
+        import shutil
+        shutil.move(str(_DEDUP_STATE), str(_DEDUP_BACKUP))
+
+
+def _restore_dedup():
+    if _DEDUP_BACKUP.exists():
+        import shutil
+        shutil.move(str(_DEDUP_BACKUP), str(_DEDUP_STATE))
+
+
+_cleanup_dedup()
+atexit.register(_restore_dedup)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -315,36 +338,93 @@ class TestResearchEventSerialization:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestTriggerResearchPipeline:
-    def test_trigger_pipeline_pending_approval(self, sample_earnings_event):
-        sample_earnings_event.auto_trigger = False
-        result = trigger_research_pipeline(sample_earnings_event)
+    @pytest.fixture(autouse=True)
+    def clean_dedup_state(self):
+        """Clear dedup state before each test to prevent cross-test pollution."""
+        import shutil
+        _DEDUP_STATE.unlink(missing_ok=True)
+        yield
+        _DEDUP_STATE.unlink(missing_ok=True)
+
+    @pytest.fixture
+    def fresh_earnings_event(self):
+        import uuid
+        return EarningsEvent(
+            event_id=f"earnings_test_{uuid.uuid4().hex[:8]}",
+            event_type="earnings",
+            title="Test Earnings Event",
+            description="Test earnings event for pipeline trigger",
+            timestamp=datetime.now(),
+            source="test",
+            related_entities=["TEST.SZ"],
+            relevance_score=0.8,
+            auto_trigger=False,
+            ts_code="TEST.SZ",
+        )
+
+    @pytest.fixture
+    def fresh_macro_event(self):
+        import uuid
+        return MacroEvent(
+            event_id=f"macro_test_{uuid.uuid4().hex[:8]}",
+            event_type="macro",
+            title="Test Macro Event",
+            description="Test macro event for pipeline trigger",
+            timestamp=datetime.now(),
+            source="test",
+            related_entities=["US"],
+            relevance_score=0.8,
+            auto_trigger=False,
+            country="US",
+            indicator="NFP",
+        )
+
+    @pytest.fixture
+    def fresh_policy_event(self):
+        import uuid
+        return PolicyEvent(
+            event_id=f"policy_test_{uuid.uuid4().hex[:8]}",
+            event_type="policy",
+            title="Test Policy Event",
+            description="Test policy event",
+            timestamp=datetime.now(),
+            source="test",
+            related_entities=["CN"],
+            relevance_score=0.8,
+            auto_trigger=False,
+            url="https://test.gov.cn",
+            publisher="Test Publisher",
+        )
+
+    def test_trigger_pipeline_pending_approval(self, fresh_earnings_event):
+        result = trigger_research_pipeline(fresh_earnings_event)
         assert result["status"] == "pending_approval"
-        assert result["event_id"] == sample_earnings_event.event_id
+        assert result["event_id"] == fresh_earnings_event.event_id
         assert "requires human approval" in result["message"]
 
-    def test_trigger_pipeline_auto_trigger(self, sample_earnings_event):
-        sample_earnings_event.auto_trigger = True
-        result = trigger_research_pipeline(sample_earnings_event)
-        assert result["status"] == "triggered"
-        assert result["event_id"] == sample_earnings_event.event_id
-        assert "pipeline_run_id" in result
+    def test_trigger_pipeline_auto_trigger(self, fresh_earnings_event):
+        fresh_earnings_event.auto_trigger = True
+        result = trigger_research_pipeline(fresh_earnings_event)
+        assert result["status"] == "queued"  # async=True returns "queued"
+        assert result["event_id"] == fresh_earnings_event.event_id
+        assert "run_id" in result
         assert "topic" in result
 
-    def test_trigger_pipeline_custom_pipeline_name(self, sample_macro_event):
-        sample_macro_event.auto_trigger = True
-        result = trigger_research_pipeline(sample_macro_event, pipeline_name="lit_review")
+    def test_trigger_pipeline_custom_pipeline_name(self, fresh_macro_event):
+        fresh_macro_event.auto_trigger = True
+        result = trigger_research_pipeline(fresh_macro_event, pipeline_name="lit_review")
         assert result["pipeline_name"] == "lit_review"
 
-    def test_trigger_pipeline_macro_event(self, sample_macro_event):
-        sample_macro_event.auto_trigger = True
-        result = trigger_research_pipeline(sample_macro_event)
-        assert result["status"] == "triggered"
+    def test_trigger_pipeline_macro_event(self, fresh_macro_event):
+        fresh_macro_event.auto_trigger = True
+        result = trigger_research_pipeline(fresh_macro_event)
+        assert result["status"] == "queued"  # async=True returns "queued"
         assert "topic" in result
 
-    def test_trigger_pipeline_policy_event(self, sample_policy_event):
-        sample_policy_event.auto_trigger = True
-        result = trigger_research_pipeline(sample_policy_event)
-        assert result["status"] == "triggered"
+    def test_trigger_pipeline_policy_event(self, fresh_policy_event):
+        fresh_policy_event.auto_trigger = True
+        result = trigger_research_pipeline(fresh_policy_event)
+        assert result["status"] == "queued"  # async=True returns "queued"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

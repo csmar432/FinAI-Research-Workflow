@@ -5,9 +5,11 @@
     "type": "object",
     "properties": {
       "properties": {
-        "type": "string"
+        "type": "string",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "Search parameters for 浏览器自动化 MCP — 网页导航、截图、表格抓取、JSON提取、表单填写、点击交互、JS执行、文件下载。适合抓取无 API 的金融网站数据（东方财富、同花顺等）。 query"
   }
 }

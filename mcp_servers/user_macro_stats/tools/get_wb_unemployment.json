@@ -1,18 +1,22 @@
 {
   "name": "get_wb_unemployment",
-  "description": "查询各国失业率",
+  "description": "查询世界银行各国失业率年度/季度数据，支持按国家/年份/性别筛选，返回数值序列和元数据标注。",
   "inputSchema": {
     "type": "object",
     "properties": {
       "country_code": {
-        "type": "string"
+        "type": "string",
+        "description": "ISO 3166-1 alpha-2 国家代码（如 CN/USA/CHN）"
       },
       "start_year": {
-        "type": "integer"
+        "type": "integer",
+        "description": "起始年份（YYYY）"
       },
       "end_year": {
-        "type": "integer"
+        "type": "integer",
+        "description": "结束年份（YYYY）"
       }
-    }
+    },
+    "description": "查询世界银行各国失业率年度/季度数据，支持按国家/年份/性别筛选，返回数值序列和元数据标注。"
   }
 }

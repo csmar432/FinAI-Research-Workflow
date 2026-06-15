@@ -1,13 +1,15 @@
 {
   "name": "pw_click",
-  "description": "点击页面元素。\\n\\n",
+  "description": "使用 Playwright 在浏览器中点击指定元素，支持 CSS selector/XPath，智能等待元素加载，支持拖拽操作和键盘快捷键。",
   "inputSchema": {
     "type": "object",
     "properties": {
       "properties": {
-        "type": "string"
+        "type": "string",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "使用 Playwright 在浏览器中点击指定元素，支持 CSS selector/XPath，智能等待元素加载，支持拖拽操作和键盘快捷键。"
   }
 }

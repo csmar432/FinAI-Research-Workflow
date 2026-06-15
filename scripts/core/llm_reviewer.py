@@ -404,47 +404,12 @@ class CalibrationDataset:
     QUALITY_LEVELS = ["strong_accept", "accept", "weak_accept", "borderline", "reject"]
     DOMAINS = ["empirical", "finance", "ml"]
 
-    # Minimal synthetic dataset for development/testing
-    # In production, replace with real labeled data from OpenReview, journal archives
-    SYNTHETIC_SAMPLES = [
-        {
-            "paper_content": (
-                "We propose DeepTrade, a novel transformer architecture for stock prediction. "
-                "We evaluate on 5 years of S&P 500 data. DeepTrade achieves 62% accuracy vs. "
-                "the best prior method at 58%. We provide code and data. Limitations: only US markets."
-            ),
-            "human_verdict": "Accept",
-            "expected_scores": {"methodology_rigor": 7, "novelty": 6, "overall": 7},
-            "notes": "Solid empirical paper, decent baselines",
-        },
-        {
-            "paper_content": (
-                "We use GPT-4 to generate trading signals. Results are good. "
-                "The paper is short. We don't compare to any baselines."
-            ),
-            "human_verdict": "Reject",
-            "expected_scores": {"methodology_rigor": 2, "novelty": 3, "overall": 2},
-            "notes": "No methodology, no baselines, no experiments",
-        },
-        {
-            "paper_content": (
-                "This paper proves that stock returns follow a power law distribution. "
-                "We provide theoretical proofs and validate on 10 markets over 30 years. "
-                "Code is provided. Related work is thoroughly discussed."
-            ),
-            "human_verdict": "Strong Accept",
-            "expected_scores": {"methodology_rigor": 9, "novelty": 8, "overall": 9},
-            "notes": "Strong theory + empirical validation",
-        },
-    ]
+    # ── Pre-generated synthetic calibration samples ─────────────────────────────
+    # Built once at module-load time via _build_calibration_samples().
+    # Schema: paper_content, human_verdict, expected_scores, notes, source.
+    SYNTHETIC_SAMPLES: list[dict] = []
 
-    KNOWN_DATASETS: dict[str, dict] = {
-        "synthetic": {
-            "description": "Synthetic papers with known quality variations (for development only)",
-            "samples": SYNTHETIC_SAMPLES,
-            "source": "Generated for calibration testing",
-        },
-    }
+    KNOWN_DATASETS: dict[str, dict] = {}
 
     def __init__(self, seed: int = 42):
         """Initialize with a random seed for reproducibility."""
@@ -730,6 +695,136 @@ We use deep learning for stocks. Our method works well.
 # ─── LLM Reviewer ──────────────────────────────────────────────────────────────
 
 
+def _build_calibration_samples() -> list[dict]:
+    """Build the expanded synthetic calibration dataset (55+ samples).
+
+    Generates 55 samples:
+      15 base samples (5 quality levels x 3 domains, via generate_paper())
+      34 augmented topic-variant samples covering RDD/IV/Event/DiD/SynCon/GMM/
+        NLP/HFT/FamaFrench/Quantile/HDID/CausalForest etc.
+      6 Chinese-language papers (economic research / financial research style)
+
+    Returns a list of dicts matching the KNOWN_DATASETS schema:
+      paper_content, human_verdict, expected_scores, notes, source.
+    """
+    rng = np.random.default_rng(42)
+    samples: list[dict] = []
+
+    verdicts_map = {
+        "Strong Accept":  {"methodology_rigor": 9, "novelty": 8, "overall": 9, "clarity": 8},
+        "Accept":        {"methodology_rigor": 7, "novelty": 6, "overall": 7, "clarity": 7},
+        "Weak Accept":   {"methodology_rigor": 6, "novelty": 5, "overall": 6, "clarity": 6},
+        "Borderline":    {"methodology_rigor": 5, "novelty": 5, "overall": 5, "clarity": 5},
+        "Reject":        {"methodology_rigor": 2, "novelty": 3, "overall": 3, "clarity": 3},
+    }
+
+    def jitter(scores: dict) -> dict:
+        return {k: max(1, min(10, v + rng.integers(-1, 2))) for k, v in scores.items()}
+
+    # 15 base samples: 5 levels x 3 domains via generate_paper()
+    inst = CalibrationDataset.__new__(CalibrationDataset)
+    inst.rng = rng
+    for domain in CalibrationDataset.DOMAINS:
+        df = inst.generate_dataset(n_per_level=1, domain=domain)
+        for _, row in df.iterrows():
+            verdict = row["expected_recommendation"]
+            base = verdicts_map.get(verdict, verdicts_map["Accept"])
+            samples.append({
+                "paper_content": row["text"],
+                "human_verdict": verdict,
+                "expected_scores": jitter(base),
+                "notes": f"[{domain.upper()}] {row['quality_level']}",
+                "source": f"Generated for calibration: {domain}/{row['quality_level']}",
+            })
+
+    # 34 augmented topic-variant samples
+    augmentations = [
+        ("Strong Accept", "RDD", "empirical", "We study causal effect of minimum wage increase on employment using Regression Discontinuity Design. Administrative payroll data (N=500,000 workers) around 48 state-level thresholds. Sharp RD with county-level average wage as running variable. $1 increase reduces employment by 2.3pp (local polynomial, IK bandwidth=0.45). FLCV bandwidth selection, rdrobust inference, rdplot confirm discontinuity. Placebo tests, alternative bandwidths, Donut-exclusion confirm robustness. Heterogeneity by demographics, firm size, industry. DOI and code provided."),
+        ("Strong Accept", "IV-2SLS", "empirical", "We identify causal effect of financial development on economic growth using panel IV estimation. Instrument: historical banking legislation (1864 National Banking Acts interacted with waterway proximity). First-stage F=38.7 (Stock-Yogo threshold=16.4). Weak-instrument-robust inference (Anderson-Rubin Wald test, p<0.001). Jackknife IV, LLC, Arellano-Bond GMM also implemented. N=80 countries, 1960-2020, 6 controls. Legal origins channel: 34% of total effect (Sobel test, p<0.01). World Bank WDI and La Porta et al. (1998). Stata and R code."),
+        ("Strong Accept", "DAG", "empirical", "We estimate causal effect of early childhood education on long-run human capital using a DAG identification strategy. Experimental variation (Perry Preschool, N=123) combined with quasi-experimental (Head Start expansions, N=12,000). Causal DAG specified and tested via d-separation. Sensitivity analysis (E-value=3.2) and bounding (Balke-Friedman). Return to one year of quality preschool: $50,000 (95 CI: $28,000-$85,000, age 40). Mechanisms: cognitive (55%), non-cognitive (30%), peer effects (15%). DOI: 10.1257/aer.201XXXXX. AEA RCT Registry."),
+        ("Strong Accept", "EventStudy", "empirical", "We examine stock market reaction to M&A announcements using event study with 3,400 deals (2000-2023). Fama-French 5-factor model with CRSP daily returns. Average CAR(-1,+1) = 1.8% (t=8.3) for acquirers. Cross-sectional regression on deal characteristics. DID with matched sample controls for selection. PSM 1:3 nearest-neighbor. Bootstrap SE (1,000 replications). Robust to alternative event windows and benchmark models."),
+        ("Strong Accept", "PanelQuantile", "empirical", "We estimate effect of corporate tax rates on investment across the investment distribution using panel quantile regression with interactive fixed effects (QIFE, Xu 2021). 50,000 firm-year observations from 42 countries (2005-2020). Tax-investment elasticity varies from -0.8 (10th quantile) to -0.2 (90th quantile). QIFE outperforms linear panel FE at all quantiles (AIC). Monte Carlo confirms finite-sample performance. Instrument: lagged effective tax rate. Results inform progressive vs. flat tax debate."),
+        ("Strong Accept", "SynCon", "empirical", "We study California tobacco control program using Synthetic Control Method (SCM). Synthetic California from 38 control states matched on pre-intervention smoking rates, demographics, economic conditions. 26% reduction in adult smoking prevalence (1988-2017). In-space placebo (Abadie et al. 2010): California ranks 2nd/39 (p=0.026). Robustness: leave-one-out, alternative donor pool, time-varying effects. CDC BRFSS. R and Stata code."),
+        ("Strong Accept", "CausalForest", "ml", "We develop causal forest for heterogeneous treatment effects in finance. 50,000 firm-year observations. ESG disclosure requirements on firm value across subpopulations. Wager & Athey (2018) causal forest. Large-cap firms benefit 3.2x more than small-cap. Lee (2018) bounds validate CATE monotonicity. MSE=0.0031, 65% better than linear DID (MSE=0.0089). Asymptotic normality of CATE with high-dimensional controls. R and Python at github.com/author/causal-forest-finance. DOI: 10.1111/jofi.XXXXX."),
+        ("Strong Accept", "NLP_Finance", "ml", "We use BERT-based NLP to extract sentiment from 10-K filings and predict returns. 50,000 documents (2000-2020). IC=0.031 (IR=0.48), outperforming Loughran-McDonald by 18%. Ablation: sector finetuning (-12% IC), attention heads (-5%), random vocab (-31%). Backtest with 10bp costs: Sharpe 0.48->0.31. Seed=42, 5-fold CV, no look-ahead. Code: github.com/author/finbert-returns."),
+        ("Strong Accept", "HighFreq", "ml", "We study HFT profitability using limit order book data. 1-second data, 200 stocks, 6 months (N=15 billion). Market-making profit: $2.3M/day, Sharpe=3.2. Execution costs, adverse selection, inventory risk separated. Latency arbitrage: $0.8M/day. Price discovery improvement: Roll spread -8.3% (p<0.001). Transaction cost sensitivity: 0.1bp to 5bp. GPU CUDA backtesting. NASDAQ TotalView-ITCH."),
+        ("Accept", "DiD_Event", "empirical", "We study effect of trade liberalization on wage inequality using DiD event study. 60 developing countries, 1990-2020. Treatment: WTO accession year. Sun-Abraham (REStud 2021) and Borusyak et al. (REStud 2024) estimators. Parallel trends: pre-treatment F=0.89, p=0.61. Post-treatment effects grow: 0.03 (yr1-3), 0.09 (yr4-6), 0.15 (yr7+). Robust to Callaway-SantAnna (QJE 2021), alternative windows. World Bank TRAINS."),
+        ("Accept", "PanelGMM", "empirical", "We examine CEO compensation and firm performance using Arellano-Bond dynamic panel GMM. N=2,800 firms, T=20 years. System GMM, two lags as instruments. Hansen: chi2(47)=62.1, p=0.058. AR(2): z=-0.93, p=0.351. 1% stock return -> 0.28% cash comp (p<0.001) and 0.45% equity pay (p<0.001). Time-invariant endogeneity addressed. Instrument exogeneity tests pass."),
+        ("Accept", "HDID", "empirical", "We estimate causal effect of maternal education on child health using HSVIV (Chernozhukov et al. 2015). Instruments: rainfall shocks during mothers schooling, school funding reforms. N=15,000 mother-child pairs. LASSO selects from 300 covariates. HD-IV reduces RMSE by 23% vs OLS. First stage: F=24.3, partial R2=0.04. Child health: z-scores, vaccination, enrollment. DOI: 10.1016/j.jeconom.2023.XXXXX."),
+        ("Accept", "SynCon2", "empirical", "We study the effect of a statewide gun control law on homicide rates using SCM. Synthetic control constructed from 49 untreated states matched on pre-intervention homicide rates, demographics, economic conditions. Post-law homicide rate 23% lower than synthetic counterfactual. In-space placebo: 2nd best rank (p=0.039). Robustness: alternative donor pool, pre-trend sensitivity, leave-one-out analysis. Data: CDC WONDER and FBI UCR."),
+        ("Accept", "BinaryChoice", "empirical", "We estimate determinants of corporate bond issuance decisions using conditional logit with firm fixed effects. N=12,000 firm-year obs, 2,400 firms, 2000-2020. Binary indicator for bond issuance. Key findings: yield spreads (coef=-0.34, p<0.001), credit rating (coef=0.28, p<0.001), institutional ownership (coef=0.15, p=0.012). Time-varying controls: leverage, Tobins Q, cash flow volatility. Within-firm variation over time. Robustness: alternative FE specs, Poisson regression, propensity score matched sample."),
+        ("Accept", "Bunching", "empirical", "We use bunching methodology to estimate elasticity of taxable income and labor supply responses to Chinese personal income tax reforms (2011, 2019). N=800,000 taxpayer records. Bunching estimate of compensated elasticity: 0.42 (SE=0.11). Dynamic bunching trajectories over 3 years post-reform. Net-of-tax rate elasticity: 0.38 (p<0.001). Robust to alternative counterfactual density specs, bandwidth selection, placebo tests with pre-reform years. Data: Chinese State Administration of Taxation."),
+        ("Accept", "FamaFrench", "finance", "We study whether Fama-French five-factor model explains emerging market returns. 500 stocks, monthly, 2005-2020. Market factor explains most variation. SMB and HML mixed significance. Value and profitability less robust than in developed markets. Controls: size, B/M, momentum. Data quality and survivorship bias acknowledged. Extends FF5 framework to emerging markets."),
+        ("Accept", "Volatility", "finance", "We examine volatility-volume relationship using GARCH(1,1). S&P 500 daily data, 2000-2020. Significant ARCH effects (Ljung-Box Q=42.3, p<0.001). GARCH coefficient = 0.94, high persistence. Some robustness checks included."),
+        ("Accept", "CorporateBond", "finance", "We study credit spread dynamics with 5,000 corporate bonds (2010-2020). Credit spreads respond to interest rate changes. Default risk premium discussion included. Limitations acknowledged."),
+        ("Accept", "TailRisk", "finance", "We examine tail risk in hedge fund returns using skewed Student-t distribution. 500 hedge funds, monthly, 2000-2020. Skewed Student-t outperforms normal (LR test=38.4, p<0.001). VaR and ES at 95% and 99% computed. Some robustness."),
+        ("Accept", "CreditDefault", "empirical", "We study effect of CDS on corporate debt pricing. DiD around 2008 financial crisis. CDS introduction reduces bond yields by 45bp (p<0.01). N=1,200 bonds, 2003-2015. Parallel trends confirmed. Robust to alternative control groups."),
+        ("Weak Accept", "Sentiment", "finance", "We examine news sentiment effect on stock returns. Sentiment index regressed on lagged returns. Positive correlations found. Interpreted as sentiment driving returns."),
+        ("Weak Accept", "OptionPrice", "finance", "We study options pricing. Black-Scholes compared to actual prices. Some deviation from theory. Possible improvements suggested."),
+        ("Weak Accept", "Crypto", "finance", "We examine cryptocurrency returns. Bitcoin highly volatile. Simple regression of Bitcoin on traditional assets."),
+        ("Weak Accept", "EarningsSurprise", "finance", "We examine market reaction to earnings surprises. Event study, 2,000 firms. Positive abnormal returns around positive surprises. Some analysis included."),
+        ("Weak Accept", "Portfolio", "finance", "We study portfolio optimization: mean-variance vs risk parity. Historical data comparison. Risk parity has lower volatility. Some robustness included."),
+        ("Weak Accept", "StockPrediction", "ml", "We predict stocks with deep learning. Method works well. Results are good. Paper short but findings important."),
+        ("Weak Accept", "MarketEfficiency", "finance", "We study market efficiency. Markets not efficient. Important implications for investors and policymakers."),
+        ("Weak Accept", "ESG", "empirical", "We study ESG and returns. ESG stocks have higher returns. Positive coefficient proves ESG creates value. Significant (p<0.05). Good for investors."),
+        ("Borderline", "RandomForest", "ml", "We predict stocks with random forest. Works well. Good results. New model."),
+        ("Borderline", "Momentum", "finance", "We study momentum. Momentum works. Coefficient positive. Important."),
+        ("Borderline", "PE_Ratio", "finance", "We examine PE ratio and returns. PE predicts returns. Significant. Important for investors."),
+        ("Borderline", "GDP", "empirical", "We study GDP growth. Growth affects markets. Significant positive relationship."),
+        ("Reject", "NeuralNetwork", "ml", "We use neural networks for prediction. Model works. Good results. Novel approach."),
+        ("Reject", "SimpleRegression", "empirical", "We study X and Y. X affects Y. Coefficient positive. Significant. Important for everyone."),
+        ("Reject", "Arbitrage", "finance", "We study arbitrage. Arbitrage opportunities exist. Important for markets."),
+        ("Reject", "Blockchain", "ml", "We use blockchain for finance. Works well. Results good. Novel approach."),
+    ]
+
+    for verdict, topic, domain, content_text in augmentations:
+        base = verdicts_map[verdict]
+        samples.append({
+            "paper_content": content_text,
+            "human_verdict": verdict,
+            "expected_scores": jitter(base),
+            "notes": f"[{domain.upper()}] {topic}/{verdict}",
+            "source": f"Augmented: {domain}/{topic}/{verdict}",
+        })
+
+    # 6 Chinese-language papers (economic research / financial research style)
+    chinese = [
+        ("Strong Accept", "ETS_GreenInnovation",
+         "This paper uses panel data on A-share listed firms from 2010-2022 and a DID design to examine the causal effect of China's ETS on firm-level green innovation. ETS increases green patent applications by 8.2% (t=3.21), robust to year x industry fixed effects. Parallel trends pass (F=1.23, p=0.287). IV estimation (historical SO2 intensity as instrument, F=23.4), placebo tests, and PSM all confirm results. Mechanism: financial constraint alleviation (Anderson-Granger z=2.15, p=0.032) and technology incentive (Sobel z=2.34, p=0.019). Heterogeneity: stronger effects in high financial development regions (z=2.08, p=0.038). Provides micro-level evidence for the Porter Hypothesis. Data: CSMAR, CNRDS, Chinese Patent Database. Code and appendix available."),
+        ("Accept", "Liquidity_Innovation",
+         "This paper uses 2007-2020 Chinese listed firm data and DID to examine how stock liquidity affects firm innovation. A 1 SD increase in liquidity raises R&D investment by 5.3% (p<0.01). Robustness checks include alternative liquidity measures, macro controls, and sample variations. Mechanism: liquidity through monitoring and information channels promotes innovation. Contributes to literature by revealing how financial market development affects firm-level technological innovation."),
+        ("Weak Accept", "ExecutiveCompensation",
+         "This paper studies the relationship between executive compensation and firm performance using OLS regression with approximately 2,000 firms. Results show a positive relationship. Results are statistically significant. Some robustness checks with alternative control variables are included. Conclusions have practical reference value."),
+        ("Borderline", "DID_Policy",
+         "This paper uses DID to study policy effects. Data covers some years and firms. Results are positive. Coefficient is significant at the 5% level. Some robustness checks are included. Conclusions are important."),
+        ("Reject", "Innovation",
+         "This paper finds that firm innovation is important. Regression analysis with R squared equals 0.23. Results are good. Coefficient is 0.5 (p<0.05). Conclusion: policy promotes innovation. This contributes to the literature."),
+        ("Strong Accept", "DigitalFinance_TFP",
+         "This paper examines the effect of digital finance development on firm total factor productivity using panel data. Research design: firm and year fixed effects with heteroskedasticity-robust standard errors. Data from Peking University Digital Finance Research Center and CSMAR, 2011-2021, covering more than 2,800 listed firms. Parallel trends test, dynamic treatment effects, placebo tests, and PSM are all complete. IV (historical mean of Peking University Digital Inclusive Finance Index) handles endogeneity (F=31.5). Mechanism: financial constraint (KZ index) and R&D investment as mediators. Heterogeneity: ownership, region, firm size. Clear marginal contribution, complete literature review, well-specified theoretical hypotheses. Complete references, data, and code availability statement provided."),
+    ]
+
+    for verdict, topic, content_text in chinese:
+        base = verdicts_map[verdict]
+        samples.append({
+            "paper_content": content_text,
+            "human_verdict": verdict,
+            "expected_scores": jitter(base),
+            "notes": f"[CN_{topic.upper()}] {verdict}",
+            "source": f"Generated for calibration: cn/{topic.lower()}/{verdict.lower()}",
+        })
+
+    return samples
+
+
+# Initialize class-level calibration data
+CalibrationDataset.SYNTHETIC_SAMPLES = _build_calibration_samples()
+CalibrationDataset.KNOWN_DATASETS["synthetic"] = {
+    "description": "Expanded synthetic papers: 15 base x 3 domains + 34 topic variants + 6 Chinese papers = 55 total",
+    "samples": CalibrationDataset.SYNTHETIC_SAMPLES,
+    "source": "Generated for calibration testing",
+}
+
+
 class LLMReviewer:
     """
     LLM-based academic paper reviewer — calibrated against human judgments.
@@ -881,8 +976,15 @@ class LLMReviewer:
         results: list[ReviewResult] = []
         for i, paper in enumerate(papers):
             try:
+                # Resolve paper content from multiple field names (fallback chain)
+                paper_content = (
+                    paper.get("content")
+                    or paper.get("paper_content")
+                    or paper.get("text")
+                    or ""
+                )
                 result = self.review(
-                    paper_content=paper.get("content", ""),
+                    paper_content=paper_content,
                     venue=venue,
                     paper_number=paper_numbers[i],
                 )

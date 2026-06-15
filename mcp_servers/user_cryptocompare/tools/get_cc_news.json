@@ -1,10 +1,15 @@
 {
   "name": "get_cc_news",
-  "description": "获取加密货币最新新闻",
-  "parameters": {
+  "description": "从 CryptoCompare 获取加密货币行业最新新闻，支持按 BTC/ETH/DOGE 等分类筛选，返回标题/摘要/发布时间/来源 URL。",
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "categories": { "type": "string", "description": "新闻分类，例如 'BTC' 或 'Blockchain'", "default": "" }
-    }
+      "categories": {
+        "type": "string",
+        "default": "",
+        "description": "分类列表（如 BTC/ETH/DOGE）"
+      }
+    },
+    "description": "从 CryptoCompare 获取加密货币行业最新新闻，支持按 BTC/ETH/DOGE 等分类筛选，返回标题/摘要/发布时间/来源 URL。"
   }
 }

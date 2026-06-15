@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "TaskStatus",
+    "TaskType",
+    "Task",
+    "ResearchPlanner",
+]
+
 import re
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from scripts.core.memory import ResearchMemory
 
 # ─── Enums ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +56,8 @@ class Task:
     retry_count: int = 0
     created_at: float = field(default_factory=time.time)
     finished_at: float | None = None
+    # Additional parameters for tool execution
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 # ─── Keyword/Regex Classification ─────────────────────────────────────────────
@@ -336,9 +347,22 @@ class ResearchPlanner:
 
             task.status = TaskStatus.RUNNING
 
-            # Simulate execution (fallback when ToolSelector is not available)
+            # Real execution via ToolSelector
             try:
-                task.result = {"status": "executed", "task_id": task.id}
+                from scripts.core.tool_selector import ToolSelector
+                ts = ToolSelector()
+                selections = ts.select(task)
+                if selections:
+                    sel = selections[0]
+                    result = ts.execute(sel, task.params or {"description": task.description})
+                    task.result = {
+                        "status": "success",
+                        "result": result.output if result.success else None,
+                        "tool_used": sel.tool_name,
+                        "confidence": sel.confidence,
+                    }
+                else:
+                    task.result = {"status": "no_tool", "task_id": task.id}
                 task.status = TaskStatus.DONE
                 task.finished_at = time.time()
             except Exception as exc:

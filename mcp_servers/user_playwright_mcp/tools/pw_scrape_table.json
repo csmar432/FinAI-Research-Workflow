@@ -5,9 +5,11 @@
     "type": "object",
     "properties": {
       "properties": {
-        "type": "string"
+        "type": "string",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "抓取HTML表格数据（东方财富/同花顺等金融网站的常用表格）。"
   }
 }

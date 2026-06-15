@@ -7,6 +7,14 @@ with quality scores, categories, and metadata.
 
 from __future__ import annotations
 
+__all__ = [
+    "ToolMetadata",
+    "MCPToolRegistry",
+    "CATEGORY_RULES",
+    "TAG_KEYWORDS",
+    "get_default_registry",
+]
+
 import json
 import os
 import re

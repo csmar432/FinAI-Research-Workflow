@@ -1,11 +1,20 @@
 {
   "name": "get_news_top_headlines",
-  "description": "获取财经头条新闻",
-  "parameters": {
+  "description": "获取全球财经头条新闻，按国家/类别/语言筛选，支持关键词过滤，返回标题/描述/URL/发布时间/来源。",
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "category": { "type": "string", "description": "分类：business, technology, science", "default": "business" },
-      "country": { "type": "string", "description": "国家代码：us,cn,gb", "default": "us" }
-    }
+      "category": {
+        "type": "string",
+        "default": "business",
+        "description": "新闻类别（如 business/technology/science）"
+      },
+      "country": {
+        "type": "string",
+        "default": "us",
+        "description": "国家代码（如 us/cn/gb）"
+      }
+    },
+    "description": "获取全球财经头条新闻，按国家/类别/语言筛选，支持关键词过滤，返回标题/描述/URL/发布时间/来源。"
   }
 }

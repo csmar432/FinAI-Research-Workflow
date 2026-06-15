@@ -5,14 +5,18 @@
     "type": "object",
     "properties": {
       "country_code": {
-        "type": "string"
+        "type": "string",
+        "description": "ISO 3166-1 alpha-2 国家代码（如 CN/USA/CHN）"
       },
       "start_year": {
-        "type": "integer"
+        "type": "integer",
+        "description": "起始年份（YYYY）"
       },
       "end_year": {
-        "type": "integer"
+        "type": "integer",
+        "description": "结束年份（YYYY）"
       }
-    }
+    },
+    "description": "查询各国人均GDP（美元）"
   }
 }

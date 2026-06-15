@@ -11,6 +11,12 @@ Reference: https://github.com/SkyworkAI/DeepResearchAgent
 
 from __future__ import annotations
 
+__all__ = [
+    "ToolMetadata",
+    "RegisteredTool",
+    "DynamicToolManager",
+]
+
 import hashlib
 import json
 import time
@@ -390,7 +396,10 @@ class DynamicToolManager:
                     break
             if not result_line:
                 raise RuntimeError("Sandboxed execution produced no output")
-            return json.loads(result_line)
+            try:
+                return json.loads(result_line)
+            except json.JSONDecodeError as e:
+                raise RuntimeError(f"Sandboxed execution returned invalid JSON: {e}")
         finally:
             try:
                 Path(temp_path).unlink(missing_ok=True)

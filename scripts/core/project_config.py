@@ -17,6 +17,14 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = [
+    "ResolvedPaths",
+    "ProjectConfig",
+    "_dataclass_replace",
+    "load_project_config",
+    "dataclass_replace",
+]
+
 import json
 import os
 from dataclasses import dataclass, field

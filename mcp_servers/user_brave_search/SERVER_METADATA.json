@@ -1,0 +1,13 @@
+{
+  "name": "Brave Search",
+  "version": "1.0.0",
+  "is_mock": false,
+  "requires_api_key": true,
+  "server_name": "user-brave-search",
+  "serverIdentifier": "user-brave-search",
+  "description": "Brave Search 网络搜索。需 BRAVE_SEARCH_API_KEY（免费注册）。覆盖中英文网页、学术资源、政策文件。",
+  "tools": ["brave_web_search"],
+  "api_key_var": "BRAVE_SEARCH_API_KEY",
+  "register_url": "https://api.search.brave.com",
+  "_note": "Brave Search 在中文网络内容覆盖率极高"
+}

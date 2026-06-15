@@ -1,13 +1,31 @@
 {
   "name": "pd_corr_analysis",
-  "description": "相关性分析（Pearson/Spearman/Kendall）+ 热力图数据生成。\\n\\n",
+  "description": "相关性分析（Pearson/Spearman/Kendall）+ 热力图数据生成。\\n\\nArgs:\\n  name: 数据框名称\\n  columns: 分析列（空=全部数值列）\\n  method: 相关系数方法\\n\\nReturns: 相关性矩阵（CSV格式）",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
         "type": "string"
+      },
+      "columns": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "pearson",
+          "spearman",
+          "kendall"
+        ],
+        "default": "pearson"
       }
     },
-    "required": []
+    "required": [
+      "name"
+    ],
+    "description": "相关性分析（Pearson/Spearman/Kendall）+ 热力图数据生成。"
   }
 }

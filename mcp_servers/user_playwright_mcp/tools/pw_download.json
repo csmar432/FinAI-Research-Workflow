@@ -5,9 +5,11 @@
     "type": "object",
     "properties": {
       "properties": {
-        "type": "string"
+        "type": "string",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "等待并下载文件（触发下载后等待完成）。"
   }
 }

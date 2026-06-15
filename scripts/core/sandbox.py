@@ -25,11 +25,21 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = [
+    "ExecutionMode",
+    "ExecutionResult",
+    "ValidationResult",
+    "_safe_savefig",
+    "main",
+]
+
 import ast
 import base64
 import builtins
 import io
+import os
 import re
+import stat
 import subprocess
 import sys
 import time
@@ -620,11 +630,19 @@ class SafeCodeExecutor:
         # Prepare wrapper script
         wrapper_code = self._build_subprocess_wrapper(code, context)
 
-        # Write code to temp file
+        # Write code to temp file (using os.O_EXCL to prevent symlink attacks)
         temp_dir = self.output_dir / "temp"
         temp_dir.mkdir(parents=True, exist_ok=True)
-        temp_file = temp_dir / f"sandbox_{int(time.time() * 1000)}.py"
-        temp_file.write_text(wrapper_code, encoding="utf-8")
+        import os, stat
+        fd, temp_path = os.mkstemp(suffix=".py", dir=str(temp_dir))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as tf:
+                tf.write(wrapper_code)
+            os.chmod(temp_path, stat.S_IRUSR)  # readable only by owner
+        except Exception:
+            os.close(fd)
+            raise
+        temp_file = Path(temp_path)
 
         try:
             # Build resource limit command

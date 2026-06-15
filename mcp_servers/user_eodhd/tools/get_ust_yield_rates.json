@@ -1,14 +1,22 @@
 {
   "name": "get_ust_yield_rates",
-  "description": "获取美国国债收益率曲线（1M-30Y），via EODHD API",
+  "description": "获取美国国债收益率曲线（1M-30Y 各期限）。通过 EODHD API 获取每日国债收益率数据，支持历史查询。用于利率期限结构、货币政策传导和风险定价研究。",
   "inputSchema": {
     "type": "object",
     "properties": {
       "year": {
         "type": "integer",
-        "description": "年份，如 2024"
+        "description": "年份（YYYY，如 2024，返回该年全部数据）"
+      },
+      "start_date": {
+        "type": "string",
+        "description": "开始日期（YYYY-MM-DD，覆盖 year 参数）"
+      },
+      "end_date": {
+        "type": "string",
+        "description": "结束日期（YYYY-MM-DD）"
       }
     },
-    "required": []
+    "description": "获取全球经济数据 MCP — 宏观经济指标、国债收益率曲线、经济日历。数据源: akshare/World Bank API (无需Key)。设置 EODHD_API_KEY 可获得官方 EODHD 数据。中的ust yield rates"
   }
 }

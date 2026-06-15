@@ -3,6 +3,7 @@
   "description": "获取中国PPI月度数据",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "获取中国PPI月度数据（生产资料/生活资料）"
   }
 }

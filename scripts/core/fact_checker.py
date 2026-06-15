@@ -12,6 +12,22 @@ This module provides comprehensive validation for financial reports:
 
 from __future__ import annotations
 
+__all__ = [
+    "IssueSeverity",
+    "ValidationIssue",
+    "ValidationReport",
+    "ValidationRule",
+    "NumericalRangeRule",
+    "YoYQoQLogicRule",
+    "TemporalConsistencyRule",
+    "UnitConsistencyRule",
+    "CitationFormatRule",
+    "MathConsistencyRule",
+    "FactCheckerAgent",
+]
+
+from abc import ABC, abstractmethod
+
 import logging
 import re
 from dataclasses import dataclass, field
@@ -87,15 +103,17 @@ class ValidationReport:
 # ─── Validation Rules ────────────────────────────────────────────────────────────
 
 
-class ValidationRule:
+class ValidationRule(ABC):
     """Base class for validation rules."""
 
     def __init__(self, name: str, severity: IssueSeverity = IssueSeverity.WARNING):
         self.name = name
         self.severity = severity
 
+    @abstractmethod
     def validate(self, text: str) -> list[ValidationIssue]:
-        raise NotImplementedError
+        """Validate the text. Subclasses must implement this method."""
+        ...
 
 
 class NumericalRangeRule(ValidationRule):

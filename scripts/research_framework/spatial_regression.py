@@ -504,7 +504,8 @@ class SpatialLagModel:
         try:
             res = optimize.minimize_scalar(neg_loglik, bounds=(-0.999, 0.999), method="bounded")
             rho = float(res.x) if res.fun < neg_loglim(0) else rho_init
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialLagModel._ml_sar] Optimization failed: {exc}")
             rho = rho_init
 
         # Compute beta given rho
@@ -530,7 +531,8 @@ class SpatialLagModel:
 
             # Full SE vector
             se = np.concatenate([[se_rho], se_beta])
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialLagModel._ml_sar] SE computation failed: {exc}")
             se = np.ones(k + 1) * 0.1
 
         coef = np.concatenate([[rho], beta])
@@ -551,14 +553,16 @@ class SpatialLagModel:
             ll = -n / 2 * np.log(2 * np.pi * sigma2_ml)
             aic = 2 * (k + 2) - 2 * ll
             bic = (k + 2) * np.log(n) - 2 * ll
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialLagModel.fit] Fit statistics computation failed: {exc}")
             r2, ll, aic, bic = 0.0, None, None, None
 
         # Moran's I of residuals
         try:
             raw_resid = y - X @ beta
             moran = _moran_i(raw_resid, W, n)
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialLagModel.fit] Moran's I computation failed: {exc}")
             moran = {"I": np.nan, "pval": np.nan}
 
         names = ["rho"] + self.var_names
@@ -678,7 +682,8 @@ class SpatialErrorModel:
         try:
             res = optimize.minimize_scalar(neg_loglik, bounds=(-0.999, 0.999), method="bounded")
             lam = float(res.x) if res.fun < neg_loglik(0) else lam_init
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialErrorModel._ml_sem] Optimization failed: {exc}")
             lam = lam_init
 
         # Beta given lambda
@@ -699,7 +704,8 @@ class SpatialErrorModel:
             d2 = (neg_loglik(lam + eps) + neg_loglik(lam - eps) - 2 * neg_loglik(lam)) / eps ** 2
             se_lam = float(1.0 / np.sqrt(abs(d2))) if abs(d2) > 1e-6 else 0.1
             se = np.concatenate([[se_lam], se_beta])
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialErrorModel._ml_sem] SE computation failed: {exc}")
             se = np.ones(k + 1) * 0.1
 
         coef = np.concatenate([[lam], beta])
@@ -717,14 +723,16 @@ class SpatialErrorModel:
             ll = -n / 2 * np.log(2 * np.pi * sigma2)
             aic = 2 * (k + 2) - 2 * ll
             bic = (k + 2) * np.log(n) - 2 * ll
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialErrorModel._ml_sem] Fit statistics computation failed: {exc}")
             r2, ll, aic, bic = 0.0, None, None, None
 
         # Moran's I
         try:
             raw_resid = y - X @ beta
             moran = _moran_i(raw_resid, W, n)
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialErrorModel._ml_sem] Moran's I computation failed: {exc}")
             moran = {"I": np.nan, "pval": np.nan}
 
         names = ["lambda"] + self.var_names
@@ -869,7 +877,8 @@ class SpatialDurbinModel:
                 ll = -n / 2 * np.log(2 * np.pi * sigma2) + det_A - n / 2 * np.log(sigma2)
                 if ll < best_ll:
                     best_ll, best_rho = ll, rho
-            except Exception:
+            except Exception as exc:
+                _log.warning(f"[SpatialDurbinModel._ml_sdm] Grid search iteration failed: {exc}")
                 continue
 
         rho = best_rho
@@ -906,14 +915,16 @@ class SpatialDurbinModel:
             ll = -n / 2 * np.log(2 * np.pi * sigma2) + det_A - n / 2 * np.log(sigma2)
             aic = 2 * (1 + 2 * k + 1) - 2 * ll
             bic = (1 + 2 * k + 1) * np.log(n) - 2 * ll
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialDurbinModel._ml_sdm] Fit statistics computation failed: {exc}")
             r2, ll, aic, bic = 0.0, None, None, None
 
         # Moran's I
         try:
             raw_resid = y - X @ beta - WX @ theta
             moran = _moran_i(raw_resid, W, n)
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialDurbinModel._ml_sdm] Moran's I computation failed: {exc}")
             moran = {"I": np.nan, "pval": np.nan}
 
         names = ["rho"] + var_names_full
@@ -1067,7 +1078,8 @@ class SpatialDurbinModel:
                     coef_boot, *_ = np.linalg.lstsq(X_full_local, y_boot, rcond=None)
                     beta_b  = coef_boot[:self.k]
                     theta_b = coef_boot[self.k:]
-                except Exception:
+                except Exception as exc:
+                    _log.warning(f"[SpatialDurbinModel.get_spatial_effects] Bootstrap iteration failed: {exc}")
                     beta_b, theta_b = beta, theta
 
                 for j, (bj, tj) in enumerate(zip(beta_b[include_idx], theta_b[include_idx])):
@@ -1344,7 +1356,8 @@ class SpatialPanelRE:
         try:
             res = optimize.minimize_scalar(neg_loglik, bounds=(-0.999, 0.999), method="bounded")
             rho = float(res.x) if res.fun < neg_loglik(rho_init) else rho_init
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialPanelRE._ml_panel_re] Optimization failed: {exc}")
             rho = rho_init
 
         # Beta given rho
@@ -1364,7 +1377,8 @@ class SpatialPanelRE:
         coef = np.concatenate([[rho], beta])
         try:
             pval = 2 * (1 - stats.norm.cdf(np.abs(coef / np.maximum(se, 1e-6))))
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialPanelRE._ml_panel_re] pval computation failed: {exc}")
             pval = np.ones(k + 1)
         ci_lower = coef - 1.96 * se
         ci_upper = coef + 1.96 * se
@@ -1375,7 +1389,8 @@ class SpatialPanelRE:
             ll = -(n * T) / 2 * np.log(2 * np.pi * sigma2)
             aic = 2 * (k + 2) - 2 * ll
             bic = (k + 2) * np.log(n * T) - 2 * ll
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialPanelRE._ml_panel_re] Fit statistics computation failed: {exc}")
             r2, ll, aic, bic = 0.0, None, None, None
 
         names = ["rho"] + self.x_vars
@@ -1537,7 +1552,8 @@ class SpatialPanelFE:
         try:
             res = optimize.minimize_scalar(neg_loglik, bounds=(-0.999, 0.999), method="bounded")
             rho = float(res.x) if res.fun < neg_loglik(rho_init) else rho_init
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialPanelFE._ml_panel_fe] Optimization failed: {exc}")
             rho = rho_init
 
         try:
@@ -1555,7 +1571,8 @@ class SpatialPanelFE:
         coef = np.concatenate([[rho], beta])
         try:
             pval = 2 * (1 - stats.norm.cdf(np.abs(coef / np.maximum(se, 1e-6))))
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialPanelFE._ml_panel_fe] pval computation failed: {exc}")
             pval = np.ones(k + 1)
         ci_lower = coef - 1.96 * se
         ci_upper = coef + 1.96 * se
@@ -1565,7 +1582,8 @@ class SpatialPanelFE:
             ll = -(n * T) / 2 * np.log(2 * np.pi * sigma2)
             aic = 2 * (k + 2) - 2 * ll
             bic = (k + 2) * np.log(n * T) - 2 * ll
-        except Exception:
+        except Exception as exc:
+            _log.warning(f"[SpatialPanelFE._ml_panel_fe] Fit statistics computation failed: {exc}")
             r2, ll, aic, bic = 0.0, None, None, None
 
         names = ["rho"] + self.x_vars
@@ -1775,7 +1793,8 @@ class SpatialRegressionEngine:
                     self._residuals = y_f - X @ result.coef[1:]
                 else:
                     self._residuals = y - X @ result.coef[1:]
-            except Exception:
+            except Exception as exc:
+                _log.warning(f"[SpatialEngine.fit] Residual computation failed: {exc}")
                 self._residuals = y - X @ result.coef[1:]
 
             _log.info(

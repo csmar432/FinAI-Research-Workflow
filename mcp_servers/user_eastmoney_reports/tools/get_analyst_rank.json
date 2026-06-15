@@ -8,6 +8,7 @@
         "type": "integer",
         "description": "年份"
       }
-    }
+    },
+    "description": "获取券商分析师排名。使用 akshare 东方财富接口，无需 API Key。"
   }
 }

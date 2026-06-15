@@ -1,0 +1,22 @@
+{
+  "name": "get_openalex_authors",
+  "description": "OpenAlex 作者搜索。通过作者名称检索作者，查看其论文列表、所属机构、合作网络。无需 API Key。用于追踪研究者学术产出和合作网络分析。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "作者姓名（支持模糊匹配）"
+      },
+      "per_page": {
+        "type": "integer",
+        "description": "每页结果数（最大200）",
+        "default": 10
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "description": "OpenAlex 作者搜索。无需 API Key。"
+  }
+}

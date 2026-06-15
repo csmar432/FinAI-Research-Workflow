@@ -5,9 +5,11 @@
     "type": "object",
     "properties": {
       "properties": {
-        "type": "string"
+        "type": "string",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "通配符文件搜索（类似find但更强大）。"
   }
 }

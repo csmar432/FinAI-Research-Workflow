@@ -42,11 +42,13 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 __all__ = [
     "RobustnessRunner",
     "RobustnessTest",
     "RobustnessReport",
+    "oster_bounds",
 ]
 
 _log = logging.getLogger("robustness_runner")
@@ -177,17 +179,20 @@ class RobustnessReport:
         ]
 
         for _, row in df.iterrows():
-            coef_str = f"${row['DID Coef']:.4f}$"
-            se_str = f"$({row['SE']:.4f})$"
-            p_str = f"${row['p-value']:.4f}$"
-
-            consistent_icon = row["Consistent"]
-            sig_icon = row["Significant"]
+            # Bug fix: NaN 值不能放入 LaTeX 数学模式（\mathord），使用短破折号
+            def fmt(val, is_math=False):
+                if pd.isna(val):
+                    return "—"
+                if is_math:
+                    return f"${val:.4f}$"
+                return f"{val:.4f}"
 
             lines.append(
                 f"    {row['Test']} & {row['Type']} & "
-                f"{coef_str} & {se_str} & {p_str} & "
-                f"{consistent_icon} & {sig_icon} & {row['Note']} \\\\ "
+                f"{fmt(row['DID Coef'], True)} & "
+                f"{fmt(row['SE'], True)} & "
+                f"{fmt(row['p-value'], True)} & "
+                f"{row['Consistent']} & {row['Significant']} & {row['Note']} \\\\ "
             )
 
         lines.extend([
@@ -293,6 +298,8 @@ class RobustnessRunner:
             "combined_ddd": self._test_combined_ddd,
             "iv_robust": self._test_iv_robust,
             "lagged_depvar": self._test_lagged_depvar,
+            # v1.7.0 新增
+            "oster_bounds": self._test_oster_bounds,
         }
 
         runner = dispatch.get(test_name)
@@ -354,25 +361,72 @@ class RobustnessRunner:
         )
 
     def _test_placebo(self, config: dict) -> RobustnessTest:
-        """安慰剂检验（Placebo）：随机分配处理组。"""
+        """Permutation-based placebo test (randomized treatment assignment).
+
+        Repeats the treatment assignment 500 times and compares the observed
+        DID coefficient to the distribution of placebo coefficients.
+        """
+        n_permutations = 500
+
         rng = np.random.default_rng(42)
         df_p = self.df.copy()
-        df_p["placebo_treat"] = rng.choice([0, 1], size=len(df_p))
+        p_treat = float(df_p[self.treat_var].mean())
 
-        coef, se, pval = self._get_result(df_p)
-        is_consistent = (coef * self.baseline_result.get("coef", 0) > 0)
-        is_significant = (pval < 0.05)
+        # Store results from all permutations
+        placebo_coefs = np.zeros(n_permutations)
+
+        for i in range(n_permutations):
+            df_b = df_p.copy()
+            df_b["placebo_treat"] = rng.choice(
+                [0, 1], size=len(df_p), p=[1 - p_treat, p_treat]
+            )
+            try:
+                coef, se, pval = self._get_result(df_b)
+                if not np.isnan(coef):
+                    placebo_coefs[i] = coef
+            except Exception:
+                placebo_coefs[i] = np.nan
+
+        # Remove failed permutations
+        valid = ~np.isnan(placebo_coefs)
+        if valid.sum() < 10:
+            return RobustnessTest(
+                test_name="Placebo (Randomized)",
+                test_type="Placebo",
+                did_coef=np.nan,
+                did_se=np.nan,
+                did_pval=1.0,
+                is_consistent=False,
+                is_significant=False,
+                note=f"Only {valid.sum()} valid permutations (need ≥10)",
+                details={"n_permutations": n_permutations, "valid": int(valid.sum())},
+            )
+
+        # Get observed coefficient
+        obs_result = self._get_result(df_p)
+        obs_coef = obs_result[0]
+
+        # Compute p-value: fraction of |placebo| >= |observed|
+        p_value = np.mean(np.abs(placebo_coefs[valid]) >= np.abs(obs_coef))
 
         return RobustnessTest(
             test_name="Placebo (Randomized)",
             test_type="Placebo",
-            did_coef=coef,
-            did_se=se,
-            did_pval=pval,
-            is_consistent=is_consistent,
-            is_significant=is_significant,
-            note="Treatment randomly assigned",
-            details={"n_permutations": 1},
+            did_coef=obs_coef,
+            did_se=np.nan,
+            did_pval=p_value,
+            is_consistent=True,
+            is_significant=p_value < 0.05,
+            note=f"{p_value:.3f} of {valid.sum()} placebo |coef| >= |{obs_coef:.3f}|",
+            details={
+                "n_permutations": n_permutations,
+                "valid_permutations": int(valid.sum()),
+                "placebo_mean": float(np.mean(placebo_coefs[valid])),
+                "placebo_std": float(np.std(placebo_coefs[valid])),
+                "placebo_5pct": float(np.percentile(placebo_coefs[valid], 5)),
+                "placebo_95pct": float(np.percentile(placebo_coefs[valid], 95)),
+                "interpretation": "Significant if p_value < 0.05",
+            },
         )
 
     def _test_psm(self, config: dict) -> RobustnessTest:
@@ -500,13 +554,36 @@ class RobustnessRunner:
         industry: str | None = None,
         n_firms: int | None = None,
     ) -> RobustnessTest:
-        """子样本检验。"""
+        """子样本检验（按年份/行业/企业数限制）。"""
         df_s = self.df.copy()
-        if year_range:
-            df_s = df_s[
-                (df_s[self.time_var] >= year_range[0]) &
-                (df_s[self.time_var] <= year_range[1])
-            ]
+
+        # Bug fix: time_var 是 post（二进制 0/1），不能用它过滤年份
+        # 自动检测年份列：优先使用 'year'，其次尝试从 DatetimeIndex 提取
+        year_col = "year"
+        if year_col not in df_s.columns:
+            # 尝试常见年份列名
+            for col in ["date", "year_num", "ann_year"]:
+                if col in df_s.columns:
+                    year_col = col
+                    break
+            else:
+                # 尝试从 DatetimeIndex 提取年份
+                if isinstance(df_s.index, pd.DatetimeIndex):
+                    df_s = df_s.reset_index()
+                    if "date" in df_s.columns:
+                        df_s["_year"] = pd.to_datetime(df_s["date"]).dt.year
+                        year_col = "_year"
+                    else:
+                        year_col = None
+
+        if year_range and year_col and year_col in df_s.columns:
+            try:
+                df_s = df_s[
+                    (df_s[year_col] >= year_range[0]) &
+                    (df_s[year_col] <= year_range[1])
+                ]
+            except Exception:
+                pass  # 无法过滤年份，继续用全量数据
         if industry and "industry" in df_s.columns:
             df_s = df_s[df_s["industry"] == industry]
 
@@ -676,7 +753,11 @@ class RobustnessRunner:
             se = float(model.bse[did_idx])
             from scipy import stats
             t = coef / se
-            pval = 2 * (1 - stats.t.cdf(abs(t), df=len(y) - X.shape[1]))
+            # Bug fix: cluster-robust SE 的 p 值自由度应为 G-1（聚类数-1），而非 n-k
+            # 原: df = len(y) - X.shape[1]，高估自由度会使 p 值偏小
+            n_clusters = len(np.unique(groups))
+            dof = max(1, n_clusters - 1)  # 最小为 1，防止除零
+            pval = 2 * (1 - stats.t.cdf(abs(t), df=dof))
         except Exception:
             return RobustnessTest(
                 test_name=f"Cluster ({new_cluster})",
@@ -764,10 +845,16 @@ class RobustnessRunner:
         df_e = self.df.copy()
 
         if announce_time is not None:
-            df_e = df_e[
-                (df_e[self.unit_var] != self.treat_var) |
-                (df_e[self.time_var] >= announce_time - exclude_periods)
-            ]
+            # Bug fix: 原逻辑使用 self.unit_var != self.treat_var 比较字符串和整数，永远为 True
+            # 正确逻辑：保留控制组（treat=0）的所有观测，保留处理组（treat=1）
+            #          在 announce_time - exclude_periods 之后的观测
+            # 关键：unit_var 是单位 ID（如 ticker），treat_var 是处理指示（0/1）
+            #       announce_time 是时间变量的值（如年份 2018）
+            is_control = df_e[self.treat_var] == 0
+            is_treated_post = (df_e[self.treat_var] == 1) & (
+                df_e[self.time_var] >= announce_time - exclude_periods
+            )
+            df_e = df_e[is_control | is_treated_post]
         else:
             treat_mask = df_e[self.treat_var] == 1
             pre_mask = df_e[self.time_var] < 1
@@ -1192,3 +1279,391 @@ class RobustnessRunner:
                 "n_obs": len(df_l),
             },
         )
+
+    def _test_oster_bounds(self, config: dict) -> RobustnessTest:
+        """Oster (2019) 敏感性分析：选择偏差边界检验。"""
+        oster_res = oster_bounds(
+            df=self.df,
+            y_var=self.y_var,
+            treatment_var=self.treat_var,
+            x_vars=self.x_vars,
+            control_vars=config.get("control_vars", []),
+            r2_max_options=config.get("r2_max_options"),
+            cluster_var=None,
+        )
+        r2_key = str(config.get("r2_max_options", [0.5, 0.7, 0.9, 1.0])[-1])
+        adjusted_beta = oster_res["delta_values"].get(r2_key, {}).get(
+            "adjusted_beta", oster_res["beta_full"]
+        )
+        delta_val = oster_res["delta_values"].get(r2_key, {}).get("delta", "inf")
+
+        return RobustnessTest(
+            test_name=f"Oster Bounds (R²_max={r2_key})",
+            test_type="Oster (2019)",
+            did_coef=float(adjusted_beta),
+            did_se=0.0,
+            did_pval=np.nan,
+            is_consistent=(
+                (adjusted_beta > 0 and oster_res["beta_restricted"] > 0) or
+                (adjusted_beta < 0 and oster_res["beta_restricted"] < 0)
+            ),
+            is_significant=not np.isnan(adjusted_beta) and abs(adjusted_beta) > 1e-6,
+            note=f"delta={delta_val}",
+            details={
+                "beta_restricted": oster_res["beta_restricted"],
+                "beta_full": oster_res["beta_full"],
+                "r2_restricted": oster_res["r2_restricted"],
+                "r2_full": oster_res["r2_full"],
+                "delta_values": oster_res["delta_values"],
+                "interpretation": oster_res["interpretation"],
+            },
+        )
+
+    def add_oster_bounds(
+        self,
+        r2_max_options: list[float] | None = None,
+        control_vars: list[str] | None = None,
+    ) -> "RobustnessRunner":
+        """添加 Oster Bounds 敏感性分析.
+
+        Parameters
+        ----------
+        r2_max_options : list[float] | None
+            R²_max 假设列表。默认为 [0.5, 0.7, 0.9, 1.0]。
+        control_vars : list[str] | None
+            额外控制变量（完整回归用）。
+        """
+        self._pending_tests.append(("oster_bounds", {
+            "r2_max_options": r2_max_options or [0.5, 0.7, 0.9, 1.0],
+            "control_vars": control_vars or [],
+        }))
+        return self
+
+
+# ── FDR Correction ────────────────────────────────────────────────────────────
+
+
+def apply_fdr_correction(pvalues: list[float], method: str = "bh") -> list[float]:
+    """Apply False Discovery Rate correction to a list of p-values.
+
+    Implements Benjamini-Hochberg (1995) procedure.
+
+    Parameters
+    ----------
+    pvalues : list[float]
+        List of p-values from multiple tests.
+    method : str
+        'bh' = Benjamini-Hochberg (default)
+        'by' = Benjamini-Yekutieli
+
+    Returns
+    -------
+    list[float]
+        Adjusted p-values (q-values). Use these instead of raw p-values.
+    """
+    n = len(pvalues)
+    if n == 0:
+        return []
+    if method not in ("bh", "by"):
+        raise ValueError(f"Unknown method: {method}. Use 'bh' or 'by'.")
+    if n == 1:
+        return list(pvalues)
+
+    # Sort p-values keeping track of original indices
+    indexed = sorted(enumerate(pvalues), key=lambda x: x[1])
+    sorted_pvals = [p for _, p in indexed]
+    sorted_indices = [i for i, _ in indexed]
+
+    if method == "bh":
+        # Benjamini-Hochberg
+        # q(i) = p(i) * n / rank(i)
+        adjusted = [p * n / (i + 1) for i, p in enumerate(sorted_pvals)]
+    elif method == "by":
+        # Benjamini-Yekutieli (more conservative)
+        # Uses harmonic number H_n = sum(1/i) for i=1 to n
+        h_n = sum(1.0 / i for i in range(1, n + 1))
+        adjusted = [p * n * h_n / (i + 1) for i, p in enumerate(sorted_pvals)]
+    else:
+        raise ValueError(f"Unknown method: {method}. Use 'bh' or 'by'.")
+
+    # Ensure monotonicity (q-values must be non-decreasing)
+    adjusted_sorted = []
+    min_val = 1.0
+    for q in reversed(adjusted):
+        min_val = min(q, min_val)
+        adjusted_sorted.append(min_val)
+    adjusted_sorted = list(reversed(adjusted_sorted))
+
+    # Restore original order
+    result = [0.0] * n
+    for idx, qval in zip(sorted_indices, adjusted_sorted):
+        result[idx] = min(qval, 1.0)  # Cap at 1.0
+
+    return result
+
+
+def summarize_robustness_with_fdr(
+    robustness_results: list[dict],
+    fdr_threshold: float = 0.05,
+) -> dict:
+    """Summarize robustness results with FDR-corrected significance.
+
+    Parameters
+    ----------
+    robustness_results : list[dict]
+        List of robustness test results, each with 'name' and 'pvalue' keys.
+    fdr_threshold : float
+        FDR threshold (default 0.05).
+
+    Returns
+    -------
+    dict
+        Summary with raw and FDR-corrected results.
+    """
+    if not robustness_results:
+        return {"n_tests": 0, "summary": "No tests to summarize"}
+
+    pvalues = [r.get("pvalue", 1.0) for r in robustness_results]
+    qvalues = apply_fdr_correction(pvalues, method="bh")
+
+    raw_significant = sum(1 for p in pvalues if p < fdr_threshold)
+    fdr_significant = sum(1 for q in qvalues if q < fdr_threshold)
+
+    return {
+        "n_tests": len(robustness_results),
+        "raw_significant": raw_significant,
+        "fdr_significant": fdr_significant,
+        "fdr_threshold": fdr_threshold,
+        "results": [
+            {
+                "name": r["name"],
+                "pvalue": r.get("pvalue"),
+                "qvalue": qvalues[i],
+                "raw_reject": r.get("pvalue", 1.0) < fdr_threshold,
+                "fdr_reject": qvalues[i] < fdr_threshold,
+                "coefficient": r.get("coefficient"),
+                "n_obs": r.get("n_obs"),
+            }
+            for i, r in enumerate(robustness_results)
+        ],
+        "summary": (
+            f"{fdr_significant}/{len(robustness_results)} tests survive FDR correction "
+            f"at {fdr_threshold} level "
+            f"(raw significant: {raw_significant})"
+        ),
+    }
+
+
+def run_with_fdr_correction(
+    panel: pd.DataFrame,
+    outcome_var: str,
+    treatment_var: str,
+    confounders: list[str],
+    test_types: list[str] | None = None,
+    fdr_threshold: float = 0.05,
+) -> dict:
+    """Run robustness tests and apply FDR correction.
+
+    Convenience function that combines robustness testing with FDR correction.
+    """
+    runner = RobustnessRunner(
+        df=panel,
+        baseline_result={"coef": 0.0, "se": 0.0, "pval": 1.0},
+        y_var=outcome_var,
+        treat_var=treatment_var,
+        x_vars=confounders,
+    )
+    if test_types:
+        for t in test_types:
+            runner.add_test(t)
+    else:
+        runner.add_test("parallel_trends")
+        runner.add_test("placebo")
+        runner.add_test("psm")
+        runner.add_test("replace_outliers")
+    report = runner.run_all()
+
+    # Build list[dict] from RobustnessReport
+    robustness_results: list[dict] = []
+    for t in report.tests:
+        robustness_results.append({
+            "name": t.test_name,
+            "pvalue": t.did_pval,
+            "coefficient": t.did_coef,
+            "n_obs": t.details.get("n_obs"),
+        })
+
+    summary = summarize_robustness_with_fdr(robustness_results, fdr_threshold)
+    summary["_report"] = report
+    return summary
+
+
+def oster_bounds(
+    df: pd.DataFrame,
+    y_var: str,
+    treatment_var: str,
+    x_vars: list[str],
+    control_vars: list[str],
+    r2_max_options: list[float] | None = None,
+    bound_method: str = "oster",
+    cluster_var: str | None = None,
+) -> dict:
+    """Oster (2019) Sensitivity Analysis for Selection on Unobservables.
+
+    Implements Oster's bounding technique for the treatment effect under
+    different assumptions about the maximum R-squared achievable with
+    all controls (including unobservables).
+
+    The key insight: if selection on observed variables is informative about
+    selection on unobserved variables, we can bound the treatment effect.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Panel data.
+    y_var : str
+        Outcome variable.
+    treatment_var : str
+        Treatment (DID) variable.
+    x_vars : list[str]
+        Control variables in restricted regression (y on treatment + x).
+    control_vars : list[str]
+        Additional control variables to add incrementally.
+    r2_max_options : list[float] | None
+        Assumptions about R²_max. Defaults to [0.5, 0.7, 0.9, 1.0].
+        - 0.5/0.7: Conservative (based on Rothendahl 2022 recommendations)
+        - 0.9/1.0: Standard Oster recommendation
+    bound_method : str
+        "oster" (default) or "brow" (Browning-Carcillo-Johannes).
+    cluster_var : str | None
+        Two-way clustering variable.
+
+    Returns
+    -------
+    dict
+        Oster bounds results with delta values and conclusions.
+    """
+    import statsmodels.api as sm
+
+    if r2_max_options is None:
+        r2_max_options = [0.5, 0.7, 0.9, 1.0]
+
+    # Clean data
+    cols = [y_var, treatment_var] + x_vars + control_vars
+    if cluster_var:
+        cols.append(cluster_var)
+    df_sub = df.dropna(subset=cols).copy()
+
+    # Step 1: Run restricted regression (y on treatment + x_vars)
+    X_restricted = sm.add_constant(df_sub[[treatment_var] + x_vars])
+    model_restricted = sm.OLS(df_sub[y_var], X_restricted).fit()
+    beta_restricted = model_restricted.params[treatment_var]
+    r2_restricted = model_restricted.rsquared
+
+    # Step 2: Run full regression (y on treatment + x_vars + control_vars)
+    X_full = sm.add_constant(df_sub[[treatment_var] + x_vars + control_vars])
+    model_full = sm.OLS(df_sub[y_var], X_full).fit()
+    beta_full = model_full.params[treatment_var]
+    r2_full = model_full.rsquared
+
+    # Step 3: Run full regression with treatment removed (to get R²_y~X without treatment)
+    X_no_treat = sm.add_constant(df_sub[x_vars + control_vars])
+    model_no_treat = sm.OLS(df_sub[y_var], X_no_treat).fit()
+    r2_without_treatment = model_no_treat.rsquared
+
+    results = {
+        "beta_restricted": float(beta_restricted),
+        "beta_full": float(beta_full),
+        "r2_restricted": float(r2_restricted),
+        "r2_full": float(r2_full),
+        "r2_without_treatment": float(r2_without_treatment),
+        "delta_values": {},
+        "interpretation": {},
+    }
+
+    # Step 4: Compute delta for each R²_max assumption
+    # Delta = (R²_max - R²_full) / (R²_full - R²_restricted) * (beta_full - beta_restricted) + beta_full
+    # Simplified Oster (2019) formula:
+    # beta* = beta_full - delta * (beta_full - beta_restricted) / (1 - R²_full / R²_max)
+
+    for r2_max in r2_max_options:
+        if r2_max <= r2_full:
+            delta = float("inf")
+            bound = float("nan")
+        else:
+            # Oster's delta formula
+            # delta = (beta_full - beta_restricted) / (r2_full - r2_restricted) * (r2_max - r2_full)
+            # Then adjusted treatment effect:
+            # beta_adj = beta_full - delta / (1 - r2_full/r2_max)
+            try:
+                delta = (r2_max - r2_full) / (r2_full - r2_restricted + 1e-10)
+                # Adjusted treatment effect using selection ratio
+                # beta* = beta_full - delta * (beta_full - beta_restricted) / (1 + delta)
+                beta_adj = beta_full - delta * (beta_full - beta_restricted) / (1 + delta)
+                # Alternative: simple proportional adjustment
+                # beta* = beta_full * (1 - r2_full / r2_max) / (r2_full - r2_restricted + 1e-10)
+                beta_adj_alt = beta_full * (r2_max - r2_without_treatment) / (r2_full - r2_without_treatment + 1e-10)
+                # Take the more conservative (closer to zero) bound
+                bound = min(beta_adj, beta_adj_alt, key=abs)
+            except (ZeroDivisionError, FloatingPointError):
+                delta = float("inf")
+                bound = float("nan")
+
+        results["delta_values"][str(r2_max)] = {
+            "delta": float(delta) if not np.isinf(delta) else "inf",
+            "adjusted_beta": float(bound) if not np.isnan(bound) else float(beta_full),
+            "r2_max": r2_max,
+        }
+
+        # Interpretation: delta > 1 means unobservables would need to explain more than
+        # observables to fully explain away the treatment effect
+        if not np.isinf(delta):
+            if delta < 1:
+                interp = "Strong: unobservables would need <100% of observable selection"
+            elif delta < 2:
+                interp = "Moderate: unobservables would need <200% of observable selection"
+            elif delta < 3:
+                interp = "Weak: unobservables would need 200-300% of observable selection"
+            else:
+                interp = "Very strong: unobservables would need >300% of observable selection"
+        else:
+            interp = "No selection adjustment possible (R2_full >= R2_max)"
+
+        results["interpretation"][str(r2_max)] = interp
+
+    # Compute relative stability: how much does beta change from restricted to full?
+    results["beta_change_pct"] = float(
+        abs(beta_full - beta_restricted) / (abs(beta_restricted) + 1e-10)
+    )
+    results["r2_change"] = float(r2_full - r2_restricted)
+    results["proportional_selection"] = float(
+        results["beta_change_pct"] / (results["r2_change"] + 1e-10)
+    )
+
+    return results
+
+
+if __name__ == "__main__":
+    import numpy as np
+    np.random.seed(42)
+    n = 500
+    df = pd.DataFrame({
+        "y": np.random.randn(n) + 0.5,
+        "did": np.random.binomial(1, 0.5, n),
+        "size": np.random.randn(n),
+        "lev": np.random.rand(n),
+        "roa": np.random.randn(n),
+        "ticker": np.repeat(range(100), 5)[:n],
+    })
+    res = oster_bounds(
+        df, y_var="y", treatment_var="did",
+        x_vars=["size"], control_vars=["lev", "roa"],
+        r2_max_options=[0.5, 0.7, 0.9, 1.0]
+    )
+    print(f"Beta restricted: {res['beta_restricted']:.4f}")
+    print(f"Beta full: {res['beta_full']:.4f}")
+    print(f"R² restricted: {res['r2_restricted']:.4f}")
+    print(f"R² full: {res['r2_full']:.4f}")
+    for k, v in res["delta_values"].items():
+        print(f"  R²_max={k}: delta={v['delta']:.3f}, adjusted_beta={v['adjusted_beta']:.4f}")
+    print("OK")

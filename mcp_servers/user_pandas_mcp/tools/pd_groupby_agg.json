@@ -1,13 +1,49 @@
 {
   "name": "pd_groupby_agg",
-  "description": "分组聚合分析（groupby + agg）。\\n\\n",
+  "description": "分组聚合分析（groupby + agg）。\\n\\nArgs:\\n  name: 数据框名称\\n  group_by: 分组列名\\n  agg_columns: 聚合列名和函数\\n  save_as: 保存结果的数据框名称\\n\\nReturns: 聚合结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
+        "type": "string"
+      },
+      "group_by": {
+        "type": "string"
+      },
+      "agg_columns": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "aggfunc": {
+              "type": "string",
+              "enum": [
+                "sum",
+                "mean",
+                "count",
+                "std",
+                "min",
+                "max",
+                "first",
+                "last"
+              ]
+            }
+          }
+        },
+        "description": "聚合列和函数"
+      },
+      "save_as": {
         "type": "string"
       }
     },
-    "required": []
+    "required": [
+      "name",
+      "group_by",
+      "agg_columns"
+    ],
+    "description": "分组聚合分析（groupby + agg）。"
   }
 }

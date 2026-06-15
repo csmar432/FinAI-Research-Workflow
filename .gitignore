@@ -17,13 +17,12 @@ profile_default/
 # Data — 保留示例数据文件，忽略运行时生成的数据
 data/*.json
 data/*.xlsx
+data/*.db
 data/charts/
 data/finance/
 data/pipeline_drafts/
 data/review_cache/
-!data/msci_esg_ratings.json
 !data/national_province_data_2026.json
-!data/test_national.json
 
 # Models
 *.pt
@@ -102,6 +101,111 @@ mcp_servers/*/.cache/
 mcp_servers/*/data/
 mcp_servers/*/__pycache__/
 
+# Node.js
+node_modules/
+
+# Cursor Canvas artifacts
+canvases/
+
 # Scripts — 核心代码，必须保留！不要忽略
 # 用户自行生成的临时脚本请放在 scripts/generated/ 并添加到上面忽略
 .github/internal-reports/
+.site/
+docs/tutorials/TUTORIALS_README.md
+
+# ── Local development experiments (not for public repo) ──────────────────────
+scripts/core/agent_pipeline_lg.py
+scripts/core/debate_arena.py
+scripts/core/debate_calibrator_bridge.py
+scripts/core/interactive_explorer.py
+scripts/core/orchestrator_lg_bridge.py
+scripts/core/paper_deep_parser.py
+scripts/health_check_mcp.py
+scripts/research_framework/causal_ml.py
+scripts/research_framework/discrete_choice.py
+scripts/research_framework/green_bond_model.py
+scripts/research_framework/mediation_test.py
+scripts/research_framework/options_iv_surface.py
+scripts/research_framework/panel_cointegration.py
+scripts/research_framework/panel_threshold_regression.py
+scripts/research_framework/panel_var.py
+scripts/research_framework/prisma_compliance.py
+scripts/research_framework/survival_analysis.py
+scripts/research_framework/time_varying_models.py
+scripts/research_framework/volatility_models.py
+tests/test_debate_arena.py
+tests/test_debate_calibrator_bridge.py
+tests/test_econometrics_DEPRECATED.py
+tests/test_institutional_holdings.py
+tests/test_interactive_explorer.py
+tests/test_journal_compile.py
+tests/test_kleibergen_paap.py
+tests/test_langgraph_pipeline.py
+tests/test_mediation_test.py
+tests/test_new_modules_2026.py
+tests/test_new_modules_v181.py
+tests/test_new_modules_v184.py
+tests/test_orchestrator_lg_bridge.py
+tests/test_p2_fixes.py
+tests/test_panel_threshold_regression.py
+tests/test_paper_deep_parser.py
+tests/test_placebo_permutations.py
+tests/test_prisma_compliance.py
+tests/test_research_framework_exports.py
+tests/test_two_way_clustered.py
+tests/test_type_audit.py
+
+# ── Local data & telemetry ───────────────────────────────────────────────────
+data/alternative_data/
+data/customs/
+data/esg/
+data/macro/
+data/pipeline_telemetry.jsonl
+data/policy/
+data/processed/
+data/user_uploaded/
+pipeline_telemetry.jsonl
+did_results.json
+.bias_history.db
+
+# ── MCP server untracked tools ───────────────────────────────────────────────
+mcp_servers/user_tushare/tools/get_institutional_holdings.json
+mcp_servers/user_tushare/tools/get_top_holders.json
+
+# ── Test files (local development, not for public repo) ───────────────────────
+tests/test_agent_pipeline_core.py
+tests/test_agent_state.py
+tests/test_ai_parliament.py
+tests/test_auto_review_rules.py
+tests/test_autonomy_loop.py
+tests/test_autonomy_loop_comprehensive.py
+tests/test_collaboration.py
+tests/test_health_check.py
+tests/test_hitl_gate.py
+tests/test_hitl_gate_comprehensive.py
+tests/test_idea_data_checker.py
+tests/test_journal_templates_multilang.py
+tests/test_multi_agent.py
+tests/test_orchestrator.py
+tests/test_orchestrator_comprehensive.py
+tests/test_presence_server.py
+tests/test_provenance_integration.py
+tests/test_provenance_rag.py
+tests/test_quality_gates.py
+tests/test_reviewer_calibrator.py
+tests/test_self_evolution.py
+tests/test_self_evolution_integration.py
+tests/test_specialized_agents.py
+tests/test_user_data_merger.py
+tests/test_validate_econometrics.py
+
+# ── Local audit & development files ─────────────────────────────────────────
+AUDIT_2026-06-10.md
+docs/adr/ADR-002-provenance-chain.md
+scripts/DEPRECATED.md
+scripts/benchmark_econometrics.py
+scripts/core/mock_data_governance.py
+scripts/deprecated/research_workflow.py
+scripts/entity_list_data_fetcher.py
+scripts/research_framework/journal_templates_multilang.py
+mcp_servers/user_chinese_literature/Dockerfile

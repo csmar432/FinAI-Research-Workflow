@@ -1,6 +1,6 @@
 {
   "name": "get_margin_data",
-  "description": "获取融资融券数据（融资余额/融资买入额/融券余额/北向资金）。使用 Tushare Pro API。",
+  "description": "获取融资融券数据（融资余额/融资买入额/融券余额/融券卖出量）及北向资金（沪深港通）。使用 Tushare Pro API。用于市场情绪、资金流向和杠杆交易研究。",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -10,23 +10,30 @@
           "margin",
           "margin_detail",
           "hsgt"
-        ]
+        ],
+        "description": "数据类型：margin（沪深市场融资融券）/margin_detail（融资融券明细）/hsgt（北向资金）",
+        "required": true
       },
       "ts_code": {
-        "type": "string"
+        "type": "string",
+        "description": "股票代码（如 000001.SZ，margin_detail 必填）"
       },
       "start_date": {
-        "type": "string"
+        "type": "string",
+        "description": "开始日期（YYYYMMDD）"
       },
       "end_date": {
-        "type": "string"
+        "type": "string",
+        "description": "结束日期（YYYYMMDD）"
       },
       "trade_date": {
-        "type": "string"
+        "type": "string",
+        "description": "指定交易日（YYYYMMDD，与日期范围二选一）"
       }
     },
     "required": [
       "data_type"
-    ]
+    ],
+    "description": "获取融资融券数据（融资余额/融资买入额/融券余额/北向资金）。使用 Tushare Pro API。"
   }
 }

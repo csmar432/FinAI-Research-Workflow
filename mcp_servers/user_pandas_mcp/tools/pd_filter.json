@@ -1,13 +1,37 @@
 {
   "name": "pd_filter",
-  "description": "按条件筛选数据行（类似SQL WHERE）。\\n\\n",
+  "description": "按条件筛选数据行（类似SQL WHERE）。\\n\\nArgs:\\n  name: 数据框名称\\n  conditions: 筛选条件列表\\n  save_as: 保存结果的数据框名称\\n\\nReturns: 筛选结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
+        "type": "string"
+      },
+      "conditions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "op": {
+              "type": "string",
+              "description": "操作符: ==, !=, >, <, >=, <=, in, not in, contains"
+            },
+            "value": {}
+          }
+        },
+        "description": "筛选条件列表"
+      },
+      "save_as": {
         "type": "string"
       }
     },
-    "required": []
+    "required": [
+      "name",
+      "conditions"
+    ],
+    "description": "按条件筛选数据行（类似SQL WHERE）。"
   }
 }

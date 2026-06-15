@@ -1,14 +1,18 @@
 {
   "name": "get_yf_quote",
-  "description": "获取股票实时行情",
-  "parameters": {
+  "description": "获取美股/港股实时报价。使用 Yahoo Finance API，无需 API Key。支持股票、ETF、期权、期货、外汇、加密货币。示例：AAPL（苹果）、MSFT（微软）、GOOGL（谷歌）、TSLA（特斯拉）、NVDA（英伟达）、0700.HK（腾讯）、9988.HK（阿里）。",
+  "inputSchema": {
     "type": "object",
     "properties": {
       "ticker": {
         "type": "string",
-        "description": "股票代码，例如 'AAPL'（美股）或 '0700.HK'（港股）"
+        "description": "股票代码（如 AAPL、TSLA、0700.HK）",
+        "required": true
       }
     },
-    "required": ["ticker"]
+    "required": [
+      "ticker"
+    ],
+    "description": "获取美股/港股实时报价。使用 Yahoo Finance API，无需 API Key。"
   }
 }

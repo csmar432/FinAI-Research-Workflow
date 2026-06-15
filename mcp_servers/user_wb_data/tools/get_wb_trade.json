@@ -15,6 +15,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取World Bank贸易数据。"
   }
 }

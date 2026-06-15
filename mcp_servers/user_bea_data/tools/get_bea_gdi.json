@@ -12,6 +12,7 @@
         "type": "string",
         "description": "季度"
       }
-    }
+    },
+    "description": "获取BEA GDI(国内总收入)数据。"
   }
 }

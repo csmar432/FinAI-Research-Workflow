@@ -783,7 +783,7 @@ class SyntheticDiDEngine:
         # R²（处理前）
         ss_tot = np.var(self.Y_pre_treated)
         ss_res = np.mean(pre_residual**2)
-        r_squared = float(1 - ss_res / ss_res) if ss_tot > 0 else None
+        r_squared = float(1 - ss_res / ss_tot) if ss_tot > 0 else None
 
         # MSPE 比值
         post_residual = self.Y_post_treated - synth_post

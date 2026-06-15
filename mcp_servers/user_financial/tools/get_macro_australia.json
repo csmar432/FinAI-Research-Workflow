@@ -1,0 +1,22 @@
+{
+  "name": "get_macro_australia",
+  "description": "获取澳大利亚宏观经济指标。使用 akshare 接口，无需 API Key。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "indicator": {
+        "type": "string",
+        "description": "指标名称",
+        "enum": [
+          "cpi",
+          "unemployment_rate",
+          "bank_rate"
+        ]
+      }
+    },
+    "required": [
+      "indicator"
+    ],
+    "description": "获取澳大利亚宏观经济指标。使用 akshare 接口，无需 API Key。"
+  }
+}

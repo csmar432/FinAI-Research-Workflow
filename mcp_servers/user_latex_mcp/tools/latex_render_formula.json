@@ -1,13 +1,45 @@
 {
   "name": "latex_render_formula",
-  "description": "将LaTeX数学公式渲染为SVG/PNG图片。适合嵌入Markdown/HTML文档。\\n\\n",
+  "description": "将LaTeX数学公式渲染为SVG/PNG图片。适合嵌入Markdown/HTML文档。\\n\\nArgs:\\n  formula: LaTeX公式（不带$$或\\[\\]包裹）\\n  output_path: 输出文件路径（.svg/.png）\\n  format: 输出格式（svg/png）\\n  scale: 缩放倍数（默认2，高清建议3）\\n  bg_color: 背景色（transparent/white）\\n\\nReturns: 渲染结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "formula": {
+        "type": "string",
+        "description": "LaTeX公式"
+      },
+      "output_path": {
+        "type": "string",
+        "description": "输出文件路径（.svg/.png）"
+      },
+      "format": {
+        "type": "string",
+        "description": "输出格式",
+        "enum": [
+          "svg",
+          "png"
+        ],
+        "default": "svg"
+      },
+      "scale": {
+        "type": "number",
+        "description": "缩放倍数（高清建议2-3）",
+        "default": 2.0
+      },
+      "bg_color": {
+        "type": "string",
+        "description": "背景色",
+        "enum": [
+          "transparent",
+          "white"
+        ],
+        "default": "transparent"
       }
     },
-    "required": []
+    "required": [
+      "formula",
+      "output_path"
+    ],
+    "description": "将LaTeX数学公式渲染为SVG/PNG图片。适合嵌入Markdown/HTML文档。"
   }
 }

@@ -1,13 +1,42 @@
 {
   "name": "pd_transform",
-  "description": "数据转换和派生新列。\\n\\n",
+  "description": "数据转换和派生新列。\\n\\nArgs:\\n  name: 数据框名称\\n  operations: 操作列表，如 [{\"col\": \"new_col\", \"expr\": \"col1 / col2\"}]\\n  fillna_value: 缺失值填充\\n  save_as: 保存结果的数据框名称\\n\\nReturns: 转换后的数据框摘要",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
+        "type": "string"
+      },
+      "operations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "col": {
+              "type": "string"
+            },
+            "expr": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "description": "操作类型: assign/dropna/fillna/astype/sort_values"
+            }
+          }
+        },
+        "description": "转换操作列表"
+      },
+      "fillna_value": {
+        "type": "number"
+      },
+      "save_as": {
         "type": "string"
       }
     },
-    "required": []
+    "required": [
+      "name",
+      "operations"
+    ],
+    "description": "数据转换和派生新列。"
   }
 }

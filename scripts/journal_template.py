@@ -5,12 +5,30 @@ LaTeX 期刊模板管理器
 提供金融顶刊的 LaTeX 模板，支持快速生成符合期刊格式的论文。
 
 支持的期刊：
-- JFE: Journal of Financial Economics（金融经济学杂志）
 - JF: Journal of Finance（金融杂志）
+- JFE: Journal of Financial Economics（金融经济学杂志）
 - RFS: Review of Financial Studies（金融研究综述）
-- 经济研究
-- 管理世界
-- 金融研究
+- JBF: Journal of Banking & Finance（银行与金融杂志）
+- JIMF: Journal of International Money and Finance（国际货币与金融杂志）
+- MF: Mathematical Finance（数理金融）
+- JFI: Journal of Financial Intermediation（金融中介杂志）
+- JFM: Journal of Financial Markets（金融市场杂志）
+- JFQA: Journal of Financial and Quantitative Analysis
+- JCF: Journal of Corporate Finance
+- QJE: Quarterly Journal of Economics
+- JPE: Journal of Political Economy
+- Econometrica
+- REStud, JEEA, AEJ:AEI, REStat
+- RJE: Rand Journal of Economics
+- JE: Journal of Econometrics
+- JAE: Journal of Applied Econometrics
+- 经济研究、管理世界、金融研究
+- 经济学动态、国际金融研究、金融评论、当代经济科学
+- 中国工业经济、世界经济、数量经济技术经济研究
+- 统计研究、会计研究、财政研究、经济学季刊
+- 科研管理、南开管理评论、中国软科学
+- 系统工程理论与实践、系统工程学报、中国管理科学、管理科学
+- ACL / NeurIPS
 
 使用方法：
     from scripts.journal_template import JournalTemplate, get_template
@@ -68,11 +86,24 @@ class JournalTemplate:
         engine: str = "pdflatex",
         passes: int = 2,
     ) -> bool:
-        """编译 LaTeX 文件"""
+        """Compile a .tex file to PDF using the specified engine.
+
+        Args:
+            tex_path: Path to .tex file (with or without .tex extension)
+            engine: Compiler to use ('xelatex', 'pdflatex', 'lualatex')
+            passes: Number of compilation passes (default 2 for cross-refs/ToC)
+
+        Returns:
+            True if PDF was generated, False otherwise.
+            Never raises — all errors are handled gracefully.
+        """
         tex_path = Path(tex_path)
+        if not str(tex_path).endswith(".tex"):
+            tex_path = tex_path.with_suffix(".tex")
 
         if not tex_path.exists():
-            raise FileNotFoundError(f"文件不存在: {tex_path}")
+            print(f"文件不存在: {tex_path}，跳过编译。")
+            return False
 
         try:
             for i in range(passes):
@@ -93,10 +124,10 @@ class JournalTemplate:
             return pdf_path.exists()
 
         except FileNotFoundError:
-            print(f"未找到 {engine}，请安装 TeX Live")
+            print(f"未找到 {engine}，请安装 TeX Live（https://tug.org/texlive/）。")
             return False
         except subprocess.TimeoutExpired:
-            print("编译超时")
+            print("编译超时（60秒），请检查 LaTeX 安装。")
             return False
 
 
@@ -3854,6 +3885,787 @@ TEMPLATES["管理科学"] = JournalTemplate(
 )
 
 # ═════════════════════════════════════════════════════════════════════════════════
+# 新增英文金融期刊
+# ═════════════════════════════════════════════════════════════════════════════════
+
+# ─── JBF: Journal of Banking & Finance ───────────────────────────────────────
+
+TEMPLATES["JBF"] = JournalTemplate(
+    name="Journal of Banking & Finance",
+    short_name="JBF",
+    category="金融",
+    description="银行学与金融学领域权威期刊，Elsevier出版，偏重银行、信贷、金融中介",
+    bibliography_style="aer",
+    required_packages=["natbib", "amsmath", "amssymb", "graphicx", "booktabs"],
+    page_limit="约50页（双栏）",
+    blind_review=True,
+    url="https://www.journals.elsevier.com/journal-of-banking-and-finance",
+    latex_code=r"""
+% JBF LaTeX Template
+% Journal of Banking & Finance
+
+\documentclass[3p]{elsarticle}
+\usepackage{natbib}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx, booktabs}
+\usepackage{lineno}
+\linenumbers
+
+\title{论文标题}
+
+\author{
+    Author One\thanks{Affiliation, Email} \\
+    Author Two\thanks{Affiliation, Email}
+}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\date{\today}
+
+\begin{abstract}
+摘要内容（不超过200字）。
+\end{abstract}
+
+\begin{keyword}
+关键词1；关键词2；关键词3
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:intro}
+
+\section{Literature Review}
+\label{sec:lit}
+
+\section{Hypotheses}
+\label{sec:hypothesis}
+
+\section{Data and Methodology}
+\label{sec:data}
+
+\section{Results}
+\label{sec:results}
+
+\section{Conclusion}
+\label{sec:concl}
+
+\section*{Acknowledgments}
+如有致谢，在此说明。
+
+\bibliographystyle{elsarticle-natbib}
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ─── JIMF: Journal of International Money and Finance ────────────────────────
+
+TEMPLATES["JIMF"] = JournalTemplate(
+    name="Journal of International Money and Finance",
+    short_name="JIMF",
+    category="金融",
+    description="国际金融与货币金融领域重要期刊，Elsevier出版，偏重汇率、货币危机、国际资本流动",
+    bibliography_style="aer",
+    required_packages=["natbib", "amsmath", "amssymb", "graphicx", "booktabs"],
+    page_limit="约40页（双栏）",
+    blind_review=True,
+    url="https://www.journals.elsevier.com/journal-of-international-money-and-finance",
+    latex_code=r"""
+% JIMF LaTeX Template
+% Journal of International Money and Finance
+
+\documentclass[3p]{elsarticle}
+\usepackage{natbib}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx, booktabs}
+\usepackage{lineno}
+\linenumbers
+
+\title{论文标题}
+
+\author{
+    Author One\thanks{Affiliation, Email} \\
+    Author Two\thanks{Affiliation, Email}
+}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\date{\today}
+
+\begin{abstract}
+摘要内容（不超过200字）。
+\end{abstract}
+
+\begin{keyword}
+关键词1；关键词2；关键词3
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:intro}
+
+\section{Literature Review}
+\label{sec:lit}
+
+\section{Model}
+\label{sec:model}
+
+\section{Data and Empirical Results}
+\label{sec:results}
+
+\section{Conclusion}
+\label{sec:concl}
+
+\bibliographystyle{elsarticle-natbib}
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ─── MF: Mathematical Finance ────────────────────────────────────────────────
+
+TEMPLATES["MF"] = JournalTemplate(
+    name="Mathematical Finance",
+    short_name="MathFinance",
+    category="金融",
+    description="金融工程与数理金融学领域顶级期刊，偏重量化投资、衍生品定价、风险度量",
+    bibliography_style="aer",
+    required_packages=["natbib", "amsmath", "amssymb", "graphicx", "booktabs", "bm"],
+    page_limit="约30页（单栏）",
+    blind_review=True,
+    url="https://onlinelibrary.wiley.com/journal/14679963",
+    latex_code=r"""
+% Mathematical Finance LaTeX Template
+
+\documentclass[referee]{svjour3}
+\usepackage{natbib}
+\usepackage{amsmath, amssymb, bm}
+\usepackage{graphicx, booktabs}
+
+\smartqed
+
+\title{论文标题\thanks{致谢内容}}
+
+\subtitle{副标题（如无则删除此行）}
+
+\author{
+    Author One\inst{1} \and
+    Author Two\inst{2}
+}
+
+\inst{
+    \textbackslash usepackage\{authblk\}\\% 使用 authblk 宏包时请删除此行
+    Affiliation 1 \\
+    Affiliation 2
+}
+
+\date{Received: date / Accepted: date}
+
+\begin{document}
+
+\abstract{
+摘要内容（不超过150字）。
+}
+
+\keywords{
+关键词1 \and 关键词2 \and 关键词3
+}
+
+\section{Introduction}
+\label{sec:intro}
+
+\section{Model Setup}
+\label{sec:model}
+
+\section{Main Results}
+\label{sec:results}
+
+\section{Numerical Illustration}
+\label{sec:numerical}
+
+\section{Conclusion}
+\label{sec:concl}
+
+\begin{acknowledgement}
+如有致谢，在此说明。
+\end{acknowledgement}
+
+\bibliographystyle{spbasic}
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ─── RJE: Rand Journal of Economics ─────────────────────────────────────────
+
+TEMPLATES["RJE"] = JournalTemplate(
+    name="Rand Journal of Economics",
+    short_name="RJE",
+    category="经济",
+    description="产业组织、法经济学、博弈论领域顶级期刊，Wiley出版，偏重理论与实证结合",
+    bibliography_style="aer",
+    required_packages=["natbib", "amsmath", "amssymb", "graphicx", "booktabs"],
+    page_limit="约50页（双栏）",
+    blind_review=True,
+    url="https://onlinelibrary.wiley.com/journal/17562216",
+    latex_code=r"""
+% Rand Journal of Economics LaTeX Template
+
+\documentclass[rand]{article}
+\usepackage{natbib}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx, booktabs}
+\usepackage{endnotes}
+\let\endnotesection\endnotes
+
+\title{论文标题}
+
+\author{
+    Author One \\
+    Author Two
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+摘要内容（不超过150字）。
+\end{abstract}
+
+\begin{keywords}
+\textbf{Keywords:} 关键词1；关键词2；关键词3
+\end{keywords}
+
+\section{Introduction}
+\label{sec:intro}
+
+\section{Model}
+\label{sec:model}
+
+\section{Empirical Analysis}
+\label{sec:empirical}
+
+\section{Conclusion}
+\label{sec:concl}
+
+\theendnotes
+
+\bibliographystyle{rae}
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ─── JE: Journal of Econometrics ─────────────────────────────────────────────
+
+TEMPLATES["JE"] = JournalTemplate(
+    name="Journal of Econometrics",
+    short_name="JE",
+    category="经济",
+    description="计量经济学理论与方法领域顶级期刊，Elsevier出版，偏重计量理论、估计方法、统计推断",
+    bibliography_style="aer",
+    required_packages=["natbib", "amsmath", "amssymb", "graphicx", "booktabs"],
+    page_limit="约40页（双栏）",
+    blind_review=True,
+    url="https://www.journals.elsevier.com/journal-of-econometrics",
+    latex_code=r"""
+% Journal of Econometrics LaTeX Template
+
+\documentclass[3p]{elsarticle}
+\usepackage{natbib}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx, booktabs}
+\usepackage{lineno}
+\linenumbers
+
+\title{论文标题}
+
+\author{
+    Author One\thanks{Affiliation, Email} \\
+    Author Two\thanks{Affiliation, Email}
+}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\date{\today}
+
+\begin{abstract}
+摘要内容（不超过200字）。
+\end{abstract}
+
+\begin{keyword}
+Keywords: 关键词1；关键词2；关键词3
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:intro}
+
+\section{Model and Assumptions}
+\label{sec:model}
+
+\section{Estimation and Inference}
+\label{sec:estimation}
+
+\section{Asymptotic Properties}
+\label{sec:asymptotics}
+
+\section{Monte Carlo Simulation}
+\label{sec:simulation}
+
+\section{Empirical Application}
+\label{sec:application}
+
+\section{Conclusion}
+\label{sec:concl}
+
+\bibliographystyle{elsarticle-natbib}
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ─── JAE: Journal of Applied Econometrics ────────────────────────────────────
+
+TEMPLATES["JAE"] = JournalTemplate(
+    name="Journal of Applied Econometrics",
+    short_name="JAE",
+    category="经济",
+    description="计量经济学应用领域重要期刊，Wiley出版，偏重实证应用、政策评估、因果推断",
+    bibliography_style="aea",
+    required_packages=["natbib", "amsmath", "amssymb", "graphicx", "booktabs"],
+    page_limit="约30页（双栏）",
+    blind_review=True,
+    url="https://onlinelibrary.wiley.com/journal/10991255",
+    latex_code=r"""
+% Journal of Applied Econometrics LaTeX Template
+
+\documentclass[referee]{svcnt}
+\usepackage{natbib}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx, booktabs}
+
+\smartqed
+
+\title{论文标题}
+
+\author{
+    Author One\inst{1} \and
+    Author Two\inst{2}
+}
+
+\date{}
+
+\begin{document}
+
+\firstpage{1}
+
+\journalname{Journal of Applied Econometrics}
+
+\volume{40}
+\pubyear{2025}
+
+\abstract{
+摘要内容（不超过200字）。
+}
+
+\keywords{
+Keywords: 关键词1；关键词2；关键词3
+}
+
+\section{Introduction}
+\label{sec:intro}
+
+\section{Literature Review}
+\label{sec:lit}
+
+\section{Identification Strategy}
+\label{sec:identification}
+
+\section{Data and Variables}
+\label{sec:data}
+
+\section{Results}
+\label{sec:results}
+
+\section{Robustness Checks}
+\label{sec:robustness}
+
+\section{Conclusion}
+\label{sec:concl}
+
+\section*{Acknowledgments}
+
+\bibliographystyle{chae}
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# 新增中文经济金融期刊
+# ═════════════════════════════════════════════════════════════════════════════════
+
+# ─── 经济学动态 ──────────────────────────────────────────────────────────────
+
+TEMPLATES["经济学动态"] = JournalTemplate(
+    name="经济学动态",
+    short_name="经济学动态",
+    category="经济",
+    description="中国社会科学院经济研究所主办，经济学综合性核心期刊，偏重宏观经济、转轨经济、产业经济，CSSCI",
+    bibliography_style="gbt7714-2015",
+    required_packages=["ctex", "xeCJK", "natbib", "amsmath", "booktabs", "geometry",
+                       "fancyhdr", "setspace", "graphicx"],
+    page_limit="约15000字",
+    blind_review=True,
+    url="https://jjxdt.cssn.cn/",
+    latex_code=r"""
+% 《经济学动态》LaTeX 模板
+% 中国社会科学院经济研究所主办，CSSCI来源期刊
+% 参考: https://jjxdt.cssn.cn/
+
+\documentclass[10pt, UTF8, a4paper]{article}
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{xeCJK}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{amsmath, amssymb, booktabs, graphicx, setspace}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\zihao{-5}\songti 经济学动态}
+\fancyfoot[C]{\thepage}
+\bibliographystyle{gbt7714-plain}
+
+\begin{document}
+
+\begin{center}
+\textbf{\heiti\zihao{3} 论文标题}
+\end{center}
+
+\vspace{8pt}
+
+\begin{center}
+{\kaishu\zihao{-4}
+  作者一$^{1}$ \quad 作者二$^{1,2}$
+}
+
+\vspace{4pt}
+
+{\fangsong\zihao{-5}
+  $^{1}$某大学经济学院，北京 100000 \\
+  $^{2}$通信作者单位，邮编
+}
+\end{center}
+
+\vspace{8pt}
+
+\noindent\textbf{摘要：} 摘要内容（不超过300字）。
+\\[4pt]
+\noindent\textbf{关键词：} 关键词1；关键词2；关键词3
+\\[8pt]
+\noindent\textbf{JEL分类号：} G00；O40；C22
+
+\section{引言}
+阐明研究背景、问题的提出、主要贡献和结构安排。
+
+\section{文献综述}
+评述相关研究进展，指出研究缺口。
+
+\section{理论框架}
+建立理论模型或分析框架。
+
+\section{实证设计}
+说明数据来源、变量定义和识别策略。
+
+\section{实证结果}
+报告基准回归和稳健性检验结果。
+
+\section{结论与政策启示}
+总结全文，说明研究局限和未来方向。
+
+\section*{参考文献}
+\begin{thebibliography}{99}
+\addtolength{\itemsep}{-1ex}
+\bibliography{references}
+\end{thebibliography}
+
+\end{document}
+""",
+)
+
+
+# ─── 国际金融研究 ───────────────────────────────────────────────────────────
+
+TEMPLATES["国际金融研究"] = JournalTemplate(
+    name="国际金融研究",
+    short_name="国际金融研究",
+    category="金融",
+    description="中国金融学会主办，外汇、国际投资、国际资本流动方向核心期刊，CSSCI",
+    bibliography_style="gbt7714-2015",
+    required_packages=["ctex", "xeCJK", "natbib", "amsmath", "booktabs", "geometry",
+                       "fancyhdr", "setspace", "graphicx"],
+    page_limit="约12000字",
+    blind_review=True,
+    url="https://gjjr.j出d.ccb.com/",
+    latex_code=r"""
+% 《国际金融研究》LaTeX 模板
+% 中国金融学会主办，CSSCI来源期刊
+
+\documentclass[10pt, UTF8, a4paper]{article}
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{xeCJK}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{amsmath, amssymb, booktabs, graphicx, setspace}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\bibliographystyle{gbt7714-plain}
+
+\begin{document}
+
+\begin{center}
+\textbf{\heiti\zihao{3} 论文标题}
+\end{center}
+
+\vspace{8pt}
+
+\begin{center}
+{\kaishu\zihao{-4}
+  作者一$^{1}$ \quad 作者二$^{2}$
+}
+
+\vspace{4pt}
+
+{\fangsong\zihao{-5}
+  $^{1}$某大学金融学院，北京 100000 \\
+  $^{2}$某大学经济学院，上海 200433
+}
+\end{center}
+
+\vspace{8pt}
+
+\noindent\textbf{摘要：} 摘要内容（不超过250字）。
+\\[4pt]
+\noindent\textbf{关键词：} 关键词1；关键词2；关键词3
+\\[8pt]
+\noindent\textbf{中图分类号：} F83 \quad \textbf{文献标识码：} A
+
+\section{引言}
+研究背景、问题的提出、主要贡献。
+
+\section{文献综述}
+国际金融市场、外汇、跨境资本流动相关研究述评。
+
+\section{理论分析与研究假设}
+基于理论提出研究假设。
+
+\section{研究设计}
+数据、变量与实证方法。
+
+\section{实证结果}
+基准回归与稳健性检验。
+
+\section{结论与启示}
+总结与政策建议。
+
+\begin{thebibliography}{99}
+\addtolength{\itemsep}{-1ex}
+\bibliography{references}
+\end{thebibliography}
+
+\end{document}
+""",
+)
+
+
+# ─── 金融评论 ────────────────────────────────────────────────────────────────
+
+TEMPLATES["金融评论"] = JournalTemplate(
+    name="金融评论",
+    short_name="金融评论",
+    category="金融",
+    description="中国社会科学院金融研究所主办，金融理论与政策方向核心期刊，CSSCI",
+    bibliography_style="gbt7714-2015",
+    required_packages=["ctex", "xeCJK", "natbib", "amsmath", "booktabs", "geometry",
+                       "setspace", "graphicx"],
+    page_limit="约15000字",
+    blind_review=True,
+    url="https://finance.cssn.cn/jrpl/",
+    latex_code=r"""
+% 《金融评论》LaTeX 模板
+% 中国社会科学院金融研究所主办，CSSCI来源期刊
+
+\documentclass[10pt, UTF8, a4paper]{article}
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{xeCJK}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{amsmath, amssymb, booktabs, graphicx, setspace}
+\bibliographystyle{gbt7714-plain}
+
+\begin{document}
+
+\begin{center}
+\textbf{\heiti\zihao{3} 论文标题}
+\end{center}
+
+\vspace{8pt}
+
+\begin{center}
+{\kaishu\zihao{-4}
+  作者一$^{1}$ \quad 作者二$^{1,2}$
+}
+
+\vspace{4pt}
+
+{\fangsong\zihao{-5}
+  $^{1}$某大学金融学院，北京 100000 \\
+  $^{2}$通信作者单位，邮编
+}
+\end{center}
+
+\vspace{8pt}
+
+\noindent\textbf{摘要：} 摘要内容（不超过300字）。
+\\[4pt]
+\noindent\textbf{关键词：} 关键词1；关键词2；关键词3
+
+\section{引言}
+研究背景与问题提出。
+
+\section{文献综述}
+金融领域的理论发展和实证研究。
+
+\section{理论模型}
+理论分析与假设推导。
+
+\section{实证设计}
+数据来源与识别策略。
+
+\section{实证结果}
+主要发现与稳健性检验。
+
+\section{结论与建议}
+研究结论与政策启示。
+
+\bibliography{references}
+
+\end{document}
+""",
+)
+
+
+# ─── 当代经济科学 ────────────────────────────────────────────────────────────
+
+TEMPLATES["当代经济科学"] = JournalTemplate(
+    name="当代经济科学",
+    short_name="当代经济科学",
+    category="经济",
+    description="西安交通大学主办，综合性经济学期刊，偏重数量经济、能源环境、产业组织，CSSCI",
+    bibliography_style="gbt7714-2015",
+    required_packages=["ctex", "xeCJK", "natbib", "amsmath", "booktabs", "geometry",
+                       "fancyhdr", "setspace", "graphicx"],
+    page_limit="约18000字",
+    blind_review=True,
+    url="https://jgjx.xjtu.edu.cn/",
+    latex_code=r"""
+% 《当代经济科学》LaTeX 模板
+% 西安交通大学主办，CSSCI来源期刊
+
+\documentclass[10pt, UTF8, a4paper]{article}
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{xeCJK}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{amsmath, amssymb, booktabs, graphicx, setspace}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\bibliographystyle{gbt7714-plain}
+
+\begin{document}
+
+\begin{center}
+\textbf{\heiti\zihao{3} 论文标题}
+\end{center}
+
+\vspace{8pt}
+
+\begin{center}
+{\kaishu\zihao{-4}
+  作者一$^{1}$ \quad 作者二$^{1,2}$ \quad 作者三$^{2}$
+}
+
+\vspace{4pt}
+
+{\fangsong\zihao{-5}
+  $^{1}$西安交通大学经济与金融学院，西安 710061 \\
+  $^{2}$通信作者单位，邮编
+}
+\end{center}
+
+\vspace{8pt}
+
+\noindent\textbf{摘要：} 摘要内容（不超过300字）。
+\\[4pt]
+\noindent\textbf{关键词：} 关键词1；关键词2；关键词3
+\\[8pt]
+\noindent\textbf{中图分类号：} F06 \quad \textbf{文献标识码：} A
+
+\section{引言}
+研究背景、问题的提出、主要贡献与全文结构。
+
+\section{文献综述}
+相关理论与实证研究述评。
+
+\section{理论分析}
+理论框架与研究假设。
+
+\section{实证研究}
+数据、变量与实证策略。
+
+\section{实证结果}
+基准回归、稳健性与异质性分析。
+
+\section{结论与启示}
+研究结论、政策建议与未来方向。
+
+\section*{参考文献}
+\begin{thebibliography}{99}
+\addtolength{\itemsep}{-1ex}
+\bibliography{references}
+\end{thebibliography}
+
+\end{document}
+""",
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════════════
 # 通用模板快捷别名（兼容旧版本）
 # ═════════════════════════════════════════════════════════════════════════════════
 
@@ -3876,6 +4688,18 @@ _TEMPLATES_ALIASES = {
     "系统工程学报": TEMPLATES.get("系统工程学报"),
     "中国管理科学": TEMPLATES.get("中国管理科学"),
     "管理科学": TEMPLATES.get("管理科学"),
+    # 新增英文金融期刊
+    "JBF": TEMPLATES.get("JBF"),
+    "JIMF": TEMPLATES.get("JIMF"),
+    "MF": TEMPLATES.get("MF"),
+    "MathFinance": TEMPLATES.get("MF"),
+    "RJE": TEMPLATES.get("RJE"),
+    "JE": TEMPLATES.get("JE"),
+    "JAE": TEMPLATES.get("JAE"),
+    # 新增中文经济金融期刊
+    "国际金融研究": TEMPLATES.get("国际金融研究"),
+    "金融评论": TEMPLATES.get("金融评论"),
+    "当代经济科学": TEMPLATES.get("当代经济科学"),
 }
 # Merge aliases into main dict (only add if key doesn't already exist)
 for k, v in _TEMPLATES_ALIASES.items():
@@ -4179,7 +5003,111 @@ JOURNAL_METADATA: dict[str, dict] = {
         "latex_template": "ctex_article",
         "submission_style": False,
     },
+    # 新增中文期刊
+    "经济学动态": {
+        "full_name": "经济学动态",
+        "publisher": "中国社会科学院经济研究所",
+        "style": "ctex",
+        "packages": ["ctex", "xeCJK", "natbib", "amsmath", "booktabs"],
+        "page_limit": 25,
+        "reference_format": "gbt7714",
+        "anonymous": True,
+        "latex_template": "ctex_article",
+        "submission_style": False,
+    },
+    "国际金融研究": {
+        "full_name": "国际金融研究",
+        "publisher": "中国金融学会",
+        "style": "ctex",
+        "packages": ["ctex", "xeCJK", "natbib", "amsmath", "booktabs"],
+        "page_limit": 20,
+        "reference_format": "gbt7714",
+        "anonymous": True,
+        "latex_template": "ctex_article",
+        "submission_style": False,
+    },
+    "金融评论": {
+        "full_name": "金融评论",
+        "publisher": "中国社会科学院金融研究所",
+        "style": "ctex",
+        "packages": ["ctex", "xeCJK", "natbib", "amsmath", "booktabs"],
+        "page_limit": 25,
+        "reference_format": "gbt7714",
+        "anonymous": True,
+        "latex_template": "ctex_article",
+        "submission_style": False,
+    },
+    "当代经济科学": {
+        "full_name": "当代经济科学",
+        "publisher": "西安交通大学",
+        "style": "ctex",
+        "packages": ["ctex", "xeCJK", "natbib", "amsmath", "booktabs"],
+        "page_limit": 30,
+        "reference_format": "gbt7714",
+        "anonymous": True,
+        "latex_template": "ctex_article",
+        "submission_style": False,
+    },
 }
+
+
+# ─── GB/T 7714-2015 bst mapping ────────────────────────────────────────────────
+# Chinese journals require GB/T 7714-2015 format.
+# The .bst file should be in the project or LaTeX system.
+# Common options: gbt7714-2015.bst, gbt7714-nature.bst
+LATEX_BIB_STYLES = {
+    # Chinese journals
+    "经济研究": "gbt7714-2015",
+    "金融研究": "gbt7714-2015",
+    "管理世界": "gbt7714-2015",
+    "会计研究": "gbt7714-2015",
+    "中国工业经济": "gbt7714-2015",
+    "世界经济": "gbt7714-2015",
+    "数量经济技术经济研究": "gbt7714-2015",
+    "统计研究": "gbt7714-2015",
+    "经济学动态": "gbt7714-2015",
+    "国际金融研究": "gbt7714-2015",
+    "金融评论": "gbt7714-2015",
+    "当代经济科学": "gbt7714-2015",
+    "财政研究": "gbt7714-2015",
+    "经济学季刊": "gbt7714-2015",
+    "科研管理": "gbt7714-2015",
+    "南开管理评论": "gbt7714-2015",
+    "系统工程理论与实践": "gbt7714-2015",
+    "中国软科学": "gbt7714-2015",
+    "管理科学学报": "gbt7714-2015",
+    "系统工程学报": "gbt7714-2015",
+    "中国管理科学": "gbt7714-2015",
+    "管理科学": "gbt7714-2015",
+    # English
+    "JF": "aer",
+    "JFE": "aer",
+    "RFS": "apa",
+    "JFQA": "aer",
+    "JCF": "aer",
+    "JFM": "aer",
+    "JFI": "aer",
+    "JBF": "aer",
+    "JIMF": "aer",
+    "MathFinance": "aer",
+    "QJE": "aer",
+    "JPE": "chicago",
+    "Econometrica": "econometrica",
+    "REStud": "econometrica",
+    "JEEA": "econometrica",
+    "REStat": "econometrica",
+    "JAE": "aea",
+    "RJE": "aer",
+    "JE": "aer",
+    "AEJ:AEI": "aer",
+    "ACL": "acl_natbib",
+    "NeurIPS": "neurips",
+}
+
+
+def _bst_for_journal(journal_name: str, fallback: str) -> str:
+    """Return the correct bst file for a journal, falling back to the default."""
+    return LATEX_BIB_STYLES.get(journal_name, fallback)
 
 
 class JournalTemplateSelector:
@@ -4415,6 +5343,10 @@ class JournalTemplateSelector:
         intro = content.get("introduction", "请在此输入引言...")
         title = content.get("title", "论文标题")
 
+        # Use LATEX_BIB_STYLES mapping for correct bst file, especially for
+        # Chinese journals (GB/T 7714-2015) vs. English journals.
+        bst = _bst_for_journal(journal_name, fallback=style)
+
         parts = [
             f"% Auto-generated LaTeX for {journal_name}",
             f"% Style: {style}",
@@ -4472,7 +5404,7 @@ class JournalTemplateSelector:
             "\\section{Conclusion}",
             "\\label{sec:concl}",
             "",
-            f"\\bibliographystyle{{{style}}}",
+            f"\\bibliographystyle{{{bst}}}",
             "\\bibliography{references}",
             "",
             "\\end{document}",
@@ -4727,6 +5659,107 @@ def main():
         print("\n可用模板:")
         for name in TEMPLATES:
             print(f"  - {name}")
+
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# Multi-language template integration (Japanese & German journals)
+# ═════════════════════════════════════════════════════════════════════════════════
+
+
+def _build_multilang_latex(mt) -> str:
+    """Build a minimal LaTeX template from a multi-language JournalTemplate."""
+    abs_env = getattr(mt, "abstract_label", "Abstract").lower().replace(" ", "")
+    sections_md = []
+    for s in mt.sections:
+        if s in ("Abstract", "Zusammenfassung"):
+            continue
+        sections_md.append(
+            f"\\section{{{s}}}\n"
+            f"\\label{{sec:{s.split('.')[0].strip().lower().replace(' ', '_')}}}"
+        )
+    sections_str = "\n\n".join(sections_md)
+    keywords_line = (
+        f"\\paragraph{{{mt.keywords_label}}}: "
+        f"{mt.keywords_separator.join(mt.jEL_codes)}"
+    )
+    return "\n".join([
+        f"% {mt.full_name} ({mt.journal_code})",
+        "% Multi-language template",
+        "",
+        f"\\documentclass[{mt.font_size}]{{article}}",
+        "\\usepackage[authoryear, round]{{natbib}}",
+        "\\usepackage{{amsmath, amssymb, amsthm}}",
+        "\\usepackage{{booktabs}}",
+        "\\usepackage[left=1in, right=1in, top=1in, bottom=1in]{{geometry}}",
+        "\\usepackage{{setspace}}",
+        "\\setstretch{{1.3}}",
+        "",
+        "\\begin{document}",
+        "",
+        f"\\begin{{{abs_env}}}",
+        f"[{mt.abstract_words} words]",
+        "摘要内容...",
+        f"\\end{{{abs_env}}}",
+        "",
+        keywords_line,
+        "",
+        sections_str,
+        "",
+        "\\bibliographystyle{{ecta}}",
+        f"{mt.bibliography_command}",
+        "",
+        "\\end{document}",
+    ])
+
+
+try:
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent.parent))
+    from scripts.research_framework.journal_templates_multilang import get_multilang_templates as _get_multilang
+
+    _MULTILANG_TEMPLATES = _get_multilang()
+    _ALL_TEMPLATES: dict[str, JournalTemplate] = {**TEMPLATES}
+
+    # Convert multi-language templates to base format and merge
+    for code, mt in _MULTILANG_TEMPLATES.items():
+        # Build minimal latex_code from the template metadata
+        _ALL_TEMPLATES[code] = JournalTemplate(
+            name=mt.full_name,
+            short_name=mt.journal_code,
+            category="经济" if mt.style in ("japanese", "german") else "其他",
+            description=f"{mt.full_name} ({mt.style} journal)",
+            latex_code=_build_multilang_latex(mt),
+            bibliography_style="natbib",
+            required_packages=["natbib", "amsmath", "amssymb", "booktabs"],
+            page_limit=f"{mt.page_limit}p" if mt.page_limit else f"{mt.word_limit}w" if mt.word_limit else None,
+            blind_review=(mt.review_style == "double_blind"),
+            url="",
+        )
+
+    def get_all_templates() -> dict[str, JournalTemplate]:
+        """Return all templates including multi-language ones."""
+        return _ALL_TEMPLATES
+
+    def get_template(name: str) -> JournalTemplate | None:
+        """Get a journal template by name or code (checks multi-language templates too)."""
+        return _ALL_TEMPLATES.get(name.upper()) or _ALL_TEMPLATES.get(name)
+
+    def list_multilang_templates() -> list[dict]:
+        """List all multi-language templates."""
+        return [t.to_dict() for t in _MULTILANG_TEMPLATES.values()]
+
+except (ImportError, Exception) as _e:
+
+    def get_all_templates() -> dict[str, JournalTemplate]:
+        return TEMPLATES
+
+    def get_template(name: str) -> JournalTemplate | None:
+        return TEMPLATES.get(name.upper()) or TEMPLATES.get(name)
+
+    def list_multilang_templates() -> list[dict]:
+        return []
+
 
 
 if __name__ == "__main__":

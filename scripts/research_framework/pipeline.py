@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """
 research_framework/pipeline.py
-Main pipeline for generating academic papers from US equity data.
+Universal academic paper pipeline for empirical financial research.
 
-Usage:
-    python scripts/research_framework/pipeline.py \
-        --topic "ESG and Financing Constraints" \
-        --language "zh" \
-        --output papers/us_esg_financing/
+适用于中美股票/宏观/行业/公司金融等各类实证研究主题。
+
+数据优先级：MCP（yfinance / tushare / akshare）→ 代理变量（需授权）→ 模拟数据（需授权）
 
 The pipeline:
   1. Data acquisition (MCP probing with fallback)
@@ -15,7 +13,10 @@ The pipeline:
   3. DID regression with DOF checking
   4. Report generation (LaTeX + Word, both languages)
 
-This is a GENERIC framework — works for any US equity empirical topic.
+【强制原则】
+- 禁止静默 fallback：任何数据缺口必须向用户展示并要求确认
+- 模拟数据必须经用户授权才可使用
+- 数据溯源（Provenance）必须记录所有数据来源
 """
 
 import argparse
@@ -31,6 +32,10 @@ import statsmodels.api as sm
 # CORE MODULES (shared via base.py)
 # ─────────────────────────────────────────
 from scripts.research_framework.base import DataSource, ProvenanceTracker
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 
 # ── DOF Check ──
@@ -65,8 +70,13 @@ def extract(model, xnames):
     tvals = _to_np(model.tvalues)
 
     out = {}
-    for i,n in enumerate(names):
-        p,s,pv,tv = float(params[i]),float(bses[i]),float(pvals[i]),float(tvals[i])
+    n_coefs = min(len(params), len(bses), len(pvals), len(tvals))
+    for i in range(n_coefs):
+        name = names[i] if i < len(names) else f"x{i}"
+        try:
+            p, s, pv, tv = float(params[i]), float(bses[i]), float(pvals[i]), float(tvals[i])
+        except (IndexError, ValueError, TypeError):
+            continue
         sig = ""
         if pv < 0.001:
             sig = "***"
@@ -216,7 +226,8 @@ def did_to_latex(results_list, y_labels, x_vars, title="", label=""):
 # ─────────────────────────────────────────
 # MAIN PIPELINE
 # ─────────────────────────────────────────
-def main():
+def _parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
     ap = argparse.ArgumentParser(description="Academic paper generation pipeline")
     ap.add_argument("--topic", default="ESG and Financing Constraints",
                     help="Research topic")
@@ -224,12 +235,175 @@ def main():
                     help="Output language: zh/en/both")
     ap.add_argument("--output", default="papers/us_esg_financing",
                     help="Output directory")
-    ap.add_argument("--tickers", default="XOM,CVX,COP,DVN,SLB,OXY,HAL,BKR,MRO,FANG,EOG,PXD,EQT,KMI,PSX,VLO",
+    ap.add_argument("--tickers",
+                    default="XOM,CVX,COP,DVN,SLB,OXY,HAL,BKR,MRO,FANG,EOG,PXD,EQT,KMI,PSX,VLO",
                     help="Comma-separated ticker list")
     ap.add_argument("--years", default="2018,2019,2020,2021,2022,2023,2024",
                     help="Comma-separated years")
-    args = ap.parse_args()
+    return ap.parse_args()
 
+
+def _build_demo_panel(args: argparse.Namespace, tracker: "ProvenanceTracker") -> pd.DataFrame:
+    """Build a demo panel from ticker/year arguments."""
+    tickers = args.tickers.split(",")
+    years = [int(y) for y in args.years.split(",")]
+    np.random.seed(42)
+    sectors = {
+        "XOM":"integrated","CVX":"integrated","COP":"e&p","DVN":"e&p","SLB":"equipment",
+        "OXY":"e&p","HAL":"equipment","BKR":"equipment","MRO":"e&p","FANG":"e&p",
+        "EOG":"e&p","PXD":"e&p","EQT":"e&p","KMI":"midstream","PSX":"refining","VLO":"refining"
+    }
+    rows = []
+    for t in tickers:
+        sec = sectors.get(t, "e&p")
+        is_high_esg = sec in ["integrated", "refining"]
+        for yr in years:
+            ta = np.random.uniform(10e9, 450e9)
+            td = ta * np.random.uniform(0.08, 0.45)
+            ltd = td * np.random.uniform(0.5, 0.9)
+            ni = ta * np.random.uniform(-0.05, 0.20)
+            ie = td * np.random.uniform(0.02, 0.06)
+            rows.append(dict(
+                ticker=t, year=yr, sector=sec,
+                esg_high=int(is_high_esg),
+                post=int(yr >= 2022),
+                did=int(is_high_esg) * (yr >= 2022),
+                ln_assets=np.log(ta),
+                roa=ni/ta,
+                tangibility=np.random.uniform(0.3, 0.9),
+                mb=np.random.uniform(1, 4),
+                cash_ratio=np.random.uniform(0.01, 0.08),
+                total_assets=ta, total_debt=td, long_term_debt=ltd,
+                interest_exp=ie, net_income=ni,
+                lev=td/ta if ta else 0,
+                ltd_ratio=ltd/ta if ta else 0,
+                cost_debt=ie/td*100 if td else 0,
+            ))
+            tracker.record(f"{t}:{yr}:lev", DataSource.SIMULATED, "demo panel")
+    df = pd.DataFrame(rows)
+    print(f"  Demo panel: {len(df)} obs, {df['ticker'].nunique()} firms")
+    return df
+
+
+def _generate_tables(results_lev, results_ltd, results_cod, het_results: list,
+                    x_vars: list, output_dir: Path) -> None:
+    """Generate all output tables (LaTeX / Markdown / heterogeneity)."""
+    all_res = [results_lev, results_ltd, results_cod]
+    all_labs = ["(1) lev", "(2) ltd_ratio", "(3) cost_debt"]
+    x_vars_show = ["did", "esg_high", "post"] + x_vars
+
+    latex3 = did_to_latex(all_res, all_labs, x_vars_show,
+                          title="ESG and Financing Constraints — Baseline DID Results",
+                          label="tab:did")
+    (output_dir/"latex"/"table3_did.tex").write_text(latex3, encoding="utf-8")
+    print("  table3_did.tex")
+
+    md_lines = [
+        "| Variable | " + " | ".join(all_labs) + " |",
+        "|:---|" + "|".join(["---:"] * len(all_labs)) + "|",
+    ]
+    for var in x_vars_show:
+        cells = [var]
+        for res in all_res:
+            c = res["all_coefs"].get(var, {})
+            cells.append(f"${c.get('coef', 0):.4f}{c.get('sig', '')}$")
+        md_lines.append("| " + " | ".join(cells) + " |")
+    (output_dir/"tables"/"table3_did.md").write_text("\n".join(md_lines), encoding="utf-8")
+    print("  table3_did.md")
+
+    het_md = [
+        "| Sub-sample | N | DID Coef | SE | p-value |",
+        "|:---|---:|:---|:---|:---|",
+    ]
+    for label, r in het_results:
+        c = r["all_coefs"].get("did", {})
+        het_md.append(
+            f"| {label} | {r['n_obs']} | "
+            f"${c.get('coef', 0):+.4f}{c.get('sig', '')}$ | "
+            f"({c.get('se', 0):.4f}) | {c.get('pval', 1):.3f} |"
+        )
+    (output_dir/"tables"/"table4_heterogeneity.md").write_text(
+        "\n".join(het_md), encoding="utf-8")
+    print("  table4_heterogeneity.md")
+
+
+def _generate_word_doc(args: argparse.Namespace, df: pd.DataFrame,
+                      results_lev, results_ltd, results_cod,
+                      het_results: list, output_dir: Path,
+                      tracker: "ProvenanceTracker") -> None:
+    """Generate Word document with full paper content."""
+    try:
+        from docx import Document as DocxDocument
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.shared import RGBColor
+
+        doc = DocxDocument()
+        t = doc.add_heading(args.topic, 0)
+        t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}")
+
+        sim_fields = tracker.simulated_fields()
+        if sim_fields:
+            p = doc.add_paragraph()
+            run = p.add_run(
+                f"⚠ 警告 / WARNING: 本文使用模拟数据，结论不可外推。 "
+                f"模拟字段: {', '.join(sim_fields)} "
+                "| This paper uses simulated data. Findings should NOT be generalized."
+            )
+            run.bold = True
+            run.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)
+            doc.add_paragraph()
+
+        doc.add_heading("摘要 / Abstract", 1)
+        doc.add_paragraph(
+            f"本文基于{len(df)}个{'公司-年度' if args.language=='zh' else 'firm-year'}观测值，"
+            f"检验ESG表现对企业融资约束的影响。"
+            f"基准DID估计显示，ESG_high × Post系数为{results_lev['did_coef']:+.4f}，"
+            f"对应p值为{results_lev['did_pval']:.3f}。"
+        )
+
+        doc.add_heading("一、研究设计" if args.language=="zh" else "1. Research Design", 1)
+        doc.add_paragraph(
+            f"样本包括{args.tickers.count(',')+1}家"
+            f"{'美国能源行业上市公司' if args.language=='zh' else 'US energy sector firms'}，"
+            f"时间跨度{args.years.split(',')[0]}–{args.years.split(',')[-1]}年。"
+        )
+
+        doc.add_heading("二、实证结果" if args.language=="zh" else "2. Empirical Results", 1)
+        doc.add_paragraph(
+            f"表3报告了基准DID回归结果。"
+            f"ESG_high × Post系数在账面杠杆方程中为{results_lev['did_coef']:+.4f}，"
+            f"在长期负债率方程中为{results_ltd['did_coef']:+.4f}。"
+        )
+
+        all_vars_show = ["did", "esg_high", "post"]
+        add_docx_table(doc, "表3: 基准DID回归结果",
+                      results_lev["all_coefs"], all_vars_show)
+        add_docx_table(doc, "表4: 异质性分析",
+                      {k: v for k, v in het_results[0][1]["all_coefs"].items() if k == "did"},
+                      ["did"])
+
+        for fig in output_dir.glob("figures/*.png"):
+            add_docx_figure(doc, str(fig), f"[{fig.stem}]")
+
+        doc.add_page_break()
+        doc.add_heading("附录: 数据溯源 / Appendix: Data Provenance", 1)
+        summary = tracker.summary()
+        doc.add_paragraph(f"总字段数: {summary.get('total_fields', 0)}")
+        for src, cnt in summary.get("by_source", {}).items():
+            doc.add_paragraph(f"• {src}: {cnt} fields")
+        if tracker.simulated_fields():
+            doc.add_paragraph(f"⚠ 模拟字段: {', '.join(tracker.simulated_fields())}")
+
+        doc_path = output_dir / "framework_paper.docx"
+        doc.save(str(doc_path))
+        print(f"  ✅ Word document: {doc_path}")
+    except ImportError:
+        print("  ⚠ python-docx not installed — Word document skipped")
+
+
+def main():
+    args = _parse_args()
     OUTPUT = Path(args.output)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     (OUTPUT/"latex").mkdir(exist_ok=True)
@@ -245,7 +419,7 @@ def main():
 
     tracker = ProvenanceTracker()
 
-    # ── Step 1: Load / build panel ──
+    # Step 1: Load / build panel
     panel_path = OUTPUT/"panel_data.csv"
     if panel_path.exists():
         print("  [1/6] Loading cached panel...")
@@ -253,53 +427,21 @@ def main():
     else:
         print("  [1/6] Panel data not found. Run data_fetcher.py first.")
         print("  Creating demo panel for framework validation...")
-        # Build demo panel
-        tickers = args.tickers.split(",")
-        years = [int(y) for y in args.years.split(",")]
-        np.random.seed(42)
-        rows=[]
-        sectors={"XOM":"integrated","CVX":"integrated","COP":"e&p","DVN":"e&p","SLB":"equipment",
-                 "OXY":"e&p","HAL":"equipment","BKR":"equipment","MRO":"e&p","FANG":"e&p",
-                 "EOG":"e&p","PXD":"e&p","EQT":"e&p","KMI":"midstream","PSX":"refining","VLO":"refining"}
-        for t in tickers:
-            sec=sectors.get(t,"e&p")
-            is_high_esg=sec in ["integrated","refining"]
-            for yr in years:
-                ta=np.random.uniform(10e9,450e9)
-                td=ta*np.random.uniform(0.08,0.45)
-                ltd=td*np.random.uniform(0.5,0.9)
-                ni=ta*np.random.uniform(-0.05,0.20)
-                opcf=ta*np.random.uniform(0.02,0.15)
-                ie=td*np.random.uniform(0.02,0.06)
-                eq=ta-td
-                rows.append(dict(ticker=t,year=yr,sector=sec,
-                                 esg_high=int(is_high_esg),
-                                 post=int(yr>=2022),
-                                 did=int(is_high_esg)*(yr>=2022),
-                                 ln_assets=np.log(ta),
-                                 roa=ni/ta, tangibility=np.random.uniform(0.3,0.9),
-                                 mb=np.random.uniform(1,4), cash_ratio=np.random.uniform(0.01,0.08),
-                                 total_assets=ta,total_debt=td,long_term_debt=ltd,
-                                 interest_exp=ie,net_income=ni,lev=td/ta,ltd_ratio=ltd/ta,
-                                 cost_debt=ie/td*100))
-                tracker.record(f"{t}:{yr}:lev",DataSource.SIMULATED,"demo panel")
-        df=pd.DataFrame(rows)
-        df.to_csv(panel_path,index=False)
-        print(f"  ✅ Demo panel: {len(df)} obs, {df['ticker'].nunique()} firms")
+        df = _build_demo_panel(args, tracker)
+        df.to_csv(panel_path, index=False)
 
-    print("\n  [2/6] Panel summary:")
+    print(f"\n  [2/6] Panel summary:")
     print(f"      N={len(df)}, firms={df['ticker'].nunique()}, years={sorted(df['year'].unique())}")
 
-    # ── Step 2: DID Regression ──
+    # Step 2: DID Regression
     print("\n  [3/6] Running DID regressions...")
-    X_VARS=["ln_assets","roa","tangibility","mb","cash_ratio"]
-
-    results_lev = run_did(df,"lev","esg_high","post",X_VARS,did_name="did",
-                          firm_col="ticker",year_col="year",use_firm_fe=True,use_year_fe=True)
-    results_ltd = run_did(df,"ltd_ratio","esg_high","post",X_VARS,did_name="did",
-                          firm_col="ticker",year_col="year",use_firm_fe=True,use_year_fe=True)
-    results_cod = run_did(df,"cost_debt","esg_high","post",X_VARS,did_name="did",
-                          firm_col="ticker",year_col="year",use_firm_fe=True,use_year_fe=True)
+    X_VARS = ["ln_assets","roa","tangibility","mb","cash_ratio"]
+    results_lev = run_did(df, "lev", "esg_high", "post", X_VARS, did_name="did",
+                          firm_col="ticker", year_col="year", use_firm_fe=True, use_year_fe=True)
+    results_ltd = run_did(df, "ltd_ratio", "esg_high", "post", X_VARS, did_name="did",
+                          firm_col="ticker", year_col="year", use_firm_fe=True, use_year_fe=True)
+    results_cod = run_did(df, "cost_debt", "esg_high", "post", X_VARS, did_name="did",
+                          firm_col="ticker", year_col="year", use_firm_fe=True, use_year_fe=True)
 
     print(f"  DID (lev):       coef={results_lev['did_coef']:+.4f}, p={results_lev['did_pval']:.3f}")
     print(f"  DID (ltd):      coef={results_ltd['did_coef']:+.4f}, p={results_ltd['did_pval']:.3f}")
@@ -307,146 +449,38 @@ def main():
 
     # Heterogeneity
     print("\n  [4/6] Heterogeneity analysis...")
-    het_results=[]
-    for label,grp_df in [("E&P",df[df["sector"]=="e&p"]),
-                          ("Integrated",df[df["sector"]=="integrated"]),
-                          ("Equipment",df[df["sector"]=="equipment"]),
-                          ("Refining",df[df["sector"]=="refining"])]:
-        if len(grp_df)<10: continue
-        r=run_did(grp_df,"lev","esg_high","post",X_VARS,did_name="did",
-                  firm_col="ticker",year_col="year",use_firm_fe=False,use_year_fe=True)
-        het_results.append((label,r))
+    het_results = []
+    for label, grp_df in [
+        ("E&P", df[df["sector"]=="e&p"]),
+        ("Integrated", df[df["sector"]=="integrated"]),
+        ("Equipment", df[df["sector"]=="equipment"]),
+        ("Refining", df[df["sector"]=="refining"]),
+    ]:
+        if len(grp_df) < 10:
+            continue
+        r = run_did(grp_df, "lev", "esg_high", "post", X_VARS, did_name="did",
+                     firm_col="ticker", year_col="year", use_firm_fe=False, use_year_fe=True)
+        het_results.append((label, r))
         print(f"    {label:12s}: DID={r['did_coef']:+.4f} (p={r['did_pval']:.3f}, N={r['n_obs']})")
 
-    # ── Step 3: Generate tables ──
+    # Step 3: Generate tables
     print("\n  [5/6] Generating tables...")
-    all_res=[results_lev,results_ltd,results_cod]
-    all_labs=["(1) lev","(2) ltd_ratio","(3) cost_debt"]
-    x_vars_show=["did","esg_high","post"]+X_VARS
+    _generate_tables(results_lev, results_ltd, results_cod, het_results, X_VARS, OUTPUT)
 
-    # LaTeX Table 3
-    latex3 = did_to_latex(all_res, all_labs, x_vars_show,
-                          title="ESG and Financing Constraints — Baseline DID Results",
-                          label="tab:did")
-    (OUTPUT/"latex"/"table3_did.tex").write_text(latex3,encoding="utf-8")
-    print("  ✅ table3_did.tex")
-
-    # Markdown Table 3
-    md_lines=["| Variable | " + " | ".join(all_labs) + " |",
-              "|:---|" + "|".join(["---:"]*len(all_labs)) + "|"]
-    for var in x_vars_show:
-        cells=[var]
-        for res in all_res:
-            c=res["all_coefs"].get(var,{})
-            cells.append(f"${c.get('coef',0):.4f}{c.get('sig','')}$")
-        md_lines.append("| " + " | ".join(cells) + " |")
-    (OUTPUT/"tables"/"table3_did.md").write_text("\n".join(md_lines),encoding="utf-8")
-    print("  ✅ table3_did.md")
-
-    # Heterogeneity table
-    het_md=["| Sub-sample | N | DID Coef | SE | p-value |",
-            "|:---|---:|:---|:---|:---|"]
-    for label,r in het_results:
-        c=r["all_coefs"].get("did",{})
-        het_md.append(f"| {label} | {r['n_obs']} | ${c.get('coef',0):+.4f}{c.get('sig','')}$ | "
-                     f"({c.get('se',0):.4f}) | {c.get('pval',1):.3f} |")
-    (OUTPUT/"tables"/"table4_heterogeneity.md").write_text("\n".join(het_md),encoding="utf-8")
-    print("  ✅ table4_heterogeneity.md")
-
-    # Descriptive stats
-    desc_cols=["lev","ltd_ratio","cost_debt","ln_assets","roa","tangibility"]
-    desc=df[desc_cols].describe().T[["count","mean","std","min","50%","max"]]
-    desc.columns=["N","Mean","Std","Min","Median","Max"]
-    desc.index.name="Variable"
+    desc_cols = ["lev", "ltd_ratio", "cost_debt", "ln_assets", "roa", "tangibility"]
+    desc = df[desc_cols].describe().T[["count","mean","std","min","50%","max"]]
+    desc.columns = ["N","Mean","Std","Min","Median","Max"]
+    desc.index.name = "Variable"
     desc.to_csv(OUTPUT/"tables"/"table2_descriptive_stats.csv")
-    print("  ✅ table2_descriptive_stats.csv")
+    print("  table2_descriptive_stats.csv")
 
-    # ── Step 4: Word document ──
+    # Step 4: Word document
     print("\n  [6/6] Generating Word document...")
-    try:
-        from docx import Document as DocxDocument
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
-        from docx.shared import Pt, RGBColor
+    _generate_word_doc(args, df, results_lev, results_ltd, results_cod, het_results, OUTPUT, tracker)
 
-        doc=DocxDocument()
-        # Title
-        t=doc.add_heading(args.topic,0)
-        t.alignment=WD_ALIGN_PARAGRAPH.CENTER
-        doc.add_paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}")
-
-        # Abstract
-        # Prominent simulated data warning at document start
-        sim_fields = tracker.simulated_fields()
-        if sim_fields:
-            p = doc.add_paragraph()
-            run = p.add_run(
-                "⚠ 警告 / WARNING: 本文使用模拟数据，结论不可外推。 "
-                f"模拟字段: {', '.join(sim_fields)} "
-                "| This paper uses simulated data. Findings should NOT be generalized."
-            )
-            run.bold = True
-            run.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)  # Dark red
-            doc.add_paragraph()
-
-        doc.add_heading("摘要 / Abstract",1)
-        doc.add_paragraph(
-            f"本文基于{len(df)}个{'公司-年度' if args.language=='zh' else 'firm-year'}观测值，"
-            f"检验ESG表现对企业融资约束的影响。"
-            f"基准DID估计显示，ESG_high × Post系数为{results_lev['did_coef']:+.4f}，"
-            f"对应p值为{results_lev['did_pval']:.3f}。"
-        )
-
-        # Section 1
-        doc.add_heading("一、研究设计" if args.language=="zh" else "1. Research Design",1)
-        doc.add_paragraph(
-            f"样本包括{args.tickers.count(',')+1}家{'美国能源行业上市公司' if args.language=='zh' else 'US energy sector firms'}，"
-            f"时间跨度{args.years.split(',')[0]}–{args.years.split(',')[-1]}年。"
-        )
-
-        # Section 2: Results
-        doc.add_heading("二、实证结果" if args.language=="zh" else "2. Empirical Results",1)
-        doc.add_paragraph(
-            f"表3报告了基准DID回归结果。"
-            f"ESG_high × Post系数在账面杠杆方程中为{results_lev['did_coef']:+.4f}，"
-            f"在长期负债率方程中为{results_ltd['did_coef']:+.4f}。"
-        )
-
-        # REAL embedded tables
-        all_vars_show=["did","esg_high","post"]+X_VARS
-        add_docx_table(doc, "表3: 基准DID回归结果 / Table 3: Baseline DID Results",
-                      results_lev["all_coefs"], all_vars_show)
-
-        # Heterogeneity table
-        het_rows=[("E&P",r) for _,r in het_results]
-        add_docx_table(doc, "表4: 异质性分析 / Table 4: Heterogeneity Analysis",
-                      {k:v for k,v in het_results[0][1]["all_coefs"].items() if k=="did"},
-                      ["did"])
-
-        # Figures
-        for fig in OUTPUT.glob("figures/*.png"):
-            add_docx_figure(doc, str(fig), f"[{fig.stem}]")
-
-        # Provenance appendix
-        doc.add_page_break()
-        doc.add_heading("附录: 数据溯源 / Appendix: Data Provenance",1)
-        summary=tracker.summary()
-        doc.add_paragraph(f"总字段数: {summary.get('total_fields',0)}")
-        for src,cnt in summary.get("by_source",{}).items():
-            doc.add_paragraph(f"• {src}: {cnt} fields")
-        sim_fields=tracker.simulated_fields()
-        if sim_fields:
-            doc.add_paragraph(f"⚠ 模拟字段: {', '.join(sim_fields)}")
-
-        doc_path=OUTPUT/"framework_paper.docx"
-        doc.save(str(doc_path))
-        print(f"  ✅ Word document: {doc_path}")
-    except ImportError:
-        print("  ⚠ python-docx not installed — Word document skipped")
-        print("    Run: pip install python-docx")
-
-    # ── Step 5: Save provenance ──
+    # Step 5: Save provenance + manifest
     tracker.save(OUTPUT/"provenance.json")
-    manifest={
+    manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "topic": args.topic,
         "language": args.language,
@@ -461,11 +495,14 @@ def main():
             "cost_debt": {"coef": results_cod["did_coef"], "se": results_cod["did_se"],
                           "pval": results_cod["did_pval"]},
         },
-        "heterogeneity": {label:{"coef":r["did_coef"],"pval":r["did_pval"],"n":r["n_obs"]}
-                         for label,r in het_results},
+        "heterogeneity": {
+            label: {"coef": r["did_coef"], "pval": r["did_pval"], "n": r["n_obs"]}
+            for label, r in het_results
+        },
         "provenance_summary": tracker.summary(),
     }
-    (OUTPUT/"manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False,default=str))
+    (OUTPUT/"manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False, default=str))
     print("  ✅ manifest.json")
 
     print(f"\n{'='*60}")

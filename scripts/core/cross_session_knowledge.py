@@ -26,12 +26,19 @@ cross_session_knowledge.py — 跨会话知识积累层
 
 from __future__ import annotations
 
+__all__ = [
+    "CrossSessionInsight",
+    "SessionSummary",
+    "CrossSessionKnowledge",
+]
+
 import json
 import logging
 import os
 import sqlite3
 import threading
 import time
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -127,9 +134,18 @@ class CrossSessionKnowledge:
         self._lit_store: LiteratureVectorStore | None = None
         if LITERATURE_STORE_AVAILABLE:
             store_path = literature_store_path or "data/literature_store"
-            self._lit_store = LiteratureVectorStore(persist_dir=store_path)
-            if embed_fn:
-                self._lit_store.set_embed_function(embed_fn)
+            try:
+                self._lit_store = LiteratureVectorStore(persist_dir=store_path)
+                if embed_fn:
+                    self._lit_store.set_embed_function(embed_fn)
+            except Exception as exc:
+                warnings.warn(
+                    f"LiteratureVectorStore initialization failed: {exc}. "
+                    f"Cross-session knowledge retrieval will use fallback (keyword search only).",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                self._lit_store = None
 
         # 洞察缓存
         self._insight_cache: list[CrossSessionInsight] = []
@@ -303,7 +319,11 @@ class CrossSessionKnowledge:
                 })
             return output
         except Exception as e:
-            logger.error(f"Semantic cross-session search failed: {e}")
+            warnings.warn(
+                f"Semantic cross-session search failed: {e}. Falling back to keyword search.",
+                UserWarning,
+                stacklevel=2,
+            )
             return self.cross_session_search(query, top_k)
 
     # ── 洞察挖掘 ─────────────────────────────────────────────────────────
@@ -477,7 +497,11 @@ class CrossSessionKnowledge:
             同步的条目数量
         """
         if not self._lit_store:
-            logger.warning("LiteratureVectorStore not available, skipping sync")
+            warnings.warn(
+                "LiteratureVectorStore not available, skipping sync to literature store.",
+                UserWarning,
+                stacklevel=2,
+            )
             return 0
 
         cursor = self._conn.cursor()
@@ -521,7 +545,11 @@ class CrossSessionKnowledge:
                 # 记录同步日志
                 self._log_sync(row["session_id"], "context", row["task"])
             except Exception as e:
-                logger.debug(f"Sync skip (likely duplicate): {e}")
+                warnings.warn(
+                    f"Failed to sync context item to LiteratureVectorStore: {e}",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
         # 2. 同步高置信度洞察
         cursor.execute("""
@@ -546,8 +574,12 @@ class CrossSessionKnowledge:
                     },
                 )
                 synced += 1
-            except Exception:
-                pass
+            except Exception as e:
+                warnings.warn(
+                    f"Failed to sync insight to LiteratureVectorStore: {e}",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
         logger.info(f"Synced {synced} items to LiteratureVectorStore")
         return synced

@@ -1,13 +1,27 @@
 {
   "name": "latex_check",
-  "description": "检查LaTeX文件的语法和格式问题。类似于拼写检查，但针对LaTeX语法。\\n\\n",
+  "description": "检查LaTeX文件的语法和格式问题。类似于拼写检查，但针对LaTeX语法。\\n\\nArgs:\\n  tex_file: .tex文件路径\\n  severity_filter: 最低显示级别（info/warning/error）\\n\\nReturns: 问题列表（含行号、类型、描述）",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "tex_file": {
+        "type": "string",
+        "description": ".tex文件路径"
+      },
+      "severity_filter": {
+        "type": "string",
+        "description": "最低显示级别",
+        "enum": [
+          "info",
+          "warning",
+          "error"
+        ],
+        "default": "info"
       }
     },
-    "required": []
+    "required": [
+      "tex_file"
+    ],
+    "description": "检查LaTeX文件的语法和格式问题。类似于拼写检查，但针对LaTeX语法。"
   }
 }

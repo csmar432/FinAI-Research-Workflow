@@ -294,10 +294,11 @@ def fetch_arxiv_papers(query: str, max_results: int = 10) -> list[dict]:
     try:
         # FIX (2026-05-29): call_mcp_tool returns MCPResult on error,
         # or raises exception on network failure. Wrap in try/except.
-        results = _mcp_call("user-arxiv", "semantic_search", {"query": query, "limit": max_results})
-        if results and isinstance(results, list):
-            logger.info(f"  arXiv MCP: '{query}' → {len(results)} 篇")
-            return results
+        results = _mcp_call("user-arxiv", "semantic_search", {"query": query, "max_results": max_results})
+        if results is not None and hasattr(results, "success") and results.success and isinstance(results.data, list):
+            data = results.data
+            logger.info(f"  arXiv MCP: '{query}' → {len(data)} 篇")
+            return data
     except Exception as e:
         logger.warning(f"[KnowledgeGraph] arXiv MCP call failed: {e}")
     return []
@@ -318,9 +319,10 @@ def fetch_web_papers(query: str, max_results: int = 10) -> list[dict]:
             "brave_web_search",
             {"query": f"{query} filetype:pdf site:arxiv.org OR site:ssrn.com"},
         )
-        if results and isinstance(results, list):
-            logger.info(f"  Web search: '{query}' → {len(results)} 篇")
-            return results[:max_results]
+        if results is not None and hasattr(results, "success") and results.success and isinstance(results.data, list):
+            data = results.data
+            logger.info(f"  Web search: '{query}' → {len(data)} 篇")
+            return data[:max_results]
     except Exception as e:
         logger.warning(f"[KnowledgeGraph] Brave Search MCP call failed: {e}")
     return []

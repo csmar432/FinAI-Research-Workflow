@@ -3,6 +3,7 @@
   "description": "获取全国GDP季度数据（2006年至今），含GDP绝对值和同比增速",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "获取全国GDP季度数据（2006年至今），含GDP绝对值和同比增速"
   }
 }

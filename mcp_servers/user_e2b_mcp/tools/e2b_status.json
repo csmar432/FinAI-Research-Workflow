@@ -4,6 +4,7 @@
   "inputSchema": {
     "type": "object",
     "properties": {},
-    "required": []
+    "required": [],
+    "description": "检查 E2B 沙箱服务状态和配额。"
   }
 }

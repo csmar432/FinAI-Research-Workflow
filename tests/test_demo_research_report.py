@@ -30,12 +30,12 @@ import pytest
 # Import the module under test
 from scripts.demo_research_report import (
     _get_mock_stock_data,
+    DEMO_CONFIG,
     analyze_financials,
     run_valuation,
     assess_risk,
     generate_report,
     run_demo_pipeline,
-    DEMO_CONFIG,
 )
 
 

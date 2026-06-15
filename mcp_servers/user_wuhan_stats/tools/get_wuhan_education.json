@@ -1,8 +1,9 @@
 {
   "name": "get_wuhan_education",
-  "description": "武汉高校教育数据",
+  "description": "查询武汉市高等教育统计数据，包括高校数量/在校生规模/毕业生去向/科研经费等指标，支持年度序列。",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "查询武汉市高等教育统计数据，包括高校数量/在校生规模/毕业生去向/科研经费等指标，支持年度序列。"
   }
 }

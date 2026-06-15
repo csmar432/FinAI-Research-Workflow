@@ -4,10 +4,10 @@
 site_name: FinResearch Agent 文档
 site_description: 经济金融领域 AI 学术研究工作流文档
 site_author: FinAI Research Workflow Contributors
-site_url: https://github.com/YOUR_USERNAME/finai-research-workflow
+site_url: https://github.com/csmar432/论文-研报工作流
 
-repo_name: YOUR_USERNAME/finai-research-workflow
-repo_url: https://github.com/YOUR_USERNAME/finai-research-workflow
+repo_name: csmar432/论文-研报工作流
+repo_url: https://github.com/csmar432/论文-研报工作流
 edit_uri: ""
 
 theme:
@@ -62,7 +62,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - 📘 使用指南（完整版）: ../使用指南.md
   - 快速入门:
+      - 教程总览: tutorials/README.md
       - 安装配置: tutorials/01-quickstart.md
       - 金融研究报告: tutorials/02-financial-report.md
       - 研究方向设计: tutorials/03-research-directions.md
@@ -74,4 +76,5 @@ nav:
       - API 参考: api_reference.md
   - 项目:
       - 架构设计: ARCHITECTURE.md
-      - 使用指南: ../USAGE_GUIDE.md
+      - 快速参考: ../USAGE_GUIDE.md
+      - 完整使用指南（docs版）: 论文写作工作流使用指南.md

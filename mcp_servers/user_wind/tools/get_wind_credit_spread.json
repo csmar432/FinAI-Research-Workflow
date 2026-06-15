@@ -14,6 +14,7 @@
         "description": "期限: 1Y/3Y/5Y/10Y",
         "default": "3Y"
       }
-    }
+    },
+    "description": "获取信用利差数据（企业债vs国债）。"
   }
 }

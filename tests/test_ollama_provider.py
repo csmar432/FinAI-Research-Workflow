@@ -147,7 +147,7 @@ def test_ollama_provider_sanitize_removes_paths():
         {
             "role": "user",
             "content": (
-                "Please read from /Users/xuzheyi/Desktop/论文-研报工作流/data/test.csv "
+                "Please read from data/test.csv "
                 "and /home/user/projects/main.py"
             ),
         }
@@ -155,7 +155,7 @@ def test_ollama_provider_sanitize_removes_paths():
     sanitized = provider._sanitize_messages(messages)
     content = sanitized[0]["content"]
 
-    assert "/Users/xuzheyi/Desktop" not in content
+    assert "/Users/" not in content
     assert "/home/user/projects" not in content
     assert "[FILE PATH]" in content
 

@@ -1,14 +1,22 @@
 {
   "name": "get_openalex_institutions",
-  "description": "获取机构信息及其发表成果",
-  "parameters": {
+  "description": "OpenAlex 机构搜索",
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "institution_id": {
+      "query": {
         "type": "string",
-        "description": "OpenAlex 机构 ID，例如 'I123456789'"
+        "description": "机构名称"
+      },
+      "per_page": {
+        "type": "integer",
+        "description": "每页结果数",
+        "default": 10
       }
     },
-    "required": ["institution_id"]
+    "required": [
+      "query"
+    ],
+    "description": "OpenAlex 机构搜索。无需 API Key。"
   }
 }

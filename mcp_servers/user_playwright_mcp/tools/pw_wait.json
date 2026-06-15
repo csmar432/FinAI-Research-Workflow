@@ -5,9 +5,11 @@
     "type": "object",
     "properties": {
       "properties": {
-        "type": "number"
+        "type": "number",
+        "description": "操作参数字典（JSON 格式）"
       }
     },
-    "required": []
+    "required": [],
+    "description": "等待指定时间或条件。"
   }
 }

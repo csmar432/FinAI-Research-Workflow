@@ -13,6 +13,15 @@ campaign_orchestrator.py — Campaign 编排器
 
 from __future__ import annotations
 
+__all__ = [
+    "StageStatus",
+    "Stage",
+    "SharedContext",
+    "Campaign",
+    "CampaignTemplate",
+    "CampaignOrchestrator",
+]
+
 import json
 import logging
 import os

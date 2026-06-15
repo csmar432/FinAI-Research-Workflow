@@ -1,43 +1,81 @@
 # 知识库
 
-> 本目录为空占位目录。Agent 相关领域知识已迁移到 `.cursor/skills/` 和 `.cursor/rules/` 中管理。
+> 论文-研报工作流的知识管理和技能文档中心。
 
 ## 目录结构
 
 ```
 knowledge/
-├── chapters/      # 论文章节模板（预留）
-├── outlines/      # 研究大纲模板（预留）
-└── papers/       # 参考论文（预留）
+├── skills/              # 技能文档真相源（18个技能）
+│   ├── fin-full-pipeline.md
+│   ├── fin-idea-discovery.md
+│   ├── fin-lit-review.md
+│   ├── fin-generate-idea.md
+│   ├── fin-novelty-check.md
+│   ├── fin-experiment-design.md
+│   ├── fin-paper-writing.md
+│   ├── fin-paper-draft.md
+│   ├── fin-paper-plan.md
+│   ├── fin-paper-figure.md
+│   ├── fin-paper-convert.md
+│   ├── fin-review-loop.md
+│   ├── fin-submit-check.md
+│   ├── fin-data-acquisition.md
+│   ├── fin-brief-generator.md
+│   ├── fin-ref-paper.md
+│   ├── fin-viz-launch.md
+│   └── fin-ref-paper.md          # BibTeX参考文献管理
+├── chapters/           # 论文章节模板（预留）
+├── outlines/           # 研究大纲模板（预留）
+└── papers/             # 参考论文（预留）
 ```
 
-## 知识管理策略
+## 技能文档（skills/）
 
-Agent 的领域知识通过以下途径管理：
+`knowledge/skills/` 是**唯一真相源**，通过目录副本共享给多个工具：
+
+| 工具目录 | 共享方式 |
+|---------|---------|
+| `.claude/skills/` | 目录副本（Claude Code）|
+| `.github/skills/` | 目录副本（GitHub Copilot）|
+| `.cursor/skills/` | 目录副本（Cursor）|
+
+**不依赖 Cursor Skill 系统的工具**（Claude Code、Copilot）通过读取这些 `.md` 文件来了解每个技能的功能。
+
+### 18 个技能概览
+
+| 类别 | 技能 | 功能 |
+|------|------|------|
+| **完整流程** | `fin-full-pipeline` | 端到端研究流水线 |
+| **想法发现** | `fin-idea-discovery` | 从方向到可执行方案 |
+| **文献综述** | `fin-lit-review` | 系统性文献搜索 + 引文网络 |
+| | `fin-generate-idea` | 8-12 个想法生成 + 数据验证 |
+| | `fin-novelty-check` | 新颖性验证（顶刊查重）|
+| **实证设计** | `fin-experiment-design` | DID/IV/RD/PSM 完整方案 |
+| **数据获取** | `fin-data-acquisition` | MCP 数据拉取 + 回归脚本 |
+| **论文写作** | `fin-paper-plan` | 大纲生成 |
+| | `fin-paper-draft` | 正文生成（LaTeX）|
+| | `fin-paper-writing` | 写作编排协调 |
+| **图表生成** | `fin-paper-figure` | matplotlib 图表（≥300 DPI）|
+| | `fin-viz-launch` | 自然语言 → 学术图表 |
+| **格式输出** | `fin-paper-convert` | LaTeX 编译 |
+| **质量保证** | `fin-review-loop` | 多轮对抗性 review |
+| | `fin-submit-check` | 投稿前检查 |
+| **辅助工具** | `fin-brief-generator` | 生成 FIN_BRIEF.md |
+| | `fin-ref-paper` | BibTeX 参考文献管理 |
+
+## 其他知识位置
 
 | 知识类型 | 管理位置 | 说明 |
 |---------|---------|------|
-| 技能定义 | `.cursor/skills/fin-*/SKILL.md` | 每个技能有独立 markdown 文件 |
-| 领域规则 | `.cursor/rules/*.mdc` | 经济金融研究规范 |
-| 研究简报 | `FIN_BRIEF.md` | 每个研究项目的上下文起点 |
-| 研究简报 | `FIN_RESEARCH_PLAN.md` | 详细研究计划（可选） |
-| 期刊格式 | `.cursor/skills/fin-paper-*/SKILL.md` | JF/JFE/RFS/CTeX 格式规范 |
+| 角色规则 | `.cursor/rules/*.mdc` | 分析师/研究员/论文助手规范（Cursor 专用）|
+| Agent 定义 | `.cursor/agents/*.md` | Agent 行为定义（Cursor 专用）|
+| 研究简报 | `FIN_BRIEF.md` | 每个项目的上下文起点 |
+| 项目总入口 | `CLAUDE.md` | 三工具统一入口文档 |
 
-## 为何不在此目录存储知识？
+## 知识管理原则
 
-1. **Skill 优先**：所有 agent 操作规程通过 markdown skill 文件驱动，而非静态知识库
-2. **动态更新**：skill 文件由 agent 在研究过程中实时生成和更新
-3. **上下文驱动**：agent 通过读取当前研究的输出文件（output/）获取上下文，而非预存知识
-
-## 如需添加知识文件
-
-请在以下位置之一添加：
-
-- **领域知识** → `.cursor/knowledge/`（需先创建目录）
-- **参考论文** → `papers/`（推荐 PDF 格式）
-- **大纲模板** → `knowledge/outlines/`
-- **章节模板** → `knowledge/chapters/`
-
-## 当前状态
-
-- `papers/us_esg_financing/` 包含一篇参考论文的相关材料
+1. **单一真相源** — 技能文档只保存在 `knowledge/skills/`，其他地方通过目录副本引用
+2. **工具无关** — 文档使用通用 Markdown，不含工具特定语法
+3. **自然语言驱动** — 在 Claude Code / Copilot 中直接用自然语言描述需求即可
+4. **上下文驱动** — Agent 通过研究输出文件（`output/`）获取上下文，而非预存知识

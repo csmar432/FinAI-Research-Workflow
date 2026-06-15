@@ -5,11 +5,14 @@
     "type": "object",
     "properties": {
       "concept_name": {
-        "type": "string"
+        "type": "string",
+        "description": "概念名称或代码"
       },
       "ts_code": {
-        "type": "string"
+        "type": "string",
+        "description": "股票代码（格式：000001.SZ 或 600000.SH）"
       }
-    }
+    },
+    "description": "获取概念股板块信息（概念列表/成分股）。使用 Tushare Pro API。"
   }
 }

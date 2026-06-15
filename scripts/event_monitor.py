@@ -427,7 +427,7 @@ def _check_macro_via_mcp(countries: list[str]) -> list[MacroEvent]:
     Tries in order:
       1. user-eodhd → economic_events
       2. user-financial → get_macro_china / get_macro_usa
-      3. user-fed-data → get_fed_fomc / get_fed_beige_book
+      3. user-fed-data → get_fed_interest_rate / get_fed_beige_book
       4. mock fallback
     """
     events: list[MacroEvent] = []
@@ -451,8 +451,8 @@ def _check_macro_via_mcp(countries: list[str]) -> list[MacroEvent]:
                     report_date=item.get("date", ""),
                 ))
             return events
-    except Exception:
-        pass
+    except Exception as exc:
+        pass  # EODHD MCP failed — continue to financial fallback
 
     # Try MCP user-financial (China macro)
     try:
@@ -476,8 +476,8 @@ def _check_macro_via_mcp(countries: list[str]) -> list[MacroEvent]:
                             report_date=latest.get("date", datetime.now().strftime("%Y-%m-%d")),
                         ))
                         break
-    except Exception:
-        pass
+    except Exception as exc:
+        pass  # user-financial MCP failed — continue to mock fallback
 
     # Fallback to mock
     if not events:
@@ -520,8 +520,8 @@ def _check_policy_via_mcp(keywords: list[str]) -> list[PolicyEvent]:
                     ))
             if len(events) >= 10:
                 break
-    except Exception:
-        pass
+    except Exception as exc:
+        pass  # Policy search failed — continue to mock fallback
 
     if not events:
         events = _search_policy_keywords_mock(keywords, 5)
@@ -561,7 +561,7 @@ def _call_mcp(server: str, tool: str, params: dict) -> dict | None:
 def trigger_research_pipeline(
     event: ResearchEvent,
     pipeline_name: str = "research_report",
-    auto_trigger: bool = False,
+    auto_trigger: bool | None = None,
     output_dir: str | Path | None = None,
     run_async: bool = True,
     language: str = "zh",
@@ -570,13 +570,15 @@ def trigger_research_pipeline(
     """Trigger the research pipeline for a given event.
 
     This function actually runs the pipeline (not just returning a dict).
-    When auto_trigger=False, returns status="pending_approval".
+    When auto_trigger is None, uses event.auto_trigger.
     When auto_trigger=True, runs the pipeline in a background thread.
+    When auto_trigger=False, returns status="pending_approval".
 
     Args:
         event: The research event that triggered this call.
         pipeline_name: "research_report" (demo) or "paper" (EnhancedPipeline).
-        auto_trigger: If True, run pipeline immediately. If False, require approval.
+        auto_trigger: If None, uses event.auto_trigger. If True, run immediately.
+                     If False, require approval.
         output_dir: Custom output directory. Auto-generated if None.
         run_async: If True, run pipeline in background thread (non-blocking).
                    If False, run synchronously (blocks until complete).
@@ -593,6 +595,9 @@ def trigger_research_pipeline(
           - output_dir: where results will be saved
           - message: human-readable message
     """
+    if auto_trigger is None:
+        auto_trigger = getattr(event, "auto_trigger", False)
+
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     topic = _build_topic_from_event(event)
     dedup = _dedup_key(event)
@@ -680,6 +685,26 @@ def _run_pipeline_sync(
 ) -> dict:
     """Run pipeline synchronously and return result."""
     started_at = datetime.now()
+
+    # ── 可视化回调：审批通过后推送结果到 Canvas ────────────────────────
+    # 可视化仅在用户审批后推送，防止在审批前展示结果
+    def _on_gate_approved(stage_name: str, ctx, feedback: str = "") -> None:
+        payload = {
+            "event": "gate_approved",
+            "stage": stage_name,
+            "topic": topic,
+            "run_id": run_id,
+            "feedback": feedback,
+            "timestamp": datetime.now().isoformat(),
+        }
+        try:
+            cache_dir = Path(__file__).parent.parent / ".cache"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            fpath = cache_dir / "wf_gate_approved.json"
+            fpath.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        except Exception as exc:
+            _log.debug("[trigger_research_pipeline] State file write failed: %s", exc)
+
     try:
         if pipeline_name == "paper":
             from scripts.research_framework.enhanced_pipeline import EnhancedPipeline
@@ -694,9 +719,9 @@ def _run_pipeline_sync(
                 enable_pdf_vision=False,
                 enable_sandbox=True,
                 enable_self_evolution=False,
+                on_gate_approved=_on_gate_approved,
             )
             result = pl.run()
-            finished_at = datetime.now()
             return {
                 "status": "completed",
                 "run_id": run_id,
@@ -924,38 +949,6 @@ def list_pending_approvals() -> list[dict]:
         return list(state.get("pending", {}).values())
     except Exception:
         return []
-
-
-# ─── MCP Integration Methods ─────────────────────────────────────────────────
-
-def check_macro_releases(
-    self,
-    countries: list[str] | None = None,
-) -> list[MacroEvent]:
-    """Check upcoming macro data releases.
-
-    Now uses real MCP integration (eodhd, user-financial, fed-data).
-    Falls back to mock data if MCP is unavailable.
-    """
-    return _check_macro_via_mcp(countries or ["CN", "US", "EU"])
-
-
-def check_policy_keywords(
-    self,
-    keywords: list[str] | None = None,
-    max_results: int = 10,
-) -> list[PolicyEvent]:
-    """Search for policy documents matching keywords.
-
-    Now uses real MCP brave_search integration.
-    Falls back to mock data if MCP is unavailable.
-    """
-    return _check_policy_via_mcp(keywords or self.keywords)
-
-
-# Monkey-patch EventMonitor methods to use real MCP
-EventMonitor.check_macro_releases = check_macro_releases
-EventMonitor.check_policy_keywords = check_policy_keywords
 
 
 def _build_topic_from_event(event: ResearchEvent) -> str:
@@ -1528,14 +1521,19 @@ def _run_scheduler_mode(
     print(f"\n[Scheduler] {len(scheduler.get_jobs())} jobs registered. Running...")
     scheduler.start()
 
-    # Keep running
+    # Keep running — wait for SIGINT instead of blocking sleep
+    # This allows the scheduler to run background jobs while staying responsive to Ctrl+C
     try:
-        while True:
-            time.sleep(60)
-    except (KeyboardInterrupt, SystemExit):
-        print("\n[Scheduler] Shutting down...")
-        scheduler.shutdown(wait=False)
-        print("[Scheduler] Done.")
+        signal.pause()  # blocks until signal is received; scheduler jobs run in their own threads
+    except (KeyboardInterrupt, SystemExit, OSError, AttributeError):
+        # KeyboardInterrupt: Ctrl+C pressed
+        # OSError: signal.pause() not available on this platform (Windows)
+        # AttributeError: signal module doesn't define pause()
+        pass
+
+    print("\n[Scheduler] Shutting down...")
+    scheduler.shutdown(wait=False)
+    print("[Scheduler] Done.")
 
 
 def _scheduled_poll(

@@ -13,6 +13,19 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "TaskStatus",
+    "ExecutionMode",
+    "Agent",
+    "Task",
+    "Workflow",
+    "AgentExecutor",
+    "DefaultAgentExecutor",
+    "MultiAgentOrchestrator",
+    "WorkflowTemplates",
+    "create_default",
+]
+
 import asyncio
 import json
 import threading
@@ -597,7 +610,3 @@ def create_default() -> MultiAgentOrchestrator:
     """Create and return a new pre-configured MultiAgentOrchestrator instance."""
     instance = MultiAgentOrchestrator()
     return instance
-
-
-# DEPRECATED: kept for backward compatibility only. Use create_default().
-orchestrator = MultiAgentOrchestrator()

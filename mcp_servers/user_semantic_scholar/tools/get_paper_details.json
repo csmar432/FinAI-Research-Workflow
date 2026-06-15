@@ -19,6 +19,9 @@
         "default": false
       }
     },
-    "required": ["paper_id"]
+    "required": [
+      "paper_id"
+    ],
+    "description": "获取论文完整详情（摘要、作者、引用量、TLDR摘要等）。支持DOI/arXiv ID。"
   }
 }

@@ -1,13 +1,20 @@
 {
   "name": "pd_head",
-  "description": "查看数据框前N行。\\n\\n",
+  "description": "查看 pandas DataFrame 前 N 行数据，支持指定行数、列过滤、显示格式控制，返回结构化表格和摘要统计。",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
         "type": "string"
+      },
+      "n": {
+        "type": "integer",
+        "default": 10
       }
     },
-    "required": []
+    "required": [
+      "name"
+    ],
+    "description": "查看 pandas DataFrame 前 N 行数据，支持指定行数、列过滤、显示格式控制，返回结构化表格和摘要统计。"
   }
 }

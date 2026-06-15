@@ -8,7 +8,7 @@ This module implements a universal data acquisition pipeline:
   3. Use proxy variables as last resort, clearly flagged as _sim
   4. Track all data provenance
 
-Supported MCP servers: user-yfinance, user-finviz-sec, user-eodhd
+Supported MCP servers: user-yfinance, user-eodhd
 
 Usage:
     fetcher = DataFetcher(output_dir="output/")
@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import logging
 import time
+import traceback
+import uuid
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -32,8 +34,55 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
+_log = logging.getLogger("data_fetcher")
+
 # ─── Single source of truth imports ───────────────────────────────────────────
 from scripts.research_framework.base import DataSource, ProvenanceTracker
+from scripts.core.provenance import ProvenanceChain
+
+# ─── Tenacity / Circuit Breaker ─────────────────────────────────────────────
+
+try:
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+    _TENACITY_AVAILABLE = True
+except ImportError:
+    _TENACITY_AVAILABLE = False
+    _log.warning("tenacity not installed; retry logic disabled. pip install tenacity")
+
+
+class CircuitBreaker:
+    """Simple in-memory circuit breaker for MCP service calls."""
+
+    def __init__(self, failure_threshold: int = 5, timeout: int = 60):
+        self.failures: dict[str, int] = {}
+        self.last_failure: dict[str, float] = {}
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+
+    def is_open(self, service: str) -> bool:
+        import time
+
+        if self.failures.get(service, 0) >= self.failure_threshold:
+            if time.time() - self.last_failure.get(service, 0) < self.timeout:
+                return True
+            else:
+                self.failures[service] = 0
+        return False
+
+    def record_success(self, service: str):
+        self.failures[service] = 0
+
+    def record_failure(self, service: str):
+        import time
+
+        self.failures[service] = self.failures.get(service, 0) + 1
+        self.last_failure[service] = time.time()
+
+
+# Shared circuit breaker instance
+_circuit_breaker = CircuitBreaker()
+
 
 # ─── Local dataclasses (no duplicate DataSource/ProvenanceTracker) ───────────
 
@@ -63,6 +112,22 @@ class DataFallbackEngine:
                     self._log(field_name, source, tier_name, False, note="empty/insufficient")
             except Exception as exc:
                 self._log(field_name, source, tier_name, False, error=str(exc))
+                # Distinguish expected data errors from unexpected code bugs.
+                # Expected: network timeout, API error, malformed response.
+                # Unexpected: AttributeError, TypeError, etc. (likely code bugs).
+                tb_str = traceback.format_exc()
+                is_transient = any(
+                    cls in tb_str for cls in (
+                        "ConnectionError", "TimeoutError", "HTTPError",
+                        "URLError", "SSLError", "JSONDecodeError"
+                    )
+                )
+                if not is_transient:
+                    _log.warning(
+                        "Unexpected error in probe('%s', tier='%s'): %s — "
+                        "this may indicate a code bug, not a data issue.",
+                        field_name, tier_name, exc
+                    )
         _log.warning(f"No data for '{field_name}' — all chains exhausted")
         return DataProbeResult(available=False, source=DataSource.SIMULATED,
                               error="all chains exhausted")
@@ -114,35 +179,74 @@ class MCPCallError(Exception):
     pass
 
 
+def _call_mcp(server: str, tool: str, args: dict, timeout: float = 30.0) -> Any:
+    """Internal MCP call without retry — used by tenacity and circuit breaker."""
+    # Try via llm_gateway's call_mcp_tool first (uses proper venv python)
+    try:
+        from scripts.core.llm_gateway import call_mcp_tool as _mcp_call
+
+        result = _mcp_call(server, tool, args, timeout=timeout)
+        if result is not None and result.success:
+            return result.data
+        raise MCPCallError(f"MCP returned unsuccessful result: {result}")
+    except ImportError:
+        # Fallback: try stdio JSON-RPC directly
+        _log.debug(f"llm_gateway import failed, trying direct JSON-RPC for {server}/{tool}")
+        raise MCPCallError("llm_gateway unavailable")
+
+
+if _TENACITY_AVAILABLE:
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+        reraise=True,
+    )
+    def _call_mcp_with_retry(tool_name: str, params: dict) -> dict:
+        return _call_mcp(tool_name, params)
+
+else:
+
+    def _call_mcp_with_retry(tool_name: str, params: dict) -> dict:
+        return _call_mcp(tool_name, params)
+
+
 def call_mcp_tool(
     server: str, tool: str, args: dict,
     *, max_retries: int = 2, delay_ms: int = 300,
     timeout: float = 30.0,
 ) -> Any:
     """
-    Call an MCP tool via subprocess with retry logic.
+    Call an MCP tool via subprocess with retry logic and circuit breaker.
     MCP servers must be registered via ``python scripts/register_mcp_servers.py``.
-    Raises MCPCallError if all retries fail.
+    Raises MCPCallError if all retries fail or circuit is open.
     """
+    # Check circuit breaker first
+    service_id = f"{server}/{tool}"
+    if _circuit_breaker.is_open(service_id):
+        _log.warning("Circuit breaker OPEN for %s — skipping call", service_id)
+        raise MCPCallError(f"Circuit breaker open for {service_id}")
 
     for attempt in range(max_retries + 1):
         try:
-            # Try via llm_gateway's call_mcp_tool first (uses proper venv python)
-            from scripts.core.llm_gateway import call_mcp_tool as _mcp_call
-            result = _mcp_call(server, tool, args, timeout=timeout)
-            if result is not None and result.success:
-                return result.data
-            raise MCPCallError(f"MCP returned unsuccessful result: {result}")
-        except ImportError:
-            # Fallback: try stdio JSON-RPC directly
-            _log.debug(f"llm_gateway import failed, trying direct JSON-RPC for {server}/{tool}")
+            # Use tenacity-backed retry wrapper if available
+            if _TENACITY_AVAILABLE:
+                result = _call_mcp_with_retry(service_id, {"server": server, "tool": tool, "args": args})
+            else:
+                result = _call_mcp(server, tool, args, timeout=timeout)
+            _circuit_breaker.record_success(service_id)
+            return result
         except MCPCallError:
-            _log.warning(f"MCP call failed (attempt {attempt+1}/{max_retries+1}): {server}/{tool}")
+            _log.warning("MCP call failed (attempt %d/%d): %s", attempt + 1, max_retries + 1, service_id)
         except Exception as exc:
-            _log.warning(f"MCP failure (attempt {attempt+1}/{max_retries+1}): {server}/{tool}: {exc}")
+            _log.warning("MCP failure (attempt %d/%d): %s: %s", attempt + 1, max_retries + 1, service_id, exc)
+            _circuit_breaker.record_failure(service_id)
         if attempt < max_retries:
             time.sleep(delay_ms / 1000)
-    raise MCPCallError(f"All {max_retries+1} attempts failed for {server}/{tool}")
+
+    _circuit_breaker.record_failure(service_id)
+    raise MCPCallError(f"All {max_retries + 1} attempts failed for {service_id}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -153,9 +257,8 @@ class DataFetcher:
     Generic data fetcher with MCP probing, fallback chains, and provenance tracking.
 
     Data acquisition priority chain:
-      1. yfinance MCP  (get_financials, get_ticker_info, get_sustainability)
-      2. finviz MCP    (get_financial_snapshot, get_analyst_ratings)
-      3. Simulated    (clearly flagged as _sim; never silently used)
+      1. yfinance MCP  (get_yf_financials, get_yf_quote, get_yf_earnings)
+      2. Simulated    (clearly flagged as _sim; never silently used)
     """
 
     DEFAULT_TICKERS = [
@@ -208,13 +311,15 @@ class DataFetcher:
                          *, use_cache: bool = True) -> dict | None:
         raw_path = self.raw_dir / f"{ticker}_{statement}.json"
         if use_cache and raw_path.exists():
-            with open(raw_path, encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(raw_path, encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                _log.warning(f"Cache file corrupted, re-fetching: {raw_path} ({e})")
+                raw_path.unlink(missing_ok=True)
         chains = {
             "primary_yf": (DataSource.MCP_YFINANCE,
                            lambda: self._mcp_yf_financials(ticker, statement)),
-            "fallback_finviz": (DataSource.MCP_FINVIZ,
-                               lambda: self._mcp_finviz_snapshot(ticker)),
             "fallback_simulated": (DataSource.SIMULATED, lambda: None),
         }
         result = self.engine.probe(f"{ticker}:{statement}", chains)
@@ -228,15 +333,13 @@ class DataFetcher:
     def fetch_ticker_info(self, ticker: str) -> dict | None:
         chains = {
             "primary_yf": (DataSource.MCP_YFINANCE, lambda: self._mcp_yf_ticker_info(ticker)),
-            "fallback_finviz": (DataSource.MCP_FINVIZ, lambda: self._mcp_finviz_info(ticker)),
             "fallback_simulated": (DataSource.SIMULATED, lambda: None),
         }
         return self.engine.probe(f"{ticker}:info", chains).data
 
     def fetch_analyst_ratings(self, ticker: str) -> dict | None:
         chains = {
-            "primary_finviz": (DataSource.MCP_FINVIZ, lambda: self._mcp_finviz_analyst(ticker)),
-            "fallback_yf": (DataSource.MCP_YFINANCE, lambda: self._mcp_yf_analyst(ticker)),
+            "primary_yf": (DataSource.MCP_YFINANCE, lambda: self._mcp_yf_analyst(ticker)),
             "fallback_simulated": (DataSource.SIMULATED, lambda: None),
         }
         return self.engine.probe(f"{ticker}:analyst", chains).data
@@ -286,36 +389,25 @@ class DataFetcher:
 
     def _mcp_yf_financials(self, ticker: str, statement: str) -> dict | None:
         try:
-            return call_mcp_tool("user-yfinance", "get_financials",
-                               {"symbol": ticker, "statement": statement, "period": "yearly"})
+            return call_mcp_tool("user-yfinance", "get_yf_financials",
+                               {"ticker": ticker, "statement_type": statement})
         except MCPCallError as e:
             _log.debug(f"yfinance financials failed for {ticker}: {e}"); return None
 
     def _mcp_yf_ticker_info(self, ticker: str) -> dict | None:
-        try: return call_mcp_tool("user-yfinance", "get_ticker_info", {"symbol": ticker})
+        try: return call_mcp_tool("user-yfinance", "get_yf_quote", {"ticker": ticker})
         except MCPCallError as e: _log.debug(f"yfinance info failed for {ticker}: {e}"); return None
 
     def _mcp_yf_sustainability(self, ticker: str) -> dict | None:
-        try: return call_mcp_tool("user-yfinance", "get_sustainability", {"symbol": ticker})
+        # yfinance MCP 无 sustainability 工具，使用 get_yf_financials ratios 作为部分替代
+        try: return call_mcp_tool("user-yfinance", "get_yf_financials",
+                                 {"ticker": ticker, "statement_type": "ratios"})
         except MCPCallError as e: _log.debug(f"yfinance sustainability failed for {ticker}: {e}"); return None
 
     def _mcp_yf_analyst(self, ticker: str) -> dict | None:
-        try: return call_mcp_tool("user-yfinance", "get_analyst_data",
-                                 {"symbol": ticker, "data_type": "recommendations"})
+        # yfinance MCP 无 analyst_data 工具，使用 get_yf_earnings 作为分析师预测替代（EPS/营收）
+        try: return call_mcp_tool("user-yfinance", "get_yf_earnings", {"ticker": ticker})
         except MCPCallError as e: _log.debug(f"yfinance analyst failed for {ticker}: {e}"); return None
-
-    def _mcp_finviz_snapshot(self, ticker: str) -> dict | None:
-        try: return call_mcp_tool("user-finviz-sec", "get_financial_snapshot", {"ticker": ticker})
-        except MCPCallError as e: _log.debug(f"finviz snapshot failed for {ticker}: {e}"); return None
-
-    def _mcp_finviz_analyst(self, ticker: str) -> dict | None:
-        try: return call_mcp_tool("user-finviz-sec", "get_analyst_ratings",
-                                 {"ticker": ticker, "count": 10})
-        except MCPCallError as e: _log.debug(f"finviz analyst failed for {ticker}: {e}"); return None
-
-    def _mcp_finviz_info(self, ticker: str) -> dict | None:
-        try: return call_mcp_tool("user-finviz-sec", "get_stock_fundamentals", {"ticker": ticker})
-        except MCPCallError as e: _log.debug(f"finviz info failed for {ticker}: {e}"); return None
 
     # ── EODHD macro methods ────────────────────────────────────────────────
     def _mcp_eodhd(self, tool: str, args: dict) -> dict | None:
@@ -341,7 +433,7 @@ class DataFetcher:
         chains = {
             "primary": (
                 DataSource.MCP_EODHD,
-                lambda: self._mcp_eodhd("get_macro_indicator", {
+                lambda: self._mcp_eodhd("get_economic_indicators", {
                     "country": country, "indicator": indicator,
                     "api_token": api_token,
                 }),
@@ -446,22 +538,33 @@ class DataFetcher:
     # ── Province Stats (province-stats MCP) ──────────────────────────────
 
     def _mcp_province_stats(self, tool: str, args: dict) -> dict | None:
-        """Internal helper: call a province-stats tool and return the result dict."""
+        """Internal helper: call a province-stats tool and return the result dict.
+
+        call_mcp_tool() returns result.data (the actual dict), not an MCPResult.
+        服务器名: user-province-stats（来自 SERVER_METADATA.json）。
+        """
         try:
-            from scripts.core.llm_gateway import call_mcp_tool as _call
-            result = _call(
-                "province-stats",
+            data = call_mcp_tool(  # returns result.data, not MCPResult
+                "user-province-stats",
                 tool,
                 args,
             )
-            if result and result.success and result.data:
-                data = result.data
-                if isinstance(data, str):
-                    import json as _json
-                    data = _json.loads(data)
+            # call_mcp_tool raises MCPCallError on failure, so we only reach here on success
+            if data and isinstance(data, dict):
                 return data
+            if data and isinstance(data, str):
+                try:
+                    import json as _json
+                    return _json.loads(data)
+                except (ValueError, OSError) as e:
+                    _log.warning(f"MCP returned non-JSON string for {tool}: {e}")
+                    return None
+            return data if data else None
+        except MCPCallError:
+            _log.warning(f"_mcp_province_stats({tool}) MCP call failed")
             return None
-        except Exception:
+        except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as e:
+            _log.warning(f"_mcp_province_stats({tool}) parse error: {e}")
             return None
 
     def fetch_province_indicator(
@@ -552,12 +655,12 @@ class DataFetcher:
         Returns:
             dict with province list and metadata, or None if the call fails.
         """
-        result = self._mcp_province_stats("get_all_provinces_summary", {})
+        result = self._mcp_province_stats("get_province_rankings", {"table": "GDP_2024"})
         if result:
             self.tracker.record(
                 "province_summary",
                 DataSource.MCP_USER,
-                detail="user-province-stats.get_all_provinces_summary",
+                detail="user-province-stats.get_province_rankings",
             )
         return result
 
@@ -585,6 +688,18 @@ class ProxyVariableBuilder:
 
     def __init__(self, tracker: ProvenanceTracker | None = None):
         self.tracker = tracker or ProvenanceTracker()
+
+    def merge_to(self, parent_tracker: ProvenanceTracker) -> None:
+        """Merge this builder's simulated field records into a parent tracker."""
+        for field, record in self.tracker._r.items():
+            parent_tracker.record(
+                field,
+                record.get("source", DataSource.SIMULATED),
+                detail=f"[merged] {record.get('source_detail', '')}",
+                is_simulated=record.get("is_simulated", False),
+            )
+            if record.get("is_simulated"):
+                parent_tracker.flag_simulated(field, record.get("note", ""))
 
     def build_esg_proxy(self, df: pd.DataFrame, method: str = "industry_avg",
                         *, allow_simulated: bool = False) -> pd.DataFrame:
@@ -680,7 +795,8 @@ class ProxyVariableBuilder:
 
 __all__ = ["DataFetcher", "ProxyVariableBuilder", "MCPCallError",
            "DataSource", "ProvenanceTracker", "DataProbeResult",
-           "DataFallbackEngine", "save_df", "save_json"]
+           "DataFallbackEngine", "CircuitBreaker", "_TENACITY_AVAILABLE",
+           "save_df", "save_json"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -720,6 +836,7 @@ class CachedDataFetcher(DataFetcher):
         cache_ttl_seconds: float = 86400.0,
         enable_7layer_fallback: bool = True,
         enable_nl_router: bool = False,
+        chain: ProvenanceChain | None = None,
     ):
         super().__init__(output_dir, tracker, probe_delay_ms, verbose)
         self.cache_db_path = cache_db_path
@@ -729,6 +846,8 @@ class CachedDataFetcher(DataFetcher):
         self.enable_7layer = enable_7layer_fallback
         self.enable_nl = enable_nl_router
         self._rate_limit_log: list[dict] = []
+        self._chain = chain
+        self._chain_enabled = chain is not None
 
     # ── Lazy cache init ──────────────────────────────────────────────────
 
@@ -778,7 +897,10 @@ class CachedDataFetcher(DataFetcher):
         cache = self.cache
         if cache is None:
             # 无缓存，降级到原有 call_mcp_tool
-            return call_mcp_tool(server, tool, args)
+            result = call_mcp_tool(server, tool, args)
+            if result and result.success and result.data:
+                return result.data
+            return None
 
         ttl = ttl_seconds if ttl_seconds is not None else self.cache_ttl
 
@@ -796,14 +918,35 @@ class CachedDataFetcher(DataFetcher):
         # Step 2: 穿透获取
         _log.debug(f"[CachedDataFetcher] CACHE MISS: {server}/{tool} → fetching")
         try:
-            data = call_mcp_tool(server, tool, args)
+            result = call_mcp_tool(server, tool, args)
+            # call_mcp_tool returns MCPResult, not dict — extract actual data
+            if result is None or not result.success:
+                _log.warning(f"[CachedDataFetcher] MCP call failed: {result.error if result else 'None'}")
+                return None
+            data = result.data if hasattr(result, 'data') else result
             if data is not None:
                 cache.set(server, tool, args, data, source=f"{server}:{tool}")
                 _log.info(f"[CachedDataFetcher] FETCHED & CACHED: {server}/{tool}")
+                returned_fields = self._extract_fields(data)
+                self.tracker.record(
+                    f"{server}:{tool}:{args.get('symbol', args.get('ticker', ''))}",
+                    DataSource.MCP_USER,
+                    detail=f"cache_miss_fetch:{server}/{tool}",
+                    returned_fields=returned_fields,
+                )
             return data
         except MCPCallError:
             _log.warning(f"[CachedDataFetcher] All MCP retries failed: {server}/{tool}")
             return None
+
+    @staticmethod
+    def _extract_fields(data) -> list[str]:
+        """Extract field/column names from an API response for provenance tracking."""
+        if isinstance(data, dict):
+            return list(data.keys())
+        if isinstance(data, (list, tuple)) and data and isinstance(data[0], dict):
+            return list(data[0].keys()) if data[0] else []
+        return []
 
     # ── 7 层故障转移 ────────────────────────────────────────────────────
 
@@ -895,6 +1038,7 @@ class CachedDataFetcher(DataFetcher):
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     })
                     return data
+                _log.warning(f"[CachedDataFetcher] {tier_name} returned None — trying next tier")
             except MCPCallError as exc:
                 fallback_log.append({
                     "tier": tier_name,
@@ -985,9 +1129,9 @@ class CachedDataFetcher(DataFetcher):
 
     def fetch_ticker_info(self, ticker: str) -> dict | None:
         """缓存优先版本的 fetch_ticker_info。"""
-        args = {"symbol": ticker}
+        args = {"ticker": ticker}
         return self._cached_mcp_call(
-            "user-yfinance", "get_ticker_info", args,
+            "user-yfinance", "get_yf_quote", args,
         )
 
     def fetch_financials(
@@ -1000,11 +1144,15 @@ class CachedDataFetcher(DataFetcher):
         """缓存优先版本的 fetch_financials（保留原有 raw 文件逻辑）。"""
         raw_path = self.raw_dir / f"{ticker}_{statement}.json"
         if use_cache and raw_path.exists():
-            with open(raw_path, encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(raw_path, encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                _log.warning(f"Cache file corrupted, re-fetching: {raw_path} ({e})")
+                raw_path.unlink(missing_ok=True)
 
-        args = {"symbol": ticker, "statement": statement, "period": "yearly"}
-        data = self._cached_mcp_call("user-yfinance", "get_financials", args)
+        args = {"ticker": ticker, "statement_type": statement}
+        data = self._cached_mcp_call("user-yfinance", "get_yf_financials", args)
 
         if data is not None:
             payload = dict(ticker=ticker, statement=statement,
@@ -1026,5 +1174,44 @@ class CachedDataFetcher(DataFetcher):
                 {"country": country, "indicator": indicator, "api_token": api_token},
             )
         args = {"country": country, "indicator": indicator, "api_token": api_token}
-        return self._cached_mcp_call("user-eodhd", "get_macro_indicator", args)
+        return self._cached_mcp_call("user-eodhd", "get_economic_indicators", args)
 
+    # ── ProvenanceChain 集成 ──────────────────────────────────────────────
+
+    def get_provenance_tracker(self) -> ProvenanceTracker | None:
+        """返回完整论文级溯源追踪器（需先调用 init_chain()）。"""
+        if self._chain is None:
+            return None
+        pt = ProvenanceTracker()
+        pt._chain = self._chain
+        return pt
+
+    def init_chain(self, project_dir: str | Path = "output/") -> ProvenanceChain:
+        """初始化论文级溯源链（图表→数字→代码→数据节点）。"""
+        if self._chain is None:
+            self._chain = ProvenanceChain(project_dir)
+            self._chain_enabled = True
+        return self._chain
+
+    def register_figure_provenance(
+        self,
+        figure_id: str,
+        figure_path: str | Path,
+        data_field: str = "",
+        code_snippet: str = "",
+    ) -> None:
+        """将图表注册到 ProvenanceChain（建立图表→数据文件的血缘链路）。"""
+        if self._chain is None:
+            _log.debug("[CachedDataFetcher] chain not initialized — call init_chain() first")
+            return
+        from scripts.core.provenance import ProvenanceNode, SourceRef, NodeType
+        node_id = self._chain.register_data_source(str(figure_path), label=figure_id)
+        fig_node = ProvenanceNode(
+            node_id=f"fig_{uuid.uuid4().hex[:8]}",
+            node_type=NodeType.CHART,
+            label=figure_id,
+            sources=[SourceRef(type="file", path=str(figure_path))],
+            content=code_snippet,
+            parent_ids=[node_id],
+        )
+        self._chain.register_node(fig_node)

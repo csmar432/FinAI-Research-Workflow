@@ -8,7 +8,7 @@
 
 The research directions system (`scripts/research_directions/`) is a unified framework for multi-domain financial economics research. It provides:
 
-- **Pre-built research templates** for 8 directions (carbon economics, green finance, macro finance, asset pricing, corporate finance, digital finance, and 2 YAML-defined directions)
+- **Pre-built research templates** for 11 directions (8 YAML-defined + 3 Python class files): carbon economics, green finance, macro finance, asset pricing, corporate finance, digital finance, behavioral finance, fintech innovation, real estate finance, international finance, and political economy of finance
 - **Methodology chains** with econometric step-by-step guidance
 - **Data acquisition strategies** via MCP tools
 - **Auto-registration** — new directions register themselves automatically
@@ -22,13 +22,19 @@ The research directions system (`scripts/research_directions/`) is a unified fra
 ```
 scripts/research_directions/
 ├── __init__.py           # Core: DirectionFactory, BaseResearchDirection, Registry
-├── directions.yaml       # YAML-defined directions (carbon_trading, green_bond)
+├── directions.yaml       # YAML-defined directions (8 directions)
 ├── carbon_economics.py   # CarbonEconomicsDirection class
 ├── green_finance.py      # GreenFinanceDirection class
-├── macro_finance.py      # MacroFinanceDirection class
-├── asset_pricing.py      # AssetPricingDirection class
-├── corporate_finance.py  # CorporateFinanceDirection class
-└── digital_finance.py    # DigitalFinanceDirection class
+├── carbon_economics.py   # CarbonEconomicsDirection
+├── macro_finance.py      # MacroFinanceDirection
+├── asset_pricing.py      # AssetPricingDirection
+├── corporate_finance.py  # CorporateFinanceDirection
+├── digital_finance.py    # DigitalFinanceDirection
+├── behavioral_finance.py  # BehavioralFinanceDirection
+├── fintech_innovation.py # FintechInnovationDirection
+├── real_estate_finance.py # RealEstateFinanceDirection
+├── international_finance.py # InternationalFinanceDirection
+└── political_economy_finance.py # PoliticalEconomyFinanceDirection
 ```
 
 ---
@@ -401,4 +407,3 @@ Each direction uses `_fetch_via_mcp()` to get real-time data:
 
 - [Tutorial 4: MCP Tool Marketplace](04-mcp-marketplace.md)
 - [Tutorial 5: Event-Driven Research](05-event-driven-research.md)
-- [API Reference: DirectionFactory](../api_reference.md#directionfactory)

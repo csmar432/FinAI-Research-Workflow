@@ -122,15 +122,17 @@ class TestCheckpointManager:
 
     def test_save_and_load_latest(self, mgr):
         """save() → load_latest() should restore a checkpoint."""
+        import uuid
+        pid = f"paper_{uuid.uuid4().hex[:8]}"
         mgr.save(
-            pipeline_id="paper_001",
+            pipeline_id=pid,
             pipeline_name="paper_pipeline",
             completed_stage="literature",
             context={"lit_count": 15},
             stage_results={"literature": {"papers": 15}},
         )
 
-        chk = mgr.load_latest("paper_001")
+        chk = mgr.load_latest(pid)
         assert chk is not None
         assert chk.pipeline_name == "paper_pipeline"
         assert chk.context["lit_count"] == 15
@@ -138,15 +140,17 @@ class TestCheckpointManager:
 
     def test_context_restoration(self, mgr):
         """restore_context() should return a deep copy of the saved context."""
+        import uuid
+        pid = f"restore_{uuid.uuid4().hex[:8]}"
         mgr.save(
-            pipeline_id="test_restore",
+            pipeline_id=pid,
             pipeline_name="test",
             completed_stage="outline",
             context={"key1": "value1", "key2": [1, 2, 3]},
             stage_results={},
         )
 
-        restored = mgr.load_latest("test_restore")
+        restored = mgr.load_latest(pid)
         ctx = mgr.restore_context(restored)
 
         assert ctx["key1"] == "value1"
@@ -176,16 +180,18 @@ class TestCheckpointManager:
 
     def test_multiple_checkpoints_newest_first(self, mgr):
         """list_checkpoints() should return checkpoints newest-first by timestamp."""
+        import uuid
+        pipeline_id = f"multi_test_{uuid.uuid4().hex[:8]}"
         for stage in ["outline", "literature", "plotting"]:
             mgr.save(
-                pipeline_id="multi_test",
+                pipeline_id=pipeline_id,
                 pipeline_name="test",
                 completed_stage=stage,
                 context={"stage": stage},
                 stage_results={stage: {}},
             )
 
-        checkpoints = mgr.list_checkpoints("multi_test", limit=10)
+        checkpoints = mgr.list_checkpoints(pipeline_id, limit=10)
         assert len(checkpoints) == 3
         # Newest first — plotting (last save) has latest timestamp
         assert checkpoints[0].completed_stages == ["plotting"]

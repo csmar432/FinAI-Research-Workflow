@@ -186,7 +186,8 @@ class DiagnosticReporter:
         pval: float | None = None,
         decision: DiagnosticDecision | None = None,
         recommendation: str = "",
-        **details,
+        details: dict | None = None,
+        **_kwargs,
     ) -> "DiagnosticReporter":
         """直接添加诊断项（无需手动创建 dataclass）。"""
         if decision is None:
@@ -200,7 +201,7 @@ class DiagnosticReporter:
             threshold=threshold,
             pval=pval,
             recommendation=recommendation,
-            details=details,
+            details=details or {},
         )
         self._checks.append(check)
         return self
@@ -454,25 +455,145 @@ class DiagnosticReporter:
         )
         return self
 
-    def add_weak_iv(self, f_stat: float) -> "DiagnosticReporter":
-        """添加弱工具变量检验。"""
-        threshold = "F > 10 (PASS)"
-        rec = f"工具变量强度足够（F={f_stat:.1f}）" if f_stat > 10 else f"工具变量弱（F={f_stat:.1f} < 10），建议增加工具变量或用 LIML"
+    def add_weak_iv(
+        self,
+        stock_yogo_f: float | None = None,
+        kp_f: float | None = None,
+    ) -> "DiagnosticReporter":
+        """Add weak instrument diagnostic for both Stock-Yogo and Kleibergen-Paap.
+
+        Stock-Yogo F assumes homoskedasticity; Kleibergen-Paap does not.
+        For financial data (almost always heteroskedastic), prefer KP-F.
+
+        Args:
+            stock_yogo_f: Stock-Yogo F-statistic (from linearmodels).
+            kp_f: Kleibergen-Paap rk Wald F-statistic (heteroskedasticity-robust).
+        """
+        # ── Stock-Yogo F ────────────────────────────────────────────────
+        if stock_yogo_f is not None:
+            threshold = "F > 10 (PASS, assumes homoskedasticity)"
+            rec = (
+                f"工具变量强度足够（F={stock_yogo_f:.1f}）"
+                if stock_yogo_f > 10
+                else f"Stock-Yogo F={stock_yogo_f:.1f} < 10：弱工具变量，建议增加工具变量或使用 LIML"
+            )
+            self.add_check(
+                name="weak_iv_stock_yogo",
+                name_zh="弱工具变量检验 (Stock-Yogo F)",
+                category="C. 内生性与工具变量",
+                value=stock_yogo_f,
+                threshold=threshold,
+                decision=(
+                    DiagnosticDecision.PASS
+                    if stock_yogo_f > 10
+                    else DiagnosticDecision.FAIL
+                ),
+                recommendation=rec,
+            )
+
+        # ── Kleibergen-Paap rk F ────────────────────────────────────────
+        if kp_f is not None:
+            threshold = "KP F > 10 (PASS, robust to heteroskedasticity)"
+            rec = (
+                f"工具变量强度足够（KP-F={kp_f:.1f}）"
+                if kp_f > 10
+                else f"KP-F={kp_f:.1f} < 10：弱工具变量，建议增加工具变量或使用 LIML"
+            )
+            self.add_check(
+                name="weak_iv_kp",
+                name_zh="弱工具变量检验 (Kleibergen-Paap rk F)",
+                category="C. 内生性与工具变量",
+                value=kp_f,
+                threshold=threshold,
+                decision=(
+                    DiagnosticDecision.PASS if kp_f > 10 else DiagnosticDecision.FAIL
+                ),
+                recommendation=rec,
+            )
+        return self
+
+    def add_two_way_clustering(
+        self,
+        cluster_vars: list[str],
+        n_cl1: int,
+        n_cl2: int,
+        dof: int,
+    ) -> "DiagnosticReporter":
+        """Add two-way clustered SE diagnostic entry.
+
+        Args:
+            cluster_vars: Names of the two clustering dimensions detected.
+            n_cl1: Number of clusters in dimension 1 (e.g., firms).
+            n_cl2: Number of clusters in dimension 2 (e.g., years).
+            dof: Degrees of freedom used for t-distribution inference.
+        """
+        has_firm = any("firm" in v.lower() or "ticker" in v.lower() for v in cluster_vars)
+        has_year = any("year" in v.lower() or "time" in v.lower() for v in cluster_vars)
+
+        if has_firm and has_year:
+            note = f"Two-way clustered SE (firm × year), DOF = {dof}"
+            rec = "使用双向聚类标准误 (firm × year)，同时控制组内相关和时序相关"
+        else:
+            note = f"Two-way clustered SE ({' × '.join(cluster_vars)}), DOF = {dof}"
+            rec = f"使用双向聚类标准误 ({' × '.join(cluster_vars)})，推断更保守"
+
         self.add_check(
-            name="weak_iv", name_zh="弱工具变量检验 (KP F)",
-            category="C. 内生性与工具变量",
-            value=f_stat, threshold=threshold,
-            decision=DiagnosticDecision.PASS if f_stat > 10 else DiagnosticDecision.FAIL,
+            name="two_way_clustered_se",
+            name_zh=f"双向聚类标准误 ({' × '.join(cluster_vars)})",
+            category="E. 推断方法",
+            value=float(min(n_cl1, n_cl2)),
+            threshold=f"G1={n_cl1}, G2={n_cl2}, DOF={dof}",
+            decision=DiagnosticDecision.PASS,
             recommendation=rec,
+            details={
+                "note": note,
+                "cluster_vars": cluster_vars,
+                "n_cl1": n_cl1,
+                "n_cl2": n_cl2,
+                "dof": dof,
+                "method": "Cameron-Gelbach-Miller (2011)",
+                "reference": "Cameron, Gelbach & Miller (2011), REStud",
+            },
         )
+        return self
+
+    def add_from_diagnostic(
+        self,
+        diag: dict,
+        cluster_vars: list[str] | None = None,
+    ) -> "DiagnosticReporter":
+        """Auto-detect and add diagnostics from a regression diagnostic dict.
+
+        Detects two-way clustering if 'cov_type' == 'two_way_clustered'.
+
+        Args:
+            diag: Diagnostic dict from RegressionEngine.did() or ols().
+            cluster_vars: Optional list of cluster variable names for the note.
+        """
+        cov_type = diag.get("cov_type", "")
+
+        if cov_type == "two_way_clustered":
+            n_cl1 = diag.get("n_cl1", 0)
+            n_cl2 = diag.get("n_cl2", 0)
+            dof = diag.get("dof", 1)
+            cvars = cluster_vars or [f"cluster1 (G={n_cl1})", f"cluster2 (G={n_cl2})"]
+            self.add_two_way_clustering(cvars, n_cl1, n_cl2, dof)
+
         return self
 
     def generate(self) -> DiagnosticReport:
         """生成诊断报告。"""
+        has_two_way = any(
+            c.name == "two_way_clustered_se" for c in self._checks
+        )
         report = DiagnosticReport(
             checks=self._checks,
             baseline=self.baseline,
-            metadata={"model": self.model_name, "n_checks": len(self._checks)},
+            metadata={
+                "model": self.model_name,
+                "n_checks": len(self._checks),
+                "two_way_clustered": has_two_way,
+            },
         )
         _log.info(
             f"[DiagnosticReporter] Generated report: "

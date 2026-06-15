@@ -16,6 +16,7 @@
         "type": "string",
         "description": "组成部分"
       }
-    }
+    },
+    "description": "获取BEA GDP数据。"
   }
 }

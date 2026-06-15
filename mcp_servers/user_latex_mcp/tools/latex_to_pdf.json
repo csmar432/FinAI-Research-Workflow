@@ -1,13 +1,35 @@
 {
   "name": "latex_to_pdf",
-  "description": "将LaTeX片段或完整代码转换为PDF文件。适合生成独立表格、公式或单页内容。\\n\\n",
+  "description": "将LaTeX片段或完整代码转换为PDF文件。适合生成独立表格、公式或单页内容。\\n\\nArgs:\\n  latex_code: LaTeX代码（可以是片段或完整文档）\\n  output_path: 输出PDF路径\\n  packages: 需要加载的包列表（默认amsmath,booktabs,graphicx）\\n  font_size: 字号（默认11pt）\\n  page_size: 纸张大小（默认a4paper）\\n\\nReturns: PDF生成结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "latex_code": {
+        "type": "string",
+        "description": "LaTeX代码"
+      },
+      "output_path": {
+        "type": "string",
+        "description": "输出PDF路径"
+      },
+      "packages": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "额外加载的包",
+        "default": []
+      },
+      "font_size": {
+        "type": "string",
+        "description": "字号",
+        "default": "11pt"
       }
     },
-    "required": []
+    "required": [
+      "latex_code",
+      "output_path"
+    ],
+    "description": "将LaTeX片段或完整代码转换为PDF文件。适合生成独立表格、公式或单页内容。"
   }
 }

@@ -19,6 +19,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取OECD GDP数据。"
   }
 }

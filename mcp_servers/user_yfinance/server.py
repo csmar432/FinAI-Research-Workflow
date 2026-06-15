@@ -1,238 +1,129 @@
-"""Yahoo Finance MCP Server — 美股/港股数据.
+#!/usr/bin/env python3
+"""
+yfinance MCP Server
+===================
+Yahoo Finance 美股/港股数据服务。
 
-数据来源：yfinance Python库（Yahoo Finance免费接口，无需API Key）。
-支持：行情、历史价格、财务报表、期权、ETF、新闻。
+数据源：Yahoo Finance API（无需 API Key，完全免费）
+
+Usage:
+    python server.py
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import sys
+import warnings
 from pathlib import Path
-from typing import Any
+
+warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+log = logging.getLogger("yfinance_mcp")
+
+_SERVER_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = _SERVER_DIR.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+try:
+    import yfinance as yf
+except ImportError:
+    log.error("yfinance not installed. Run: pip install yfinance")
+    sys.exit(1)
 
 try:
     from mcp.server import Server
-    from mcp.types import Tool, TextContent
     from mcp.server.stdio import stdio_server
+    from mcp.types import Tool, TextContent
 except ImportError:
-    import warnings
-    warnings.warn("mcp library not installed. Install with: pip install mcp")
-    raise
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("yfinance-mcp")
-
-APP_NAME = "yfinance-mcp"
-APP_VERSION = "1.0.0"
-server = Server(APP_NAME)
+    log.error("mcp package required. pip install mcp")
+    sys.exit(1)
 
 
-def _safe_json_response(data: Any, error: str | None = None) -> list[TextContent]:
-    import json
-    if error:
-        return [TextContent(type="text", text=json.dumps({"status": "error", "message": error}, ensure_ascii=False, indent=2))]
-    try:
-        return [TextContent(type="text", text=json.dumps(data, ensure_ascii=False, indent=2, default=str))]
-    except Exception:
-        return [TextContent(type="text", text=json.dumps({"status": "error", "data": str(data)}, ensure_ascii=False, indent=2))]
-
-
-# ── Tool Handlers ──────────────────────────────────────────────────────────────
-
-
-async def handle_get_quote(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    if not ticker:
-        return _safe_json_response(None, "ticker is required")
-
-    try:
-        import yfinance as yf
-        ticker_obj = yf.Ticker(ticker)
-        info = ticker_obj.info
-
-        result = {
-            "symbol": ticker,
-            "name": info.get("shortName", ""),
-            "price": info.get("currentPrice") or info.get("regularMarketPrice"),
-            "change": info.get("regularMarketChange"),
-            "change_pct": info.get("regularMarketChangePercent"),
-            "volume": info.get("averageVolume"),
-            "market_cap": info.get("marketCap"),
-            "pe_ratio": info.get("trailingPE"),
-            "dividend_yield": info.get("dividendYield"),
-            "beta": info.get("beta"),
-            "52w_high": info.get("fiftyTwoWeekHigh"),
-            "52w_low": info.get("fiftyTwoWeekLow"),
-            "analyst_target": info.get("targetMeanPrice"),
-            "recommendation": info.get("recommendationKey", ""),
-        }
-        return _safe_json_response(result)
-    except Exception as e:
-        logger.warning(f"[yfinance] get_quote error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-async def handle_get_historical(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    start = args.get("start_date", "")
-    end = args.get("end_date", "")
-    interval = args.get("interval", "1d")
-    if not ticker or not start or not end:
-        return _safe_json_response(None, "ticker, start_date, end_date are required")
-
-    try:
-        import yfinance as yf
-        df = yf.download(ticker, start=start, end=end, interval=interval, progress=False)
-        if df.empty:
-            return _safe_json_response(None, f"No data for {ticker} in {start} to {end}")
-
-        result = {
-            "symbol": ticker,
-            "start": start,
-            "end": end,
-            "interval": interval,
-            "data_points": len(df),
-            "recent_5": df.tail(5).to_dict(orient="records"),
-        }
-        return _safe_json_response(result)
-    except Exception as e:
-        logger.warning(f"[yfinance] get_historical error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-async def handle_get_financials(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    if not ticker:
-        return _safe_json_response(None, "ticker is required")
-
-    try:
-        import yfinance as yf
-        ticker_obj = yf.Ticker(ticker)
-        financials = ticker_obj.financials
-        balance = ticker_obj.balance_sheet
-        cashflow = ticker_obj.cashflow
-
-        return _safe_json_response({
-            "symbol": ticker,
-            "income_statement": financials.to_dict() if not financials.empty else {},
-            "balance_sheet": balance.to_dict() if not balance.empty else {},
-            "cashflow": cashflow.to_dict() if not cashflow.empty else {},
-        })
-    except Exception as e:
-        logger.warning(f"[yfinance] get_financials error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-async def handle_get_options(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    if not ticker:
-        return _safe_json_response(None, "ticker is required")
-
-    try:
-        import yfinance as yf
-        ticker_obj = yf.Ticker(ticker)
-        opts = ticker_obj.option_chain()
-        if opts and opts[0] is not None and not opts[0].empty:
-            calls = opts[0].head(10).to_dict(orient="records")
-            puts = opts[1].head(10).to_dict(orient="records") if len(opts) > 1 else []
-            return _safe_json_response({"symbol": ticker, "calls": calls, "puts": puts})
-        return _safe_json_response({"symbol": ticker, "options": "No options data available"})
-    except Exception as e:
-        logger.warning(f"[yfinance] get_options error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-async def handle_get_earnings(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    if not ticker:
-        return _safe_json_response(None, "ticker is required")
-
-    try:
-        import yfinance as yf
-        ticker_obj = yf.Ticker(ticker)
-        earnings = ticker_obj.earnings
-        earnings_dates = ticker_obj.earnings_dates
-        return _safe_json_response({
-            "symbol": ticker,
-            "earnings_history": earnings.to_dict() if not earnings.empty else {},
-            "upcoming_earnings": earnings_dates.head(5).to_dict(orient="records") if not earnings_dates.empty else {},
-        })
-    except Exception as e:
-        logger.warning(f"[yfinance] get_earnings error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-async def handle_get_news(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    if not ticker:
-        return _safe_json_response(None, "ticker is required")
-
-    try:
-        import yfinance as yf
-        ticker_obj = yf.Ticker(ticker)
-        news = ticker_obj.news
-        items = [
-            {"title": n.get("title"), "publisher": n.get("publisher"), "link": n.get("link"), "pubDate": n.get("pubDate")}
-            for n in (news or [])[:10]
-        ]
-        return _safe_json_response({"symbol": ticker, "news": items})
-    except Exception as e:
-        logger.warning(f"[yfinance] get_news error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-async def handle_get_etf_holdings(args: dict) -> list[TextContent]:
-    ticker = args.get("ticker", "").strip().upper()
-    if not ticker:
-        return _safe_json_response(None, "ticker is required")
-
-    try:
-        import yfinance as yf
-        ticker_obj = yf.Ticker(ticker)
-        holdings = ticker_obj.info.get("holdings", [])
-        if not holdings:
-            # Try to get from info dict
-            top_holdings = ticker_obj.info.get("topHoldings", [])
-            if top_holdings:
-                return _safe_json_response({"symbol": ticker, "top_holdings": top_holdings[:20]})
-            return _safe_json_response({"symbol": ticker, "holdings": "Not available for this ETF"})
-        return _safe_json_response({"symbol": ticker, "holdings": holdings[:20]})
-    except Exception as e:
-        logger.warning(f"[yfinance] get_etf_holdings error for {ticker}: {e}")
-        return _safe_json_response(None, str(e))
-
-
-# ── Server Setup ───────────────────────────────────────────────────────────────
-
+server = Server("user-yfinance")
 
 TOOLS = [
-    Tool(name="get_yf_quote", description="获取股票实时行情",
-         inputSchema={"type": "object", "properties": {"ticker": {"type": "string", "description": "股票代码，例如 'AAPL'"}}, "required": ["ticker"]}),
-    Tool(name="get_yf_historical", description="获取股票历史价格",
-         inputSchema={"type": "object", "properties": {
-             "ticker": {"type": "string"}, "start_date": {"type": "string"}, "end_date": {"type": "string"}, "interval": {"type": "string", "default": "1d"}
-         }, "required": ["ticker", "start_date", "end_date"]}),
-    Tool(name="get_yf_financials", description="获取财务报表",
-         inputSchema={"type": "object", "properties": {"ticker": {"type": "string"}}, "required": ["ticker"]}),
-    Tool(name="get_yf_options", description="获取期权链",
-         inputSchema={"type": "object", "properties": {"ticker": {"type": "string"}}, "required": ["ticker"]}),
-    Tool(name="get_yf_earnings", description="获取盈利数据",
-         inputSchema={"type": "object", "properties": {"ticker": {"type": "string"}}, "required": ["ticker"]}),
-    Tool(name="get_yf_news", description="获取股票新闻",
-         inputSchema={"type": "object", "properties": {"ticker": {"type": "string"}}, "required": ["ticker"]}),
-    Tool(name="get_yf_etf_holdings", description="获取ETF持仓",
-         inputSchema={"type": "object", "properties": {"ticker": {"type": "string"}}, "required": ["ticker"]}),
+    Tool(
+        name="get_yf_quote",
+        description="获取美股/港股实时报价。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {"ticker": {"type": "string", "description": "股票代码（如 AAPL, TSLA, 0700.HK）"}},
+            "required": ["ticker"],
+        },
+    ),
+    Tool(
+        name="get_yf_historical",
+        description="获取股票历史行情数据（日/周/月频）。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string", "description": "股票代码"},
+                "start_date": {"type": "string", "description": "开始日期 YYYY-MM-DD"},
+                "end_date": {"type": "string", "description": "结束日期 YYYY-MM-DD"},
+                "interval": {"type": "string", "description": "数据频率", "enum": ["1d", "1wk", "1mo"], "default": "1mo"},
+            },
+            "required": ["ticker", "start_date", "end_date"],
+        },
+    ),
+    Tool(
+        name="get_yf_financials",
+        description="获取公司财务报表（利润表、资产负债表、现金流量表）。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string", "description": "股票代码"},
+                "statement_type": {"type": "string", "description": "报表类型", "enum": ["income", "balance", "cashflow", "ratios"], "default": "income"},
+            },
+            "required": ["ticker"],
+        },
+    ),
+    Tool(
+        name="get_yf_options",
+        description="获取股票期权数据。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string", "description": "股票代码"},
+                "date": {"type": "string", "description": "期权到期日 YYYY-MM-DD（可选）"},
+            },
+            "required": ["ticker"],
+        },
+    ),
+    Tool(
+        name="get_yf_etf_holdings",
+        description="获取ETF持仓明细。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {"ticker": {"type": "string", "description": "ETF代码（如 SPY, QQQ）"}},
+            "required": ["ticker"],
+        },
+    ),
+    Tool(
+        name="get_yf_news",
+        description="获取股票最新新闻。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string", "description": "股票代码"},
+            },
+            "required": ["ticker"],
+        },
+    ),
+    Tool(
+        name="get_yf_earnings",
+        description="获取股票盈利日期和分析师预期。使用 Yahoo Finance API，无需 API Key。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string", "description": "股票代码"},
+            },
+            "required": ["ticker"],
+        },
+    ),
 ]
-
-TOOL_HANDLERS = {
-    "get_yf_quote": handle_get_quote,
-    "get_yf_historical": handle_get_historical,
-    "get_yf_financials": handle_get_financials,
-    "get_yf_options": handle_get_options,
-    "get_yf_earnings": handle_get_earnings,
-    "get_yf_news": handle_get_news,
-    "get_yf_etf_holdings": handle_get_etf_holdings,
-}
 
 
 @server.list_tools()
@@ -241,15 +132,108 @@ async def list_tools() -> list[Tool]:
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-    handler = TOOL_HANDLERS.get(name)
-    if not handler:
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
-    return await handler(arguments)
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    ticker = arguments.get("ticker", "")
+    ticker = ticker.strip().upper()
+
+    try:
+        ticker_obj = yf.Ticker(ticker)
+
+        if name == "get_yf_quote":
+            info = ticker_obj.info
+            # 提取关键字段
+            keys = ["symbol", "shortName", "longName", "currentPrice", "previousClose",
+                    "regularMarketPrice", "regularMarketChange", "fiftyTwoWeekHigh",
+                    "fiftyTwoWeekLow", "volume", "marketCap", "trailingPE",
+                    "forwardPE", "dividendYield", "profitMargins", "revenueGrowth"]
+            result = {k: info.get(k) for k in keys if info.get(k) is not None}
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+        elif name == "get_yf_historical":
+            start = arguments.get("start_date", "2020-01-01")
+            end = arguments.get("end_date", "2024-12-31")
+            interval = arguments.get("interval", "1mo")
+            df = ticker_obj.history(start=start, end=end, interval=interval)
+            if df.empty:
+                return [TextContent(type="text", text=f"No data for {ticker} from {start} to {end}")]
+            df = df.reset_index()
+            df.columns = [str(c).replace(" ", "_") for c in df.columns]
+            return [TextContent(type="text", text=df.to_csv(index=False))]
+
+        elif name == "get_yf_financials":
+            stype = arguments.get("statement_type", "income")
+            if stype == "income":
+                df = ticker_obj.income_stmt
+            elif stype == "balance":
+                df = ticker_obj.balance_sheet
+            elif stype == "cashflow":
+                df = ticker_obj.cashflow
+            else:
+                df = ticker_obj.financials
+            if df is None or df.empty:
+                return [TextContent(type="text", text=f"No {stype} data for {ticker}")]
+            return [TextContent(type="text", text=df.to_csv())]
+
+        elif name == "get_yf_options":
+            date = arguments.get("date", None)
+            if date:
+                opts = ticker_obj.option_chain(date)
+            else:
+                dates = ticker_obj.options
+                if not dates:
+                    return [TextContent(type="text", text=f"No options data for {ticker}")]
+                opts = ticker_obj.option_chain(dates[0])
+            calls = opts.calls.to_csv(index=False)
+            puts = opts.puts.to_csv(index=False)
+            return [TextContent(type="text", text=f"CALLS:\n{calls}\n\nPUTS:\n{puts}")]
+
+        elif name == "get_yf_etf_holdings":
+            try:
+                holdings = ticker_obj.info.get("holdings", [])
+                if not holdings:
+                    df = getattr(ticker_obj, "fund_holdings", None)
+                    if df is not None and not df.empty:
+                        return [TextContent(type="text", text=df.to_csv(index=False))]
+                    return [TextContent(type="text", text=f"No holdings data for {ticker}")]
+                return [TextContent(type="text", text=json.dumps(holdings, ensure_ascii=False, indent=2))]
+            except Exception as e:
+                return [TextContent(type="text", text=f"Error fetching holdings: {e}")]
+
+        elif name == "get_yf_news":
+            try:
+                news = ticker_obj.news
+                if not news:
+                    return [TextContent(type="text", text=f"No news for {ticker}")]
+                items = [
+                    {"title": n.get("title", ""), "link": n.get("link", ""),
+                     "publisher": n.get("publisher", ""), "published": n.get("published", ""),
+                     "summary": n.get("summary", "")[:300]}
+                    for n in news[:20]
+                ]
+                return [TextContent(type="text", text=json.dumps(items, ensure_ascii=False, indent=2))]
+            except Exception as e:
+                return [TextContent(type="text", text=f"Error fetching news: {e}")]
+
+        elif name == "get_yf_earnings":
+            try:
+                earnings = ticker_obj.earnings_dates
+                if earnings is None or earnings.empty:
+                    return [TextContent(type="text", text=f"No earnings dates for {ticker}")]
+                earnings = earnings.reset_index()
+                earnings.columns = [str(c).replace(" ", "_") for c in earnings.columns]
+                return [TextContent(type="text", text=earnings.to_csv(index=False))]
+            except Exception as e:
+                return [TextContent(type="text", text=f"Error fetching earnings: {e}")]
+
+        else:
+            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+    except Exception as e:
+        log.error(f"Error in {name} for {ticker}: {e}")
+        return [TextContent(type="text", text=f"Error: {e}")]
 
 
 async def main():
-    logger.info(f"Starting {APP_NAME} v{APP_VERSION}")
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 

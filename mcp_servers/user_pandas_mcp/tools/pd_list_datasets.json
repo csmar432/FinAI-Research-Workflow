@@ -4,6 +4,7 @@
   "inputSchema": {
     "type": "object",
     "properties": {},
-    "required": []
+    "required": [],
+    "description": "列出当前会话中所有已注册的数据框及其摘要。"
   }
 }

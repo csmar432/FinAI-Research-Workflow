@@ -1,13 +1,21 @@
 {
   "name": "latex_bibtex_check",
-  "description": "检查BibTeX文件格式，识别重复条目、未定义引用、无效字段。\\n\\n",
+  "description": "检查BibTeX文件格式，识别重复条目、未定义引用、无效字段。\\n\\nArgs:\\n  bib_file: .bib文件路径\\n  tex_file: 可选，关联的tex文件（用于检查引用完整性）\\n\\nReturns: 问题列表和统计",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "bib_file": {
+        "type": "string",
+        "description": ".bib文件路径"
+      },
+      "tex_file": {
+        "type": "string",
+        "description": "关联的tex文件（用于检查引用完整性）"
       }
     },
-    "required": []
+    "required": [
+      "bib_file"
+    ],
+    "description": "检查BibTeX文件格式，识别重复条目、未定义引用、无效字段。"
   }
 }

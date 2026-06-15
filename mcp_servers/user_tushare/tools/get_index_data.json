@@ -5,16 +5,20 @@
     "type": "object",
     "properties": {
       "ts_code": {
-        "type": "string"
+        "type": "string",
+        "description": "股票代码（格式：000001.SZ 或 600000.SH）"
       },
       "trade_date": {
-        "type": "string"
+        "type": "string",
+        "description": "交易日期（格式：YYYYMMDD）"
       },
       "start_date": {
-        "type": "string"
+        "type": "string",
+        "description": "起始日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "end_date": {
-        "type": "string"
+        "type": "string",
+        "description": "结束日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "data_type": {
         "type": "string",
@@ -22,8 +26,10 @@
           "daily",
           "basic"
         ],
-        "default": "daily"
+        "default": "daily",
+        "description": "数据类型（如 spot/daily/weekly 等）"
       }
-    }
+    },
+    "description": "获取A股指数数据（日线行情/基础信息）。使用 Tushare Pro API。"
   }
 }

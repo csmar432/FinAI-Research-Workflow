@@ -1,8 +1,26 @@
 {
   "name": "get_education_panel",
-  "description": "中国教育指标面板数据指引",
+  "description": "获取中国教育面板数据，包括在校生人数、教育经费、师资力量等省级面板指标。数据来源于国家统计局和教育部。用于人力资本、教育公平和教育投入产出研究。",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+      "province": {
+        "type": "string",
+        "description": "省份名称（不填则返回全国及各省数据）"
+      },
+      "year_from": {
+        "type": "integer",
+        "description": "起始年份（如 2015）"
+      },
+      "year_to": {
+        "type": "integer",
+        "description": "结束年份（如 2023）"
+      },
+      "indicator": {
+        "type": "string",
+        "description": "指标名称（在校生数/教育经费/专任教师数）"
+      }
+    },
+    "description": "中国教育指标面板数据指引（各省高校/在校生/研究生）"
   }
 }

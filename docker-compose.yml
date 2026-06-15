@@ -242,6 +242,20 @@ services:
   #   container_name: mcp_context7
   #   environment: [PYTHONUNBUFFERED=1]
 
+  mcp_cnki:             # CNKI 中国知网论文检索（网页爬虫）
+    build: ./mcp_servers/user_cnki
+    container_name: mcp_cnki
+    environment:
+      - PYTHONUNBUFFERED=1
+    # notes: "CNKI 无免费API，通过网页爬虫实现，请遵守 robots.txt"
+
+  mcp_wanfang:          # 万方数据论文检索（网页爬虫）
+    build: ./mcp_servers/user_wanfang
+    container_name: mcp_wanfang
+    environment:
+      - PYTHONUNBUFFERED=1
+    # notes: "万方数据无免费API，通过网页爬虫实现，请遵守服务条款"
+
   # mcp_openalex:        # 学术元数据（2亿+成果）
   #   build: ./mcp_servers/user_openalex
   #   container_name: mcp_openalex

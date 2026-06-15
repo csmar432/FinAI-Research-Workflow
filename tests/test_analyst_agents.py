@@ -87,3 +87,123 @@ class TestAnalystFactory:
         # Unknown type falls back to BaseAnalystAgent
         agent = AnalystFactory.create(AnalystType.RISK, config)
         assert agent is not None
+
+
+class TestAnalystTypes:
+    """Tests for AnalystType enum and AnalystConfig dataclass."""
+
+    def test_analyst_type_values(self):
+        for t in AnalystType:
+            assert isinstance(t.value, str)
+            assert len(t.value) > 0
+
+    def test_analyst_type_count(self):
+        assert len(AnalystType) >= 6
+
+    def test_analyst_config_defaults(self):
+        config = AnalystConfig(
+            analyst_type=AnalystType.FUNDAMENTAL_FINANCIAL,
+            name="test_analyst",
+            role="Financial analyst",
+            focus_areas=["profitability"],
+            tools=["tushare"],
+        )
+        assert config.name == "test_analyst"
+        assert config.analyst_type == AnalystType.FUNDAMENTAL_FINANCIAL
+
+
+class TestAnalystFactoryExtended:
+    """Additional AnalystFactory tests."""
+
+    def test_create_all_registered_types(self):
+        for analyst_type in AnalystType:
+            config = AnalystConfig(
+                analyst_type=analyst_type,
+                name=f"test_{analyst_type.value}",
+                role="Test",
+                focus_areas=[],
+                tools=[],
+            )
+            agent = AnalystFactory.create(analyst_type, config)
+            assert agent is not None, f"Failed: {analyst_type}"
+
+
+class TestCompositeAnalysis:
+    """Tests for CompositeAnalysis dataclass."""
+
+    def test_composite_analysis_creation(self):
+        from scripts.core.analyst_agents import CompositeAnalysis
+        import time
+        analysis = CompositeAnalysis(
+            ticker="000001.SZ",
+            timestamp=time.time(),
+            analyst_results={},
+            consensus_view="Positive outlook",
+            divergent_views=["Concern about leverage"],
+            confidence=0.75,
+            total_latency_ms=500.0,
+        )
+        assert analysis.ticker == "000001.SZ"
+        assert analysis.confidence == 0.75
+
+    def test_composite_analysis_to_dict(self):
+        from scripts.core.analyst_agents import CompositeAnalysis, AnalystResult, AnalystType
+        import time
+        ca = CompositeAnalysis(
+            ticker="600000.SH",
+            timestamp=time.time(),
+            analyst_results={
+                AnalystType.FUNDAMENTAL_FINANCIAL: AnalystResult(
+                    analyst_type=AnalystType.FUNDAMENTAL_FINANCIAL,
+                    status="success",
+                    findings={},
+                    confidence=0.8,
+                    key_points=["Strong ROE"],
+                    warnings=[],
+                )
+            },
+            consensus_view="Hold",
+            divergent_views=[],
+            confidence=0.60,
+            total_latency_ms=300.0,
+        )
+        d = ca.to_dict()
+        assert isinstance(d, dict)
+        assert d["ticker"] == "600000.SH"
+        assert "analyst_results" in d
+
+
+class TestDupontDecomposition:
+    """Tests for DupontDecomposition dataclass."""
+
+    def test_dupont_decomposition_fields(self):
+        from scripts.core.analyst_agents import DupontDecomposition
+        dd = DupontDecomposition(
+            company="TestCorp",
+            year=2023,
+            roe=0.12,
+            net_margin=0.08,
+            asset_turnover=1.2,
+            equity_multiplier=1.5,
+            roa=0.08,
+            comparison={},
+        )
+        assert dd.company == "TestCorp"
+        assert dd.roe == 0.12
+
+
+class TestAccrualsAnalysis:
+    """Tests for AccrualsAnalysis dataclass."""
+
+    def test_accruals_analysis_creation(self):
+        from scripts.core.analyst_agents import AccrualsAnalysis
+        acc = AccrualsAnalysis(
+            year=2023,
+            total_accruals=0.05,
+            abnormal_accruals=0.02,
+            discretionary_accruals=0.01,
+            is_suspicious=False,
+        )
+        assert acc.year == 2023
+        assert acc.total_accruals == 0.05
+        assert acc.is_suspicious is False

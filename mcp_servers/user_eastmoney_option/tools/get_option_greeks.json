@@ -16,6 +16,7 @@
     },
     "required": [
       "option_code"
-    ]
+    ],
+    "description": "获取期权希腊字母（Greeks）数据。"
   }
 }

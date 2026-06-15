@@ -116,13 +116,16 @@ class ProvenanceTracker:
     def __init__(self) -> None:
         self._r: dict = {}
 
-    def record(self, field: str, source, detail: str = "", **kwargs) -> None:
+    def record(self, field: str, source, detail: str = "",
+               returned_fields: list[str] | None = None,
+               **kwargs) -> None:
         """Record the source of a data field.
 
         Args:
             field: Field/variable name
             source: DataSource value or string literal (e.g., DataSource.MCP_YFINANCE)
             detail: Additional detail about the source
+            returned_fields: Actual field/column names from the API response
             **kwargs: Extra metadata (e.g., method, url, date)
         """
         # Serialize source: Enum → string value for JSON compatibility
@@ -133,6 +136,7 @@ class ProvenanceTracker:
             source_detail=detail,
             is_simulated=False,
             is_fallback=False,
+            returned_fields=returned_fields or [],
             **kwargs,
         )
 

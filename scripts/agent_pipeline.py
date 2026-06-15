@@ -10,6 +10,8 @@ This module integrates all new P0/P1/P2 modules:
     - BenchmarkEvaluator: Automated quality evaluation
     - WorkflowVisualizer: DOT / Mermaid / HTML visualization
     - DashboardLauncher: Auto-launch Streamlit dashboard with browser
+    - LangGraphPipeline: optional LangGraph-backed pipeline with checkpoint + observability
+      (activated via ``--langgraph`` CLI flag or ``use_langgraph=True`` constructor arg)
 
 Usage:
     # Basic usage
@@ -17,14 +19,22 @@ Usage:
     pipeline = AgentPipeline()
     result = pipeline.run("LLM在金融时间序列预测中的应用", venue="NeurIPS 2025")
 
+    # LangGraph-backed pipeline
+    from scripts.agent_pipeline import AgentPipeline, _LG_BRIDGE_AVAILABLE
+    pipeline = AgentPipeline(use_langgraph=_LG_BRIDGE_AVAILABLE)
+    result = pipeline.run(topic="碳排放权交易与绿色创新", venue="经济研究")
+
+    # CLI
+    python scripts/agent_pipeline.py --topic "..." --langgraph --use-hitl
+
     # Streaming
     async for event in pipeline.stream("..."):
         print(event.event_type, event.data)
 
     # Benchmark
-    from scripts.core.benchmark import BenchmarkEvaluator
-    evaluator = BenchmarkEvaluator(gateway)
-    evaluator.run_benchmark_suite()
+    from scripts.core.benchmark import PaperWritingBench, BenchmarkConfig
+    bench = PaperWritingBench(BenchmarkConfig(n_papers=3, domains=["empirical_paper"]))
+    results = bench.run()
 
 Canvas可视化：
     运行期间可在 Cursor 中打开 workflow-progress.canvas.tsx 查看实时进度。
@@ -45,6 +55,60 @@ from scripts.core.platform import (
     get_canvas_file_path,
     is_canvas_available,
 )
+
+# ─── Report Generator (P0-1: end-to-end PDF) ──────────────────────────────────
+try:
+    from scripts.research_framework.report_generator import ReportGenerator
+    _REPORT_GEN_AVAILABLE = True
+except ImportError:
+    _REPORT_GEN_AVAILABLE = False
+    ReportGenerator = None  # type: ignore[assignment, misc]
+
+# ─── LangGraph Bridge ────────────────────────────────────────────────────────────
+
+try:
+    from scripts.core.orchestrator_lg_bridge import (
+        PipelineRunner,
+        run_research_pipeline,
+        is_langgraph_available as _bridge_lg_available,
+        is_pipeline_available as _bridge_pipeline_available,
+    )
+    _LG_BRIDGE_AVAILABLE = True
+except ImportError:
+    _LG_BRIDGE_AVAILABLE = False
+    _bridge_lg_available = False
+    _bridge_pipeline_available = False
+    PipelineRunner = None  # type: ignore[assignment, misc]
+    run_research_pipeline = None  # type: ignore[assignment, misc]
+
+
+class PipelineConfigurationError(Exception):
+    """流水线配置错误：健康检查未通过时抛出。"""
+
+    def __init__(self, message: str = "", details: dict | None = None):
+        super().__init__(message)
+        self.message = message
+        self.details = details or {}
+
+
+@dataclass
+class InteractionResult:
+    """交互操作的结果，供调用方（终端/AI agent）使用。
+
+    诊断完成后，此对象包含：
+    - needs_input: 是否需要进一步用户输入
+    - action_needed: 下一步操作类型
+    - questions: 需要询问用户的问题（用于 AI agent 对话交互）
+    - limitations: 受限功能清单
+    - can_proceed: 是否可以继续研究
+    """
+    needs_input: bool = False
+    action_needed: str = "proceed"   # "proceed" | "ask_api_key" | "ask_llm_confirm"
+    questions: list[str] = field(default_factory=list)   # AI agent 向用户提问
+    limitations: list[str] = field(default_factory=list)
+    api_keys_to_add: list[dict] = field(default_factory=list)   # [{name, url}]
+    fix_steps: list[str] = field(default_factory=list)
+    llm_available: bool = True
 
 
 def _get_canvas_url() -> str:
@@ -489,9 +553,10 @@ def _save_wf_json_fallback(payload: dict) -> None:
         except Exception:
             if tmp.exists():
                 tmp.unlink()
-            raise
-    except Exception:
-        pass
+            raise  # Propagate so caller knows the save failed
+    except OSError as e:
+        import logging as _wf_log
+        _wf_log.warning("[_save_wf_json_fallback] Failed to create cache directory: %s", e)
 
     # POST 到可视化服务器（端口 8502）
     try:
@@ -505,7 +570,10 @@ def _save_wf_json_fallback(payload: dict) -> None:
         with urllib.request.urlopen(req, timeout=5) as resp:
             resp.read()
     except Exception:
-        pass
+        import logging as _viz_log
+        _viz_log.getLogger("agent_pipeline.viz").debug(
+            "Canvas POST failed (server likely not running) — this is non-fatal"
+        )
 
 
 
@@ -543,6 +611,39 @@ from scripts.core.orchestrator import (
     PipelineStep,
 )
 from scripts.core.self_evolution import SelfEvolutionEngine
+
+# Checkpoint / Telemetry / Provenance / Parliament
+try:
+    from scripts.core.checkpoint import (
+        CheckpointManager,
+        PipelineCheckpoint,
+        PipelineTelemetry,
+        get_telemetry,
+    )
+    _CHECKPOINT_AVAILABLE = True
+except ImportError:
+    _CHECKPOINT_AVAILABLE = False
+    CheckpointManager = PipelineCheckpoint = PipelineTelemetry = get_telemetry = None
+
+try:
+    from scripts.core.provenance import (
+        ProvenanceChain,
+        get_chain,
+    )
+    _PROVENANCE_AVAILABLE = True
+except ImportError:
+    _PROVENANCE_AVAILABLE = False
+    ProvenanceChain = get_chain = None
+
+try:
+    from scripts.core.ai_parliament import (
+        AIParliament,
+        AIParliamentHITLIntegration,
+    )
+    _PARLIAMENT_AVAILABLE = True
+except ImportError:
+    _PARLIAMENT_AVAILABLE = False
+    AIParliament = AIParliamentHITLIntegration = None
 
 # ─── Dashboard Launcher ──────────────────────────────────────────────────────────
 
@@ -700,7 +801,7 @@ class DirectionResult:
     figures: dict | None = None
     errors: list[str] = field(default_factory=list)
     latency_ms: float = 0.0
-    timestamp: float = field(default_factory=time.time)
+    timestamp: float = field(default_factory=lambda: time.time())
 
 
 # ─── Pipeline Result ───────────────────────────────────────────────────────────
@@ -708,7 +809,10 @@ class DirectionResult:
 
 @dataclass
 class AgentPipelineResult:
-    """Result of a complete agent pipeline run."""
+    """Result of a complete agent pipeline run.
+
+    包含所有阶段输出、轨迹、质量报告和自动评分。
+    """
     config: AgentPipelineConfig
     outline: dict | None = None
     literature: dict | None = None
@@ -721,7 +825,14 @@ class AgentPipelineResult:
     visualization_path: Path | None = None
     total_latency_ms: float = 0.0
     success: bool = False
-    timestamp: float = field(default_factory=time.time)
+    errors: list[str] = field(default_factory=list)
+    timestamp: float = field(default_factory=lambda: time.time())
+    # 质量报告：stage_name → QualityGate 检查结果
+    quality_reports: dict[str, dict] = field(default_factory=dict)
+    # 自动评分：stage_name → AutoReviewRules 评分结果
+    auto_review_reports: dict[str, dict] = field(default_factory=dict)
+    # 自动生成的 DID 诊断图表路径列表
+    did_chart_paths: list = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -744,6 +855,7 @@ class AgentPipelineResult:
             "evolution_events": len(self.evolution_events),
             "hitl_approvals": [a.stage for a in (self.hitl_approvals or [])],
             "visualization": str(self.visualization_path) if self.visualization_path else None,
+            "errors": self.errors,
         }
 
 
@@ -786,8 +898,10 @@ class AgentPipeline:
         result = pipeline.run(config=config)
     """
 
-    def __init__(self, config: AgentPipelineConfig | None = None):
+    def __init__(self, config: AgentPipelineConfig | None = None,
+                 use_langgraph: bool = False):
         self.config = config or AgentPipelineConfig(topic="")
+        self._use_langgraph: bool = use_langgraph and _LG_BRIDGE_AVAILABLE
         self._gateway: LLMGateway | None = None
         self._orchestrator: AgentOrchestrator | None = None
         self._verifier: CitationVerifier | None = None
@@ -796,6 +910,187 @@ class AgentPipeline:
         self._memory = None
         self._initialized = False
         self._current_steps: list = []
+        # 可视化延迟启动：仅在首个 HITL gate 触发后启动
+        # 用户审批通过后才推送阶段可视化，不在审批前展示结果
+        self._viz_launched: bool = False
+        self._viz_url: str = "http://localhost:8502"
+
+        # ── Checkpoint / Telemetry ────────────────────────────────────────────────
+        if _CHECKPOINT_AVAILABLE:
+            self.checkpoint_manager = CheckpointManager(base_dir="output/checkpoints")
+            self.pipeline_id = f"pipeline_{int(time.time())}"
+            self.telemetry = get_telemetry(self.pipeline_id)
+            # Try to resume from latest checkpoint
+            try:
+                latest_cp = self.checkpoint_manager.load_latest(self.pipeline_id)
+                if latest_cp:
+                    import logging as _cp_log
+                    _cp_log.getLogger("agent_pipeline").info(
+                        "Found checkpoint to resume: %s, stage=%s",
+                        latest_cp.checkpoint_id[:8],
+                        latest_cp.stage,
+                    )
+                    self._resume_checkpoint = latest_cp
+                else:
+                    self._resume_checkpoint = None
+            except Exception:
+                self._resume_checkpoint = None
+        else:
+            self.checkpoint_manager = None
+            self.pipeline_id = f"pipeline_{int(time.time())}"
+            self.telemetry = None
+            self._resume_checkpoint = None
+
+        # ── Provenance ────────────────────────────────────────────────────────────
+        if _PROVENANCE_AVAILABLE:
+            self.provenance_chain = ProvenanceChain(project_dir="output/provenance")
+        else:
+            self.provenance_chain = None
+
+        # ── Parliament (optional, for paper review) ─────────────────────────────
+        if _PARLIAMENT_AVAILABLE:
+            self.parliament = AIParliamentHITLIntegration()
+        else:
+            self.parliament = None
+
+        # ── Quality Gates ──────────────────────────────────────────────────────
+        # 论文写作质量下限自动检查（QualityGates）
+        self._quality_gates: "PaperQualityGates | None" = None
+
+        # ── Auto Review ─────────────────────────────────────────────────────────
+        # 论文自动评分引擎（AutoReviewRules）
+        self._auto_reviewer: "AutoReviewRules | None" = None
+
+        # ── Quality Reports Storage ─────────────────────────────────────────────
+        # 存储每个 stage 的质量检查结果
+        self._quality_reports: dict[str, dict] = {}
+
+        # ── Idea-Data Validation ────────────────────────────────────────────────
+        # 存储想法验证结果（用于 idea → data_acquisition 强制检查点）
+        self._validated_ideas: list[dict] = []
+
+    # ── Idea-Data Validation Checkpoint ────────────────────────────────────
+
+    def _run_idea_data_validation(self, ideas: list[dict]) -> list[dict]:
+        """
+        P1: 强制想法-数据验证 checkpoint。
+
+        在想法生成阶段和数据分析阶段之间插入，确保所有候选想法
+        在进入数据获取阶段前完成数据可行性检查。
+
+        处理逻辑：
+          - Feasibility.AVAILABLE → 直接包含在返回列表
+          - Feasibility.PARTIALLY_AVAILABLE → 包含但记录缺失变量
+          - Feasibility.DATA_GAP → 询问用户：补充数据路径 / 跳过
+          - Feasibility.REQUIRES_AUTH → 提示用户授权模拟数据
+
+        Args:
+            ideas: 原始想法列表（每个dict包含id/title/description/keywords等字段）
+
+        Returns:
+            经过数据可行性过滤的想法列表（可能为空）
+        """
+        try:
+            from scripts.idea_data_checker import IdeaDataValidator
+        except ImportError:
+            print("⚠ idea_data_checker 模块不可用，跳过想法-数据验证")
+            return ideas
+
+        import logging as _idv_log
+        _idv_log.getLogger("idea_data_checker").setLevel(logging.INFO)
+
+        print()
+        print("\033[96m" + "═" * 60 + "\033[0m")
+        print("\033[96m" + "  💡 想法-数据验证 checkpoint  " + "\033[0m")
+        print("\033[96m" + "═" * 60 + "\033[0m")
+        print()
+
+        validator = IdeaDataValidator(ideas)
+        report = validator.validate_all()
+
+        # 汇总统计
+        available = []
+        partial = []
+        gap = []
+        auth_needed = []
+
+        for idea_result in report.idea_results:
+            idea_dict = idea_result.idea
+            feat = idea_result.feasibility
+
+            if feat.value == "available":
+                available.append(idea_dict)
+            elif feat.value == "partial":
+                partial.append(idea_dict)
+            elif feat.value == "data_gap":
+                gap.append(idea_dict)
+            elif feat.value == "auth_needed":
+                auth_needed.append(idea_dict)
+
+        # 打印汇总
+        print(f"  📊 想法-数据验证汇总:")
+        print(f"     ✅ 数据可行:   {len(available)}个")
+        print(f"     🟡 部分可行:   {len(partial)}个")
+        print(f"     ❌ 数据缺口:   {len(gap)}个")
+        print(f"     🔐 需授权:     {len(auth_needed)}个")
+        print()
+
+        # 可行的想法：直接通过
+        if available:
+            print("\033[92m" + "  ✅ 数据可行的想法（直接进入数据获取阶段）:" + "\033[0m")
+            for idea in available:
+                title = idea.get("title", idea.get("id", "unknown"))
+                print(f"     • {title}")
+            print()
+
+        # 部分可行的想法：包含但记录缺失
+        if partial:
+            print("\033[93m" + "  🟡 部分可行的想法（含缺失变量）:" + "\033[0m")
+            for idea in partial:
+                title = idea.get("title", idea.get("id", "unknown"))
+                result = next((r for r in report.idea_results if r.idea.get("id") == idea.get("id")), None)
+                if result:
+                    missing = result.gaps[:3]
+                    print(f"     • {title}")
+                    for g in missing:
+                        print(f"       缺失: {g}")
+            print()
+
+        # 数据缺口的想法：询问用户
+        if gap:
+            print("\033[91m" + "  ❌ 有数据缺口的想法（需补充数据或跳过）:" + "\033[0m")
+            for idea in gap:
+                title = idea.get("title", idea.get("id", "unknown"))
+                result = next((r for r in report.idea_results if r.idea.get("id") == idea.get("id")), None)
+                if result:
+                    print(f"     • {title}")
+                    for action in result.actions[:3]:
+                        print(f"       → {action}")
+            print()
+            print("  提示: 请在 data/ 目录补充所需数据文件，或更换研究方向")
+            print("  如需授权使用演示数据，请调用: checker.authorize_variable('{var_name}')")
+            print()
+
+        # 需授权的想法
+        if auth_needed:
+            print("\033[93m" + "  🔐 需要模拟数据授权的想法:" + "\033[0m")
+            for idea in auth_needed:
+                title = idea.get("title", idea.get("id", "unknown"))
+                print(f"     • {title}")
+            print()
+
+        # 最终合并：可行 + 部分可行
+        validated = available + partial
+
+        print("\033[96m" + "─" * 60 + "\033[0m")
+        print(f"  最终通过验证的想法: {len(validated)}/{len(ideas)}个")
+        if not validated:
+            print("\033[91m" + "  ⚠ 所有想法均无数据支持，请补充数据或更换研究方向" + "\033[0m")
+        print("\033[96m" + "─" * 60 + "\033[0m")
+        print()
+
+        self._validated_ideas = validated
+        return validated
 
     # ── Initialization ─────────────────────────────────────────────────
 
@@ -826,7 +1121,8 @@ class AgentPipeline:
 
         # Initialize citation verifier
         self._verifier = CitationVerifier(
-            cache_dir=str(output_dir / ".cache" / "citations"),
+            timeout=10.0,
+            cache_size=500,
         )
 
         # Initialize orchestrator
@@ -845,23 +1141,287 @@ class AgentPipeline:
             self._evolution = SelfEvolutionEngine(self._memory, self._gateway)
             self._orchestrator.set_evolution_engine(self._evolution)
 
-        self._initialized = True
+        # Wire AIParliament into orchestrator for pre-gate machine review
+        if self.parliament is not None:
+            self._orchestrator.set_parliament(self.parliament)
 
-        # Auto-start visualization server (non-blocking, background thread)
-        self._start_viz_server_if_needed()
+        # ── Initialize QualityGates ─────────────────────────────────────────────
+        try:
+            from scripts.core.quality_gates import PaperQualityGates
+            self._quality_gates = PaperQualityGates(strict=False)
+        except ImportError:
+            self._quality_gates = None
+
+        # ── Initialize AutoReviewRules ──────────────────────────────────────────
+        try:
+            from scripts.core.auto_review_rules import AutoReviewRules
+            self._auto_reviewer = AutoReviewRules(domain="empirical_paper")
+        except ImportError:
+            self._auto_reviewer = None
+
+        self._initialized = True
+        # 可视化服务器延迟启动：在首个 HITL gate 触发后才启动
+        # 这样用户审批前不会看到任何结果图表
+        # self._launch_viz_when_needed() 在 run() 流程中调用
 
     def _start_viz_server_if_needed(self) -> bool:
-        """启动可视化服务（如未运行）。"""
+        """启动可视化服务（幂等：仅首次调用时启动）。"""
+        if self._viz_launched:
+            return True
         try:
             from scripts.workflow_viz_server import VisualizationServer
             viz_server = VisualizationServer()
-            viz_url = "http://localhost:8502"
             if viz_server.start(open_browser=False):
-                print(f"  可视化服务已就绪: {viz_url}")
+                self._viz_launched = True
+                print(f"  可视化服务已启动: {self._viz_url}")
                 return True
+        except Exception as exc:
+            import logging as _viz_log
+            _viz_log.getLogger("agent_pipeline.viz").debug(
+                "[_start_visualization_server] Failed to start: %s — continuing without viz", exc
+            )
+        return False
+
+    def _save_stage_checkpoint(self, stage_name: str, context: dict) -> str:
+        """Save a checkpoint for the current stage.
+
+        This method is best-effort: any exception is logged and swallowed
+        so that a missing checkpoint manager never breaks the pipeline.
+        """
+        if not _CHECKPOINT_AVAILABLE or self.checkpoint_manager is None:
+            return ""
+        try:
+            checkpoint = PipelineCheckpoint(
+                pipeline_id=self.pipeline_id,
+                pipeline_name="paper_pipeline",
+                stage=stage_name,
+                timestamp=time.time(),
+                context=context,
+                completed_stage_index=-1,
+                completed_stages=[],
+            )
+            cp_id = self.checkpoint_manager.save(
+                pipeline_id=self.pipeline_id,
+                pipeline_name="paper_pipeline",
+                completed_stage=stage_name,
+                context=context,
+                stage_results={},
+            )
+            import logging as _cp_log
+            _cp_log.getLogger("agent_pipeline").info(
+                "Checkpoint saved: stage=%s, id=%s", stage_name, cp_id[:8]
+            )
+            return cp_id
+        except Exception as exc:
+            import logging as _cp_warn
+            _cp_warn.getLogger("agent_pipeline").warning(
+                "Failed to save checkpoint for stage %s: %s", stage_name, exc
+            )
+            return ""
+
+    def _extract_stage_text(self, stage_output) -> str:
+        """
+        从任意 stage output 中提取纯文本内容。
+
+        支持 dict（"output"/"text"/"content" 键）、str 和有 __str__ 的对象。
+        """
+        if stage_output is None:
+            return ""
+        if isinstance(stage_output, str):
+            return stage_output
+        if isinstance(stage_output, dict):
+            for key in ("output", "text", "content", "result", "html", "markdown"):
+                if key in stage_output:
+                    val = stage_output[key]
+                    if isinstance(val, str):
+                        return val
+                    break
+            return json.dumps(stage_output, ensure_ascii=False)
+        if hasattr(stage_output, "__str__"):
+            return str(stage_output)
+        return repr(stage_output)
+
+    def get_quality_report(self, stage_name: str) -> dict | None:
+        """
+        查询指定 stage 的 QualityGates 检查结果。
+
+        Usage:
+            pipeline = AgentPipeline()
+            pipeline.run("研究主题")
+            qg = pipeline.get_quality_report("writing")
+            if qg and not qg["passed"]:
+                print(f"质量检查未通过: {qg['issues']}")
+        """
+        return self._quality_reports.get(stage_name)
+
+    def _run_quality_check(self, stage_name: str, text: str) -> dict | None:
+        """
+        对阶段输出执行 QualityGates 检查。
+
+        在 HITL 审批前自动执行质量下限检查，输出结构化报告。
+        """
+        if self._quality_gates is None:
+            return None
+        try:
+            chapter_map = {
+                "outline": "Introduction",
+                "literature_review": "Literature Review",
+                "literature": "Literature Review",
+                "writing": "Methodology",
+                "plotting": "Results",
+                "refinement": "Discussion",
+            }
+            chapter = chapter_map.get(stage_name, stage_name.title())
+            report = self._quality_gates.gate(chapter, text)
+            report_dict = {
+                "chapter": chapter,
+                "score": report.score,
+                "level": report.level.value,
+                "passed": report.passed,
+                "issues": [{"message": i.message, "severity": i.severity.value} for i in report.issues],
+                "suggestions": report.suggestions,
+                "elapsed_ms": getattr(report, "elapsed_ms", 0),
+            }
+            self._quality_reports[stage_name] = report_dict
+            return report_dict
+        except Exception:
+            return None
+
+    def _run_auto_review(self, stage_name: str, text: str) -> dict | None:
+        """
+        对阶段输出执行 AutoReviewRules 评分。
+
+        在 HITL 审批前自动执行评分，识别 CRITICAL 问题。
+        """
+        if self._auto_reviewer is None:
+            return None
+        try:
+            chapter_map = {
+                "outline": "Introduction",
+                "literature_review": "Literature Review",
+                "literature": "Literature Review",
+                "writing": "Methodology",
+                "plotting": "Results",
+                "refinement": "Discussion",
+            }
+            chapter = chapter_map.get(stage_name, stage_name.title())
+            score = self._auto_reviewer.score_chapter(chapter, text)
+            return score
+        except Exception:
+            return None
+
+    def _register_provenance_result(self, stage_name: str, stage_data) -> None:
+        """Register a stage output in the provenance chain (best-effort)."""
+        if not _PROVENANCE_AVAILABLE or not self.provenance_chain:
+            return
+        try:
+            import json as _json
+            summary = _json.dumps(stage_data, ensure_ascii=False)[:200] if stage_data else ""
+            provenance_node = __import__(
+                "scripts.core.provenance", fromlist=["ProvenanceNode"]
+            ).ProvenanceNode(
+                node_id="",
+                node_type=__import__(
+                    "scripts.core.provenance", fromlist=["NodeType"]
+                ).NodeType.OUTPUT,
+                label=f"Stage output: {stage_name}",
+                content=summary,
+            )
+            self.provenance_chain.register_node(provenance_node)
         except Exception:
             pass
-        return False
+
+    async def _parliament_review(self, paper_content: dict) -> dict:
+        """Run AI parliament review before human approval.
+
+        This method is best-effort: if parliament is unavailable or fails,
+        it returns an empty verdict dict so the HITL gate can still proceed.
+        """
+        if not _PARLIAMENT_AVAILABLE or self.parliament is None:
+            return {"error": "parliament_unavailable", "scores": {}, "disputed": False}
+        try:
+            verdict, need_human = await self.parliament.debate_and_approve(
+                paper_content,
+                rounds=3,
+                auto_threshold=4.0,
+            )
+            verdict_dict = dict(verdict)
+            import logging as _parl_log
+            _parl_log.getLogger("agent_pipeline").info(
+                "Parliament verdict: avg_score=%s, disputed=%s, need_human=%s",
+                verdict_dict.get("score", "N/A"),
+                verdict_dict.get("disputed", False),
+                need_human,
+            )
+            verdict_dict["_need_human_review"] = need_human
+            return verdict_dict
+        except Exception as exc:
+            import logging as _parl_err
+            _parl_err.getLogger("agent_pipeline").warning(
+                "Parliament review failed: %s", exc
+            )
+            return {"error": str(exc), "scores": {}, "disputed": False}
+
+    def _notify_viz_gate_approved(
+        self,
+        stage_name: str,
+        stage_result: dict,
+        feedback: str = "",
+    ) -> None:
+        """
+        HITL 审批通过后，推送该阶段结果到可视化服务器。
+
+        调用时机：用户审批通过（approve_step）后立即调用。
+        在审批通过前，不推送任何结果数据。
+        """
+        if not self._viz_launched:
+            self._start_viz_server_if_needed()
+
+        # 构建仅包含已审批阶段的可视化 payload
+        payload = {
+            "event": "gate_approved",
+            "stage": stage_name,
+            "result_preview": str(stage_result)[:500] if stage_result else "",
+            "feedback": feedback,
+            "timestamp": time.time(),
+            "topic": self.config.topic or "",
+        }
+
+        import logging as _gate_log
+        _gate_log = _gate_log.getLogger("agent_pipeline.gate")
+
+        # 写入文件供可视化服务器读取
+        try:
+            cache_dir = Path(__file__).parent.parent / ".cache"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            fpath = cache_dir / "wf_gate_approved.json"
+            tmp = fpath.with_suffix(".tmp")
+            tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            tmp.rename(fpath)
+        except Exception as exc:
+            _gate_log.debug(
+                "[_notify_viz_gate_approved] State file write failed: %s", exc
+            )
+
+        # 直接 POST 到可视化服务器
+        try:
+            import urllib.request, urllib.error
+            req = urllib.request.Request(
+                f"{self._viz_url}/gate_approved",
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                resp.read()
+        except Exception as exc:
+            _gate_log.debug("Gate approval POST failed: %s — this is non-fatal", exc)
+
+        # 告知用户
+        print()
+        print(f"  阶段 '{stage_name}' 已通过审批，结果已推送至可视化")
+        print(f"  查看: {self._viz_url}")
+        print()
 
     # ── Main Run ──────────────────────────────────────────────────────
 
@@ -884,22 +1444,68 @@ class AgentPipeline:
         start_time = time.time()
         self._ensure_initialized()
 
+        # ── LangGraph Bridge ─────────────────────────────────────────────────────
+        if _LG_BRIDGE_AVAILABLE and self._use_langgraph and run_research_pipeline is not None:
+            import logging as _ap_log
+            _ap_log.getLogger("agent_pipeline").info(
+                "Using LangGraph pipeline (bridge available, topic=%r)", topic or self.config.topic
+            )
+            lg_result = run_research_pipeline(
+                topic=topic or self.config.topic,
+                venue=self.config.venue,
+                language="zh",
+                use_langgraph=True,
+            )
+            # Wrap the raw dict result in AgentPipelineResult shape so callers
+            # can still consume a structured return value
+            _wrap = type("_LGBridgeResult", (), {
+                "config": self.config,
+                "success": lg_result.get("is_complete", True),
+                "outline": lg_result.get("stage_outputs", {}).get("outline"),
+                "literature": lg_result.get("stage_outputs", {}).get("literature"),
+                "plotting": lg_result.get("stage_outputs", {}).get("plotting"),
+                "writing": lg_result.get("stage_outputs", {}).get("writing"),
+                "refinement": lg_result.get("stage_outputs", {}).get("refinement"),
+                "trace": lg_result.get("trace", []),
+                "quality_report": lg_result.get("quality_report"),
+                "elapsed_s": time.time() - start_time,
+                "raw_result": lg_result,
+            })()
+            return _wrap  # type: ignore[return-value]
+
+        # ── Provenance: register pipeline start ──────────────────────────────────
+        if _PROVENANCE_AVAILABLE and self.provenance_chain:
+            try:
+                from scripts.core.provenance import NodeType
+                self.provenance_chain.register_data_source(
+                    path=f"pipeline:{self.pipeline_id}",
+                    node_type=NodeType.OUTPUT,
+                    label=f"Pipeline {self.pipeline_id} started",
+                )
+                self._provenance_initialized = True
+            except Exception:
+                pass
+
         # ── 首次运行配置检测 ────────────────────────────────────────────────
-        # 基于研究方向自动推荐配置项（不阻断，只提示）
         topic_for_check = (topic or self.config.topic or "")
-        self._check_and_suggest_setup(topic_for_check)
+        ir = self._check_and_suggest_setup(topic_for_check)
 
-        # ── Canvas 可视化启动提示 ───────────────────────────────────────
-        viz_url = "http://localhost:8502"
-        _print_canvas_hint(
-            "研究工作流已启动！",
-            f"可视化: {viz_url}"
-        )
+        # 仅在交互式终端中调用 input()（Cursor IDE）
+        # Claude Code / Codex 等 AI agent 环境：返回 InteractionResult，
+        # 由 AI agent 在对话中向用户询问
+        if self._is_interactive_terminal():
+            self._handle_interactive(ir)
 
-        # Auto-launch Streamlit dashboard
-        if self.config.auto_dashboard:
-            project_root = Path(__file__).parent.parent
-            DashboardLauncher.launch(project_root)
+        # ── 可视化延迟启动 ─────────────────────────────────────────────────
+        # 可视化服务器在用户首个 HITL gate 触发后才启动。
+        # 可视化内容在用户审批通过后才推送到 Canvas。
+        # 不在 run() 开始时提示 Canvas URL，避免用户在审批前就能看到结果。
+        #
+        # 用户审批流程：
+        #   1. pipeline 在 HITL gate 暂停，等待用户审批
+        #   2. 用户调用 approve_step(stage, feedback) 审批
+        #   3. approve_step 调用 _notify_viz_gate_approved() 推送结果
+        #   4. Canvas 此时才显示该阶段的可视化
 
         # Override config
         if topic:
@@ -922,18 +1528,62 @@ class AgentPipeline:
             "template": self.config.template,
         }
 
-        orchestrator_result = self._orchestrator.run_pipeline(
-            pipeline_name="paper_pipeline",
-            steps=steps,
-            input_data=input_data,
-        )
+        try:
+            t0 = time.time()
+            # ── Telemetry: record orchestrator call ───────────────────────────────
+            orchestrator_result = self._orchestrator.run_pipeline(
+                pipeline_name="paper_pipeline",
+                steps=steps,
+                input_data=input_data,
+            )
+            elapsed = time.time() - t0
+            if self.telemetry:
+                self.telemetry.record_stage("orchestrator", elapsed)
+                self.telemetry.record_api_call("orchestrator")
+            # ── Provenance: record data fetch node ───────────────────────────────
+            if _PROVENANCE_AVAILABLE and self.provenance_chain:
+                try:
+                    from scripts.core.provenance import NodeType
+                    self.provenance_chain.register_node(
+                        __import__("scripts.core.provenance", fromlist=["ProvenanceNode"]).ProvenanceNode(
+                            node_id="",
+                            node_type=NodeType.OUTPUT,
+                            label=f"Stage orchestrator completed in {elapsed:.1f}s",
+                        )
+                    )
+                except Exception:
+                    pass
+        except Exception as exc:
+            if self.telemetry:
+                self.telemetry.record_error(type(exc).__name__)
+            import logging as _ap_log
+            _ap_log.getLogger("agent_pipeline").error(
+                "Orchestrator crashed: %s", exc, exc_info=True
+            )
+            # Build a minimal failure result so callers always get a valid AgentPipelineResult
+            from scripts.core.autonomy_loop import PipelineResult
+            _fake_stage = type("FakeStageResult", (), {"output": None, "status": "failed", "error": str(exc)})()
+            orchestrator_result = type("FakeResult", (), {
+                "success": False,
+                "stage_results": {"orchestrator_crash": _fake_stage},
+                "trace": [],
+                "hitl_paused_at": None,
+            })()
+        finally:
+            # Auto-save provenance report
+            if self.provenance_chain:
+                try:
+                    self.provenance_chain.export_report(Path("output/provenance/report.md"))
+                except Exception:
+                    pass
 
         # Push live data to Canvas for real-time visualization
         hitl_gates: dict = {}
         if (self._orchestrator._hitl_gate and
-                hasattr(self._orchestrator._hitl_gate, "_pending") and
-                self._orchestrator._hitl_gate._pending):
-            hitl_gates = dict(self._orchestrator._hitl_gate._pending)
+                hasattr(self._orchestrator._hitl_gate, "get_pending")):
+            pending_records = self._orchestrator._hitl_gate.get_pending()
+            if pending_records:
+                hitl_gates = {rec.gate_id: rec for rec in pending_records}
 
         push_wf_to_canvas(
             steps,
@@ -952,21 +1602,229 @@ class AgentPipeline:
             success=orchestrator_result.success,
         )
 
+        # Aggregate step-level errors into result.errors
+        for stage, stage_result in orchestrator_result.stage_results.items():
+            stage_error = getattr(stage_result, 'error', None) or getattr(stage_result, 'err', None)
+            stage_status = getattr(stage_result, 'status', None)
+            if stage_error:
+                result.errors.append(f"[{stage}] {stage_error}")
+            elif stage_status in ("failed", "error"):
+                result.errors.append(f"[{stage}] stage failed with status={stage_status}")
+
         if PipelineStage.OUTLINE in orchestrator_result.stage_results:
             result.outline = orchestrator_result.stage_results[PipelineStage.OUTLINE].output
+            self._save_stage_checkpoint("outline", {"outline": result.outline})
+            outline_text = self._extract_stage_text(result.outline)
+            if outline_text:
+                qg_report = self._run_quality_check("outline", outline_text)
+                arr_report = self._run_auto_review("outline", outline_text)
+                if qg_report:
+                    result.quality_reports["outline"] = qg_report
+                if arr_report:
+                    result.auto_review_reports["outline"] = arr_report
+
+            # ── P1: 强制想法-数据验证 checkpoint ─────────────────────────────
+            # 在 outline（包含想法）完成后，数据获取阶段开始前执行
+            # 提取 ideas 字典（如果 outline output 中包含）
+            ideas_from_output: list[dict] = []
+            if isinstance(result.outline, dict):
+                if "ideas" in result.outline:
+                    ideas_from_output = result.outline["ideas"]
+                elif "data" in result.outline and isinstance(result.outline["data"], dict):
+                    ideas_from_output = result.outline["data"].get("ideas", [])
+
+            if ideas_from_output:
+                validated = self._run_idea_data_validation(ideas_from_output)
+                if not validated:
+                    # 所有想法均无数据支持，硬中断
+                    raise RuntimeError(
+                        "所有候选想法均无数据支持，请补充数据或更换研究方向。"
+                        "提示：将数据文件放入 data/ 目录，或联系学校图书馆申请CSMAR账号。"
+                    )
 
         if PipelineStage.LITERATURE in orchestrator_result.stage_results:
             lit_result = orchestrator_result.stage_results[PipelineStage.LITERATURE]
             result.literature = lit_result.output
+            self._save_stage_checkpoint("literature_review", {"literature": result.literature})
+            lit_text = self._extract_stage_text(result.literature)
+            if lit_text:
+                qg = self._run_quality_check("literature", lit_text)
+                arr = self._run_auto_review("literature", lit_text)
+                if qg:
+                    result.quality_reports["literature"] = qg
+                if arr:
+                    result.auto_review_reports["literature"] = arr
 
         if PipelineStage.PLOTTING in orchestrator_result.stage_results:
             result.plotting = orchestrator_result.stage_results[PipelineStage.PLOTTING].output
+            self._save_stage_checkpoint("plotting", {"plotting": result.plotting})
+            plotting_text = self._extract_stage_text(result.plotting)
+            if plotting_text:
+                qg = self._run_quality_check("plotting", plotting_text)
+                if qg:
+                    result.quality_reports["plotting"] = qg
+
+        # ── P1: Auto-generate DID charts if DID design detected ──────────────
+        # Run after plotting stage to add DID diagnostic charts automatically
+        did_charts_dir = Path(str(self.config.output_dir or "output")) / "charts"
+        did_charts_dir.mkdir(parents=True, exist_ok=True)
+        result.did_chart_paths = self._auto_generate_did_charts(
+            regressions=getattr(result, "_regressions", {}),
+            output_dir=did_charts_dir,
+        )
 
         if PipelineStage.WRITING in orchestrator_result.stage_results:
             result.writing = orchestrator_result.stage_results[PipelineStage.WRITING].output
+            self._save_stage_checkpoint("writing", {"writing": result.writing})
+            writing_text = self._extract_stage_text(result.writing)
+            if writing_text:
+                qg = self._run_quality_check("writing", writing_text)
+                arr = self._run_auto_review("writing", writing_text)
+                if qg:
+                    result.quality_reports["writing"] = qg
+                if arr:
+                    result.auto_review_reports["writing"] = arr
 
         if PipelineStage.REFINEMENT in orchestrator_result.stage_results:
             result.refinement = orchestrator_result.stage_results[PipelineStage.REFINEMENT].output
+            self._save_stage_checkpoint("review", {"refinement": result.refinement})
+            refinement_text = self._extract_stage_text(result.refinement)
+            if refinement_text:
+                qg = self._run_quality_check("refinement", refinement_text)
+                arr = self._run_auto_review("refinement", refinement_text)
+                if qg:
+                    result.quality_reports["refinement"] = qg
+                if arr:
+                    result.auto_review_reports["refinement"] = arr
+
+        # ── DID Chart Auto-generation ─────────────────────────────────────────────
+
+    def _auto_generate_did_charts(
+        self,
+        regressions: dict | None = None,
+        output_dir: Path | None = None,
+    ) -> list[Path]:
+        """
+        Detect DID design and auto-generate standard DID diagnostic charts.
+
+        Looks for DID regressions in the orchestrator results and generates:
+          - Parallel trend chart
+          - Placebo test chart
+          - Dynamic effects / event study chart
+
+        This is best-effort: wrapped in try/except so it never blocks the pipeline.
+        """
+        chart_paths: list[Path] = []
+        did_methods = {
+            "did_2x2", "cs_did", "sun_abraham", "borusyak",
+            "gardner", "synth_did", "did", "twfe",
+        }
+
+        regressions = regressions or {}
+        has_did = any(
+            isinstance(v, dict) and
+            str(v.get("method", "")).lower() in did_methods
+            for v in regressions.values()
+        )
+
+        if not has_did:
+            _log_debug = __import__("logging").getLogger("agent_pipeline")
+            _log_debug.debug("[_auto_generate_did_charts] No DID design detected, skipping")
+            return chart_paths
+
+        try:
+            from scripts.research_framework.fin_charts import FinancialChartFactory
+        except ImportError:
+            return chart_paths
+
+        try:
+            factory = FinancialChartFactory.__new__(FinancialChartFactory)
+            factory._data = None
+            factory._regressions = regressions
+
+            if output_dir is None:
+                out_dir = Path("output/charts")
+            else:
+                out_dir = Path(output_dir) / "charts"
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            # Parallel trend chart
+            try:
+                p1 = factory.create("parallel_trend", title="平行趋势检验")
+                if p1 and isinstance(p1, Path):
+                    chart_paths.append(p1)
+            except Exception as e:
+                _log_w = __import__("logging").getLogger("agent_pipeline")
+                _log_w.debug("[_auto_generate_did_charts] parallel_trend failed: %s", e)
+
+            # Placebo test chart
+            try:
+                p2 = factory.create("placebo_test", title="安慰剂检验")
+                if p2 and isinstance(p2, Path):
+                    chart_paths.append(p2)
+            except Exception as e:
+                _log_w = __import__("logging").getLogger("agent_pipeline")
+                _log_w.debug("[_auto_generate_did_charts] placebo_test failed: %s", e)
+
+            # Dynamic effects / event study chart
+            try:
+                p3 = factory.create("event_study", title="动态效应图")
+                if p3 and isinstance(p3, Path):
+                    chart_paths.append(p3)
+            except Exception as e:
+                _log_w = __import__("logging").getLogger("agent_pipeline")
+                _log_w.debug("[_auto_generate_did_charts] event_study failed: %s", e)
+
+            if chart_paths:
+                _log_i = __import__("logging").getLogger("agent_pipeline")
+                _log_i.info(
+                    "[_auto_generate_did_charts] Auto-generated %d DID charts: %s",
+                    len(chart_paths),
+                    [str(p) for p in chart_paths],
+                )
+
+        except Exception as e:
+            _log_w = __import__("logging").getLogger("agent_pipeline")
+            _log_w.warning("[_auto_generate_did_charts] Chart auto-generation failed: %s", e)
+
+        return chart_paths
+
+    # ── P0-1: End-to-end PDF generation ────────────────────────────────────
+        # Collect writing content for paper generation
+        paper_content: dict = {}
+        if result.outline:
+            paper_content.update(result.outline if isinstance(result.outline, dict) else {})
+        if result.writing:
+            writing_data = result.writing if isinstance(result.writing, dict) else {}
+            paper_content.setdefault("content", writing_data)
+        if result.refinement:
+            refined = result.refinement if isinstance(result.refinement, dict) else {}
+            paper_content.setdefault("content", refined)
+
+        if _REPORT_GEN_AVAILABLE and paper_content:
+            import logging as _ap_log
+            _ap_log = _ap_log.getLogger("agent_pipeline")
+            try:
+                output_dir = kwargs.get("output_dir") or self.config.output_dir or "output/papers/"
+                rg = ReportGenerator(output_dir=output_dir)
+                tex_path = rg.generate_paper(
+                    topic=self.config.topic or "",
+                    outline=paper_content,
+                    data=None,
+                    regressions=None,
+                    references=None,
+                    journal=self.config.venue or "经济研究",
+                    output_dir=output_dir,
+                )
+                result.paper_tex_path = str(tex_path)
+                _ap_log.info("Paper PDF generated: %s", tex_path)
+                pdf_path = tex_path.with_suffix(".pdf")
+                if pdf_path.exists():
+                    _ap_log.info("PDF available: %s (%.1f KB)",
+                                pdf_path, pdf_path.stat().st_size / 1024)
+            except Exception as e:
+                _ap_log.warning("Paper PDF generation failed: %s", e)
+                result.errors.append(f"[PDF] generate_paper: {e}")
 
         # Evolution events
         if self._evolution:
@@ -975,6 +1833,25 @@ class AgentPipeline:
         # HITL approvals
         if self._hitl_gate:
             result.hitl_approvals = self._hitl_gate.get_history()
+
+        # ── Provenance: register final results ───────────────────────────────────
+        if _PROVENANCE_AVAILABLE and self.provenance_chain:
+            try:
+                self._register_provenance_result("outline", result.outline)
+                self._register_provenance_result("literature", result.literature)
+                self._register_provenance_result("plotting", result.plotting)
+                self._register_provenance_result("writing", result.writing)
+                self._register_provenance_result("refinement", result.refinement)
+            except Exception:
+                pass
+
+        # ── Telemetry: record total duration ────────────────────────────────────
+        if self.telemetry:
+            self.telemetry.ended_at = time.time()
+            try:
+                self.telemetry.save()
+            except Exception:
+                pass
 
         # Visualization
         if self.config.visualize:
@@ -995,39 +1872,230 @@ class AgentPipeline:
 
         return result
 
-    def _check_and_suggest_setup(self, topic: str = "") -> None:
-        """基于研究方向检测配置状态并给出提示。
+    def _is_interactive_terminal(self) -> bool:
+        """判断是否在交互式终端中运行（而非被 AI agent 调用）。
 
-        仅提示，不阻断。帮助用户了解还缺哪些配置。
+        只有 Cursor IDE 的终端（或有 TTY 的本地 shell）才进行 input() 交互。
+        Claude Code / Codex 通过对话交互，不调用 input()。
+        """
+        # 优先用平台检测
+        try:
+            from scripts.core.platform import get_platform_info
+            info = get_platform_info()
+            if not info.is_cursor:
+                return False
+        except Exception:
+            pass
+
+        # 备用：检查是否有 TTY
+        try:
+            import sys
+            if hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+                return True
+        except Exception:
+            pass
+
+        return False
+
+    def _check_and_suggest_setup(self, topic: str = "") -> InteractionResult:
+        """系统健康检查 + 交互准备。
+
+        诊断并返回 InteractionResult 对象，供调用方决定如何与用户交互：
+          - 终端入口（main）：读取返回值 → 打印 → input() 询问
+          - AI agent（Claude Code/Codex）：读取返回值 → 在对话中询问用户
+
+        不在脚本内部调用 input()，只返回结构化结果。
+
+        Returns
+        -------
+        InteractionResult
+            包含 needs_input、action_needed、questions、limitations 等字段
         """
         try:
-            from scripts.setup_wizard import check_and_guide_setup
+            from scripts.health_check import run_diagnostic, print_diagnostic
         except ImportError:
-            return  # setup_wizard 不可用时静默跳过
+            print("⚠️  无法导入 health_check 模块，跳过自检")
+            return InteractionResult(needs_input=False, action_needed="proceed")
 
-        result = check_and_guide_setup(topic=topic)
-        if not result.get("needs_setup"):
+        try:
+            result = run_diagnostic()
+        except Exception as e:
+            print(f"⚠️  健康检查执行失败: {e}，跳过自检继续运行")
+            return InteractionResult(needs_input=False, action_needed="proceed")
+
+        # 打印诊断报告（始终打印，用户看到状态）
+        print_diagnostic(result, compact=False)
+
+        # 构建受限功能清单
+        limitations = []
+        for p in result.problems:
+            if p.category == "api_key":
+                limitations.append(p.name_zh)
+
+        # 收集 API Key 缺失的详情
+        api_key_problems = [p for p in result.problems if p.category == "api_key"]
+
+        # 构建 fix_steps
+        fix_steps = []
+        for p in result.problems:
+            if p.category in ("api_key", "network"):
+                fix_steps.extend([s for s in p.fix_steps if not s.startswith("【")])
+
+        # ── 情形 A：系统就绪 ─────────────────────────────────────
+        if result.system_ready and not api_key_problems:
+            self._limitation_note = ""
+            return InteractionResult(
+                needs_input=False,
+                action_needed="proceed",
+                limitations=limitations,
+                llm_available=result.llm_available,
+            )
+
+        # ── 情形 B：API Key 缺失 + LLM 可用 ─────────────────────
+        if api_key_problems and result.llm_available:
+            key_map = {
+                "TUSHARE_TOKEN": ("Tushare A股", "https://tushare.pro/register"),
+                "EODHD_API_KEY": ("EODHD 全球宏观", "https://eodhd.com"),
+                "BRAVE_SEARCH_API_KEY": ("Brave Search", "https://brave.com/search/api/"),
+                "CSMAR_API_KEY": ("CSMAR 国泰安", "https://www.gtadata.com"),
+            }
+            api_keys_to_add = []
+            for p in api_key_problems:
+                for key_name, (zh, url) in key_map.items():
+                    if key_name in " ".join(p.fix_steps):
+                        api_keys_to_add.append({"name": key_name, "zh": zh, "url": url})
+                        break
+
+            questions = [
+                f"检测到 {len(api_key_problems)} 个 API Key 缺失，受限功能：{', '.join(limitations)}。"
+                f" 是否现在补充配置？",
+                "",
+                "  (1) 是 — 我来帮你打开 .env.local 配置",
+                "  (2) 否 — 跳过，使用已有工具继续（部分数据功能受限）",
+            ]
+            self._limitation_note = "；".join(limitations) if limitations else ""
+            return InteractionResult(
+                needs_input=True,
+                action_needed="ask_api_key",
+                questions=questions,
+                limitations=limitations,
+                api_keys_to_add=api_keys_to_add,
+                fix_steps=fix_steps,
+                llm_available=True,
+            )
+
+        # ── 情形 C：LLM 不可用 ──────────────────────────────────
+        questions = [
+            "LLM 不可用，无法进行论文写作和分析。",
+            "当前受限功能：",
+        ]
+        for step in fix_steps[:4]:
+            questions.append(f"  {step}")
+        questions.extend([
+            "",
+            "是否继续？（系统将使用已有工具工作，但无法调用 LLM 生成文本）",
+            "  (1) 继续 — 继续工作（受限模式）",
+            "  (2) 退出 — 修复后重新启动",
+        ])
+        self._limitation_note = "LLM 不可用"
+        return InteractionResult(
+            needs_input=True,
+            action_needed="ask_llm_confirm",
+            questions=questions,
+            limitations=["LLM 不可用"],
+            fix_steps=fix_steps,
+            llm_available=False,
+        )
+
+    def _handle_interactive(self, ir: InteractionResult) -> None:
+        """终端入口专用：在终端中使用 input() 与用户交互。
+
+        此方法仅在脚本直接运行时（而非被 AI agent 调用时）使用。
+        """
+        if not ir.needs_input:
             return
 
-        missing = result.get("missing", [])
-        guidance = result.get("guidance", "")
+        print()
+        print(bold(cyan("─" * 72)))
 
-        # 打印配置提示（ASCII 美化格式）
-        separator = "=" * 60
-        print(f"\n{separator}")
-        print("  [配置提示] 研究工作流配置检测")
-        print(separator)
+        if ir.action_needed == "ask_api_key":
+            for q in ir.questions:
+                print(f"  {yellow('⚠️  ' + q) if '⚠️' in q else '  ' + q}")
+            print()
+            print(f"  {dim('回复数字或描述：1/是/好 → 打开配置 | 2/否/跳过 → 继续')}")
+            try:
+                response = input(bold("  你的选择: ")).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                response = "2"
+            print()
 
-        if guidance:
-            # 分段打印，每段不超过 58 字符
-            for line in guidance.split("\n"):
-                if line.strip():
-                    print(f"  {line}")
+            if response in ("1", "是", "好", "y", "yes", "ok"):
+                self._do_api_key_setup(ir)
+            else:
+                lim = '、'.join(ir.limitations) if ir.limitations else "无"
+                print(f"  {dim('跳过配置，受限功能：' + lim)}")
+                print()
 
-        # 打印快速配置命令
-        print(f"\n  快速配置: python scripts/setup_wizard.py --guided")
-        print(f"  查看状态: python scripts/setup_wizard.py --status")
-        print(separator)
+        elif ir.action_needed == "ask_llm_confirm":
+            for q in ir.questions:
+                print(f"  {red(q) if 'LLM 不可用' in q else '  ' + q}")
+            print()
+            try:
+                response = input(bold("  你的选择 [默认: 1 继续]: ")).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return
+            if response in ("2", "退出", "no", "n"):
+                print(f"  {dim('退出。请修复 LLM 配置后重新启动。')}")
+                return
+            print()
+
+    def _do_api_key_setup(self, ir: InteractionResult) -> None:
+        """执行 API Key 配置向导（终端）。"""
+        print(bold(cyan("═" * 72)))
+        print(f"  {bold('API Key 配置向导')}")
+        print(bold(cyan("═" * 72)))
+        print()
+
+        root = Path(__file__).parent.parent
+        env_file = root / ".env.local"
+
+        if ir.api_keys_to_add:
+            print("  缺失的 API Key：")
+            for item in ir.api_keys_to_add:
+                print(f"    • {bold(item['name'])} [{item['zh']}]")
+                print(f"      注册: {dim(item['url'])}")
+            print()
+            print(f"  请在 .env.local 中添加上述 Key（格式：KEY=value），保存后重启 IDE")
+            print()
+        else:
+            dim_hint = dim("请打开以下文件添加 Key: " + str(env_file))
+            print(f"  {dim_hint}")
+            print()
+
+        # 尝试用编辑器打开
+        import subprocess
+        editors = ["code", "nano", "vim", "vi", "emacs"]
+        opened = False
+        for editor in editors:
+            try:
+                subprocess.run([editor, str(env_file)], capture_output=True, timeout=3)
+                opened = True
+                print(f"  已用 {editor} 打开 {env_file}")
+                break
+            except Exception:
+                continue
+
+        if not opened:
+            print(f"  {dim('请手动打开: ' + env_hint)}")
+
+        print()
+        print(f"  {dim('配置完成并重启后，下次运行会自动识别')}")
+        print(f"  {dim('按回车继续工作（Key 在下次运行时生效）')}")
+        try:
+            input(bold("  按回车继续: "))
+        except (EOFError, KeyboardInterrupt):
+            print()
         print()
 
     def _build_pipeline_steps(self) -> list[PipelineStep]:
@@ -1081,22 +2149,77 @@ class AgentPipeline:
     # ── HITL ────────────────────────────────────────────────────────
 
     def approve_step(self, stage: PipelineStage, feedback: str = "") -> dict:
-        """Approve a HITL-paused step and resume pipeline."""
+        """
+        审批一个 HITL 暂停的步骤并恢复 pipeline。
+
+        审批通过后：
+        1. 调用 orchestrator.approve_step() 执行实际批准逻辑
+        2. 调用 _notify_viz_gate_approved() 推送该阶段结果到可视化服务器
+        3. 告知用户可视化已更新
+
+        可视化仅在用户审批后展示，防止用户在审批前看到结果。
+        """
+        # 确保 orchestrator 和 gate 已初始化
+        if not self._initialized:
+            self._ensure_initialized()
         if self._hitl_gate is None:
             return {"error": "HITL not enabled"}
-        return self._orchestrator.approve_step(stage, feedback)
+
+        # 1. 执行批准
+        approval_result = self._orchestrator.approve_step(stage, feedback)
+
+        # 2. 审批通过后才推送可视化
+        if approval_result.get("approved"):
+            stage_result = None
+            if (self._orchestrator._result and
+                    stage in self._orchestrator._result.stage_results):
+                stage_result = self._orchestrator._result.stage_results[stage].output
+            self._notify_viz_gate_approved(
+                stage_name=stage.value,
+                stage_result=stage_result,
+                feedback=feedback,
+            )
+
+        return approval_result
 
     def reject_step(self, stage: PipelineStage, feedback: str) -> dict:
-        """Reject a HITL-paused step."""
+        """
+        拒绝一个 HITL 暂停的步骤。
+
+        拒绝后：
+        1. 调用 orchestrator.reject_step() 执行实际拒绝逻辑
+        2. 告知用户该阶段已拒绝及原因
+        """
+        if not self._initialized:
+            self._ensure_initialized()
         if self._hitl_gate is None:
             return {"error": "HITL not enabled"}
-        return self._orchestrator.reject_step(stage, feedback)
+
+        result = self._orchestrator.reject_step(stage, feedback)
+
+        print()
+        print(f"  阶段 '{stage.value}' 已拒绝。反馈：{feedback[:100]}")
+        print(f"  请修改内容后重新提交审批，或直接退出。")
+        print()
+
+        return result
 
     def get_pending_approvals(self) -> list:
-        """Get all pending HITL approvals."""
+        """
+        获取所有待审批的 HITL 请求。
+
+        当有待审批请求时，自动启动可视化服务器，
+        让用户可在 Canvas 上看到工作流当前状态和等待审批的节点。
+        """
+        pending = []
+        if not self._initialized:
+            self._ensure_initialized()
         if self._hitl_gate:
-            return self._hitl_gate.get_pending()
-        return []
+            pending = self._hitl_gate.get_pending()
+        # 有待审批时，延迟启动可视化让用户可查看当前状态
+        if pending and not self._viz_launched:
+            self._start_viz_server_if_needed()
+        return pending
 
     def resume_pipeline(self, paused_result) -> "AgentPipelineResult":
         """
@@ -1241,10 +2364,10 @@ class AgentPipeline:
 
     def run_benchmark(self, task_ids=None) -> dict:
         """Run benchmark evaluation suite."""
-        from scripts.core.benchmark import BenchmarkEvaluator
+        from scripts.core.benchmark import PaperWritingBench, BenchmarkConfig
 
         self._ensure_initialized()
-        evaluator = BenchmarkEvaluator(self._gateway)
+        bench = PaperWritingBench(BenchmarkConfig(n_papers=5))
 
         output_dir = self.config.output_dir
         if output_dir is None:
@@ -1252,18 +2375,16 @@ class AgentPipeline:
         elif isinstance(output_dir, str):
             output_dir = Path(output_dir)
 
-        results = evaluator.run_benchmark_suite(
-            task_ids=task_ids,
-            output_dir=str(output_dir / "benchmark"),
-        )
+        results = bench.run()
+        bench.report(results)
+        rates = bench.simulate_acceptance_rates(results)
 
         return {
             "task_count": len(results),
-            "avg_overall": sum(r.overall for r in results.values()) / len(results) if results else 0,
-            "results": {
-                tid: {"overall": r.overall, "citation_f1": r.citation_f1}
-                for tid, r in results.items()
-            },
+            "domains": [r.domain for r in results],
+            "overall_scores": [r.overall_score for r in results],
+            "pass_rates": [r.passed_rules / r.total_rules if r.total_rules > 0 else 0 for r in results],
+            "acceptance_rates": rates,
         }
 
     # ── Streaming ─────────────────────────────────────────────────
@@ -1383,3 +2504,65 @@ class AgentPipeline:
 
         return pipeline_result
 
+
+# ─── CLI Entry Point ────────────────────────────────────────────────────────────
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="论文-研报工作流 — 端到端研究流水线",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Note:
+  - 本脚本是主入口，自动选择合适的分析引擎
+  - 纯回归分析请使用: python scripts/research_framework/pipeline.py
+
+Examples:
+  python scripts/agent_pipeline.py --topic "碳排放权交易对企业绿色创新的影响" --venue "经济研究"
+  python scripts/agent_pipeline.py --topic "数字金融与企业创新" --langgraph   # use LangGraph runtime
+  python scripts/agent_pipeline.py --langgraph --use-hitl   # interactive mode with HITL gates
+""",
+    )
+    parser.add_argument(
+        "--topic", "-t", type=str, default=None,
+        help="研究方向/研究主题",
+    )
+    parser.add_argument(
+        "--venue", type=str, default=None,
+        help="目标期刊（如：经济研究、金融研究、NeurIPS）",
+    )
+    parser.add_argument(
+        "--langgraph", action="store_true",
+        help="启用 LangGraph 运行时管道（需要安装 langgraph）",
+    )
+    parser.add_argument(
+        "--use-hitl", action="store_true",
+        help="启用 Human-in-the-Loop 审批门",
+    )
+    parser.add_argument(
+        "--language", choices=["zh", "en"], default="zh",
+        help="写作语言（默认：zh）",
+    )
+    parser.add_argument(
+        "--output-dir", "-o", type=str, default=None,
+        help="论文输出目录（默认：output/papers/）",
+    )
+
+    args = parser.parse_args()
+
+    config = AgentPipelineConfig(topic=args.topic or "")
+    if args.venue:
+        config.venue = args.venue
+    if args.use_hitl:
+        config.use_hitl = True
+    output_dir = args.output_dir or "output/papers/"
+
+    pipeline = AgentPipeline(config=config, use_langgraph=args.langgraph)
+    result = pipeline.run(topic=args.topic, output_dir=output_dir)
+
+    if result.success:
+        print("\n✅ 流水线执行完成")
+    else:
+        print("\n⚠️  流水线执行完成，但部分阶段可能失败，请检查输出")

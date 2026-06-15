@@ -1,65 +1,52 @@
-FROM python:3.11-slim
+# ─────────────────────────────────────────────────────────────────────────────
+# Wuhan Stats MCP Server
+# 数据源：武汉统计年鉴数据 — 已知数据汇总 + 武汉统计年鉴PDF来源指引
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM python:3.12-slim
 
 WORKDIR /app
+
+# Security: create non-root user
+RUN groupadd --gid 1000 mcpuser \
+    && useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home mcpuser
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy server code
 COPY server.py .
 COPY SERVER_METADATA.json .
 COPY tools/ ./tools/
-COPY pyproject.toml ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir \
-    pandas>=2.0.0 \
-    numpy>=1.26.0 \
-    scikit-learn>=1.4.0 \
-    scipy>=1.13.0 \
-    statsmodels>=0.14.0 \
-    torch>=2.2.0 \
-    transformers>=4.40.0 \
-    accelerate>=0.30.0 \
-    networkx>=3.2.0 \
-    faiss-cpu>=1.7.4 \
-    sentence-transformers>=2.3.0 \
-    chromadb>=0.4.22 \
-    jieba>=0.42.0 \
-    matplotlib>=3.8.0 \
-    seaborn>=0.13.0 \
-    plotly>=5.21.0 \
-    pdfplumber>=0.11.0 \
-    python-docx>=1.1.0 \
-    python-pptx>=0.6.23 \
-    Pillow>=10.3.0 \
-    markdown>=3.4.0 \
-    requests>=2.31.0 \
-    beautifulsoup4>=4.12.0 \
-    lxml>=4.9.0 \
-    akshare>=1.18.63 \
-    openai>=2.0.0 \
-    anthropic>=7.0.0 \
-    httpx>=0.27.0 \
-    tiktoken>=0.7.0 \
-    yfinance>=0.2.0 \
-    linearmodels>=4.17 \
-    pandas-datareader>=0.10.0 \
-    pandasql>=0.7.3 \
-    python-dotenv>=1.0.0 \
-    pyyaml>=6.0.0 \
-    pydantic>=2.0.0 \
-    fastapi>=0.115.0 \
-    uvicorn[standard]>=0.30.0 \
-    streamlit>=1.32.0 \
-    pypandoc>=0.8.0 \
-    openpyxl>=3.1.0 \
-    mcp
+# Install Python dependencies (version-pinned)
+RUN pip install --no-cache-dir --break-system-packages \
+    mcp>=1.1.0
+
+# Environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONFAULTHANDLER=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)" || exit 1
+
+# Labels
+LABEL org.opencontainers.image.title="Wuhan Stats MCP Server" \
+      org.opencontainers.image.description="武汉统计年鉴数据 — 已知数据汇总 + 武汉统计年鉴PDF来源指引" \
+      org.opencontainers.image.source="https://github.com/xuzheyi/finresearch" \
+      org.opencontainers.image.version="1.0.0" \
+      finresearch.mcp.server="user_wuhan_stats" \
+      finresearch.mcp.api="API" \
+      finresearch.mcp.apikey="none"
 
 EXPOSE 8000
 
-ENV PYTHONUNBUFFERED=1
+# Switch to non-root user
+USER mcpuser
 
 CMD ["python", "server.py"]

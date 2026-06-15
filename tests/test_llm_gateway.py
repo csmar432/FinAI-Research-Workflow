@@ -105,11 +105,11 @@ class TestCallMCPTool:
 
         from scripts.core.llm_gateway import call_mcp_tool
 
-        result = call_mcp_tool("user-yfinance", "get_stock_info", {"symbol": "AAPL"})
+        result = call_mcp_tool("user-yfinance", "get_yf_quote", {"ticker": "AAPL"})
         assert result.success is True
         assert result.data == {"price": 150.0}
         assert result.server == "user-yfinance"
-        assert result.tool == "get_stock_info"
+        assert result.tool == "get_yf_quote"
         assert result.is_mock is False
         mock_subprocess.assert_called_once()
 
@@ -124,7 +124,7 @@ class TestCallMCPTool:
 
         from scripts.core.llm_gateway import call_mcp_tool
 
-        result = call_mcp_tool("user-yfinance", "get_stock_info", {"symbol": "AAPL"})
+        result = call_mcp_tool("user-yfinance", "get_yf_quote", {"ticker": "AAPL"})
         assert result.success is True
         assert result.data == {"price": 150.0, "_mock": True}
 
@@ -137,7 +137,7 @@ class TestCallMCPTool:
 
         from scripts.core.llm_gateway import call_mcp_tool
 
-        result = call_mcp_tool("user-yfinance", "get_stock_info", {"symbol": "AAPL"})
+        result = call_mcp_tool("user-yfinance", "get_yf_quote", {"ticker": "AAPL"})
         assert result.success is True
         assert result.data == {"nested": {"_mock": True, "price": 150.0}}
 
@@ -162,7 +162,7 @@ class TestCallMCPTool:
         from scripts.core.llm_gateway import call_mcp_tool
 
         start = time.time()
-        result = call_mcp_tool("user-yfinance", "get_stock_info", {})
+        result = call_mcp_tool("user-yfinance", "get_yf_quote", {})
         elapsed = (time.time() - start) * 1000
         assert result.latency_ms >= 0
         assert result.latency_ms <= elapsed + 100  # Allow some tolerance

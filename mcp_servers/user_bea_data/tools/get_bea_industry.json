@@ -12,6 +12,7 @@
         "type": "string",
         "description": "行业层级"
       }
-    }
+    },
+    "description": "获取BEA行业数据。"
   }
 }

@@ -17,6 +17,14 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = [
+    "RuleViolation",
+    "ValidationResult",
+    "RuleSeverity",
+    "HaltRuleChecker",
+    "HaltRulesRegistry",
+]
+
 import ast
 import operator as op
 import re

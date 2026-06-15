@@ -146,7 +146,7 @@ class ProvinceResult:
 def mcp_get_province_summary() -> dict | None:
     """调用 MCP get_all_provinces_summary 获取当前数据状态。"""
     try:
-        result = call_mcp_tool("province-stats", "get_all_provinces_summary", {})
+        result = call_mcp_tool("user-province-stats", "get_province_rankings", {"table": "GDP_2024"})
         if result:
             data = result.get("data", {}) if isinstance(result, dict) else result
             if isinstance(data, dict) and "provinces" in data:
@@ -154,7 +154,7 @@ def mcp_get_province_summary() -> dict | None:
             return data if isinstance(data, dict) else None
         return None
     except Exception as e:
-        _log.warning(f"MCP get_all_provinces_summary failed: {e}")
+        _log.warning(f"MCP get_province_rankings(GDP_2024) failed: {e}")
         return None
 
 
@@ -164,7 +164,7 @@ def mcp_get_indicator(province: str, indicator: str, year: str = "") -> dict | N
     if year:
         args["year"] = year
     try:
-        result = call_mcp_tool("province-stats", "get_province_indicator", args)
+        result = call_mcp_tool("user-province-stats", "get_province_indicator", args)
         if result:
             return result.get("data", result) if isinstance(result, dict) else None
         return None
@@ -176,7 +176,7 @@ def mcp_get_indicator(province: str, indicator: str, year: str = "") -> dict | N
 def mcp_get_timeseries(province: str, indicator: str) -> dict | None:
     """调用 MCP get_province_timeseries 获取序列数据。"""
     try:
-        result = call_mcp_tool("province-stats", "get_province_timeseries", {
+        result = call_mcp_tool("user-province-stats", "get_province_timeseries", {
             "province": province, "indicator": indicator
         })
         if result:
@@ -190,7 +190,7 @@ def mcp_get_timeseries(province: str, indicator: str) -> dict | None:
 def mcp_get_rankings(table: str) -> dict | None:
     """调用 MCP get_province_rankings 获取排名表。"""
     try:
-        result = call_mcp_tool("province-stats", "get_province_rankings", {"table": table})
+        result = call_mcp_tool("user-province-stats", "get_province_rankings", {"table": table})
         if result:
             return result.get("data", result) if isinstance(result, dict) else None
         return None
@@ -210,8 +210,8 @@ def web_search_province_bulletin(province: str, year: int = 2024) -> dict | None
     name = aliases[0]
     query = f"{name}省 {year}年 国民经济和社会发展统计公报 site:gov.cn"
     try:
-        result = call_mcp_tool("user-brave-search", "brave-search", {
-            "query": query, "count": 3, "source": "web"
+        result = call_mcp_tool("user-brave-search", "brave_web_search", {
+            "query": query, "count": 3
         })
         if not result:
             return None

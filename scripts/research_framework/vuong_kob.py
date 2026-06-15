@@ -26,7 +26,6 @@ import pandas as pd
 __all__ = [
     "VuongResult",
     "VuongTest",
-    "ClarkeTest",
     "KOBResult",
     "KOBDecomposition",
     "OaxacaBlinderDecomposition",

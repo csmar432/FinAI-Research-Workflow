@@ -1,13 +1,36 @@
 {
   "name": "latex_compile",
-  "description": "编译LaTeX项目生成PDF。支持自动检测主文件和多次编译（pdflatex → bibtex → pdflatex）。\\n\\n",
+  "description": "编译LaTeX项目生成PDF。支持自动检测主文件和多次编译（pdflatex → bibtex → pdflatex）。\\n\\nArgs:\\n  project_dir: 项目根目录（包含.tex文件）\\n  tex_file: 可选，指定主tex文件\\n  engine: 编译引擎（pdflatex/xelatex/lualatex）\\n  passes: 编译次数（默认3次，通常足够）\\n\\nReturns: 编译结果摘要（页数、文件大小、错误警告数）",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "project_dir": {
+        "type": "string",
+        "description": "LaTeX项目根目录路径"
+      },
+      "tex_file": {
+        "type": "string",
+        "description": "主tex文件名（不指定则自动检测最大文件）"
+      },
+      "engine": {
+        "type": "string",
+        "description": "编译引擎",
+        "enum": [
+          "pdflatex",
+          "xelatex",
+          "lualatex"
+        ],
+        "default": "pdflatex"
+      },
+      "passes": {
+        "type": "integer",
+        "description": "编译次数（一般3次足够）",
+        "default": 3
       }
     },
-    "required": []
+    "required": [
+      "project_dir"
+    ],
+    "description": "编译LaTeX项目生成PDF。支持自动检测主文件和多次编译（pdflatex → bibtex → pdflatex）。"
   }
 }

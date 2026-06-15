@@ -1,0 +1,44 @@
+{
+  "name": "search_wanfang_papers",
+  "description": "搜索万方数据（Wanfang）学术论文。\n\n万方数据是国内三大中文学术数据库之一，覆盖期刊、学位、会议、专利等。支持按主题词、作者、期刊、年份等多维度检索。\n\n返回论文标题、作者、期刊、年份、摘要、被引次数等元数据。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "搜索关键词，如：数字金融 绿色创新",
+        "required": true
+      },
+      "author": {
+        "type": "string",
+        "description": "作者姓名（可选）"
+      },
+      "journal": {
+        "type": "string",
+        "description": "期刊名称（可选）"
+      },
+      "year_from": {
+        "type": "integer",
+        "description": "起始年份（默认2020）",
+        "default": 2020
+      },
+      "year_to": {
+        "type": "integer",
+        "description": "结束年份（默认2024）",
+        "default": 2024
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "最大结果数（默认20，最大50）",
+        "default": 20
+      },
+      "paper_type": {
+        "type": "string",
+        "description": "文献类型：periodical（期刊）/ thesis（学位论文）/ conference（会议）/ patent（专利）",
+        "default": "periodical"
+      }
+    },
+    "required": ["query"],
+    "description": "Search parameters for Wanfang paper search. 数据源：万方数据（wanfangdata.com.cn），通过网页爬虫实现，需遵守服务条款。"
+  }
+}

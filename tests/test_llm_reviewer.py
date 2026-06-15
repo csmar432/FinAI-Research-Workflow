@@ -195,3 +195,124 @@ class TestLLMReviewer:
 
         # Either count incremented (LLM available) or stayed same (LLM unavailable)
         assert reviewer._review_count >= initial
+
+
+class TestCalibrationDatasetExpanded:
+    """Tests for expanded SYNTHETIC_SAMPLES (5 levels × 3 domains = 15 samples)."""
+
+    def test_synthetic_samples_count(self):
+        """SYNTHETIC_SAMPLES must have at least 50 entries (expanded from 3)."""
+        samples = CalibrationDataset.SYNTHETIC_SAMPLES
+        assert len(samples) >= 50, f"Expected at least 50 samples, got {len(samples)}"
+
+    def test_synthetic_covers_all_domains(self):
+        """Each of the 3 core domains must have at least 5 entries."""
+        notes_by_domain: dict = {}
+        for s in CalibrationDataset.SYNTHETIC_SAMPLES:
+            # Core domains: EMPIRICAL, FINANCE, ML; CN_* are separate tags
+            tag = s["notes"].split("]")[0].replace("[", "") if "]" in s["notes"] else "?"
+            notes_by_domain[tag] = notes_by_domain.get(tag, 0) + 1
+        for domain in ["EMPIRICAL", "FINANCE", "ML"]:
+            count = notes_by_domain.get(domain, 0)
+            assert count >= 5, (
+                f"Domain {domain} has {count} entries, expected at least 5"
+            )
+
+    def test_synthetic_covers_all_quality_levels(self):
+        """Each of the 5 quality levels must appear at least 3 times."""
+        verdicts: dict = {}
+        for s in CalibrationDataset.SYNTHETIC_SAMPLES:
+            v = s["human_verdict"]
+            verdicts[v] = verdicts.get(v, 0) + 1
+        expected_levels = {"Strong Accept", "Accept", "Weak Accept", "Borderline", "Reject"}
+        for level in expected_levels:
+            count = verdicts.get(level, 0)
+            assert count >= 3, (
+                f"Level '{level}' has {count} entries, expected at least 3"
+            )
+
+    def test_synthetic_sample_fields(self):
+        """Each sample must have all required schema fields."""
+        required = {"paper_content", "human_verdict", "expected_scores", "notes", "source"}
+        for s in CalibrationDataset.SYNTHETIC_SAMPLES:
+            assert required.issubset(s.keys()), f"Missing fields: {required - set(s.keys())}"
+            assert len(s["paper_content"]) > 10, "paper_content is too short"
+            assert isinstance(s["expected_scores"], dict)
+            for key in ["methodology_rigor", "novelty", "overall", "clarity"]:
+                assert key in s["expected_scores"]
+
+    def test_known_datasets_synthetic_linked(self):
+        """KNOWN_DATASETS['synthetic'] must reference the same SYNTHETIC_SAMPLES list."""
+        assert CalibrationDataset.KNOWN_DATASETS["synthetic"]["samples"] is CalibrationDataset.SYNTHETIC_SAMPLES
+
+    def test_generate_dataset_columns(self):
+        """generate_dataset() must return DataFrame with expected columns."""
+        gen = CalibrationDataset()
+        df = gen.generate_dataset(n_per_level=1, domain="empirical")
+        assert list(df.columns) == [
+            "paper_id", "quality_level", "domain", "text",
+            "expected_score", "expected_recommendation",
+        ]
+        assert len(df) == 5  # one per quality level
+
+    def test_generate_mixed_domain(self):
+        """generate_mixed_domain_dataset() must produce multi-domain DataFrame."""
+        gen = CalibrationDataset()
+        df = gen.generate_mixed_domain_dataset(n_per_level=1)
+        assert df["domain"].nunique() == 3
+        assert len(df) == 15  # 5 levels × 3 domains
+
+
+class TestBatchReviewFieldResolution:
+    """Tests for batch_review() accepting multiple paper content field names."""
+
+    def _call_batch_review_with_patched_review(self, papers: list[dict]) -> list:
+        """Call batch_review with a patched LLMReviewer.review that returns
+        a ReviewResult encoding the paper_content length (as a proxy for which
+        field was read).
+
+        Patches LLMReviewer.review with a plain function (not a bound method)
+        so it can be restored cleanly via `setattr(reviewer, 'review', orig)`.
+        """
+        from scripts.core.llm_reviewer import LLMReviewer, ReviewResult
+
+        def patch_review(paper_content: str, **kwargs) -> ReviewResult:
+            return ReviewResult(
+                scores={}, overall_score=0.0,
+                overall_recommendation=f"read={len(paper_content)}",
+                summary="", strengths=[], weaknesses=[],
+                detailed_feedback="", confidence=0.0, metadata={},
+            )
+
+        reviewer = LLMReviewer(enable_cache=False)
+        orig = reviewer.review
+        try:
+            # Patch on the instance so self-binding is preserved
+            reviewer.review = patch_review
+            return reviewer.batch_review(papers, venue="ML")
+        finally:
+            reviewer.review = orig
+
+    def test_batch_review_paper_content_field(self):
+        """batch_review() must read 'paper_content' field (synthetic dataset format)."""
+        papers = [{"paper_content": "ABCDEF", "metadata": {"id": 1}}]
+        results = self._call_batch_review_with_patched_review(papers)
+        assert "read=6" in results[0].overall_recommendation
+
+    def test_batch_review_content_field(self):
+        """batch_review() must read 'content' field (priority over paper_content)."""
+        papers = [{"content": "XY"}]
+        results = self._call_batch_review_with_patched_review(papers)
+        assert "read=2" in results[0].overall_recommendation
+
+    def test_batch_review_text_field_fallback(self):
+        """batch_review() must fall back to 'text' field."""
+        papers = [{"text": "ZW"}]
+        results = self._call_batch_review_with_patched_review(papers)
+        assert "read=2" in results[0].overall_recommendation
+
+    def test_batch_review_content_takes_priority(self):
+        """When multiple fields exist, 'content' takes priority."""
+        papers = [{"content": "A", "paper_content": "ABC", "text": "ABCDE"}]
+        results = self._call_batch_review_with_patched_review(papers)
+        assert "read=1" in results[0].overall_recommendation  # content="A" wins

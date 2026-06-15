@@ -58,64 +58,48 @@ class DataStatus:
 # Step 1: MCP数据获取（真实数据）
 # ════════════════════════════════════════════════════════════════════
 
-def fetch_mcp_finagent_financial(ticker: str, data_type: str = "balance_sheet") -> dict | None:
-    """通过 finagent MCP 获取中国A股财务数据"""
+def fetch_mcp_tushare_financial(ticker: str, data_type: str = "balance_sheet") -> dict | None:
+    """通过 user-tushare MCP 获取中国A股财务数据（balance/income/cashflow/fina_indicator）"""
     try:
         from scripts.core.llm_gateway import call_mcp_tool
+        # data_type maps to Tushare report_type
+        report_type_map = {
+            "balance_sheet": "balance",
+            "income_statement": "income",
+            "cash_flow": "cashflow",
+        }
+        report_type = report_type_map.get(data_type, data_type)
         result = call_mcp_tool(
-            server="user-finagent",
-            tool="financial_data",
-            arguments={"ticker": ticker, "data_type": data_type}
+            server="user-tushare",
+            tool="get_financial_report",
+            arguments={"ts_code": ticker, "report_type": report_type}
         )
-        if result and len(result) > 0:
-            return {"source": DataSource.MCP_FINAGENT, "data": result, "ticker": ticker, "type": data_type}
+        # Tushare returns {items: [[...]], fields: ["field1", "field2", ...]}
+        # Reshape to {field: value} for each row
+        if result and isinstance(result, dict) and result.get("items"):
+            fields = result.get("fields", [])
+            rows = result.get("items", [])
+            # Return first row as field→value dict
+            shaped = {f: v for f, v in zip(fields, rows[0])} if rows else {}
+            return {"source": DataSource.MCP_TUSHARE, "data": shaped, "ticker": ticker, "type": report_type}
+        elif result and isinstance(result, list) and result:
+            # Handle list-of-dicts response
+            return {"source": DataSource.MCP_TUSHARE, "data": result[0], "ticker": ticker, "type": report_type}
     except Exception as e:
-        print(f"  [finagent] {ticker} 获取失败: {e}")
+        print(f"  [tushare] {ticker} 获取失败: {e}")
     return None
 
 
-def fetch_mcp_stockdata_financial(symbol: str, report_type: str = "balance_sheet") -> dict | None:
-    """通过 stock_data MCP 获取A股个股财务数据（akshare）"""
-    try:
-        from scripts.core.llm_gateway import call_mcp_tool
-        result = call_mcp_tool(
-            server="user-stock-data",
-            tool="stock_financials_us",
-            arguments={"symbol": symbol, "report_type": report_type, "quarterly": False}
-        )
-        if result and "资产负债表" in result:
-            return {"source": DataSource.MCP_STOCK_DATA, "data": result, "symbol": symbol, "type": report_type}
-    except Exception as e:
-        print(f"  [stock_data] {symbol} 获取失败: {e}")
-    return None
-
-
-def fetch_mcp_stockdata_info(symbol: str, market: str = "sh") -> dict | None:
-    """获取A股基本信息"""
-    try:
-        from scripts.core.llm_gateway import call_mcp_tool
-        result = call_mcp_tool(
-            server="user-stock-data",
-            tool="stock_info",
-            arguments={"symbol": symbol, "market": market}
-        )
-        if result:
-            return {"source": DataSource.MCP_STOCK_DATA, "data": result, "symbol": symbol}
-    except Exception as e:
-        print(f"  [stock_info] {symbol} 获取失败: {e}")
-    return None
-
-
-def fetch_multiple_stocks(symbols: list, report_type: str = "balance_sheet") -> dict:
-    """批量获取多只股票财务数据（带冗余错误处理）"""
+def fetch_mcp_tushare_financial_batch(symbols: list, report_type: str = "balance") -> dict:
+    """批量获取多只股票财务数据（通过 user-tushare）"""
     results = {}
     errors = {}
     for sym in symbols:
-        r = fetch_mcp_stockdata_financial(sym, report_type)
+        r = fetch_mcp_tushare_financial(sym, data_type=report_type)
         if r:
             results[sym] = r
         else:
-            errors[sym] = f"stock_data: {sym} failed"
+            errors[sym] = f"tushare: {sym} failed"
         time.sleep(0.3)  # 避免频率限制
     return {"success": results, "failed": errors}
 

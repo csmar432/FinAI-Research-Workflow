@@ -21,6 +21,21 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "PipelineConfig",
+    "AgentOutput",
+    "PipelineResult",
+    "QueryAnalyzer",
+    "DataProcessor",
+    "VizMapper",
+    "DesignExplorer",
+    "CodeGenerator",
+    "DebugAgent",
+    "VisualEvaluator",
+    "ChartPipeline",
+    "main",
+]
+
 import asyncio
 import json
 import re

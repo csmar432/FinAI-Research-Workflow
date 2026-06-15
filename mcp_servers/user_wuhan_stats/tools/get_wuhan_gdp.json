@@ -1,8 +1,9 @@
 {
   "name": "get_wuhan_gdp",
-  "description": "武汉GDP历年数据",
+  "description": "获取武汉市历年GDP数据，含增长率和产业结构分析",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "武汉GDP历年数据（含已知数据和统计年鉴来源）"
   }
 }

@@ -12,6 +12,7 @@
         "type": "boolean",
         "description": "是否包含声明全文"
       }
-    }
+    },
+    "description": "获取FOMC会议日程和利率决议。"
   }
 }

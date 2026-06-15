@@ -1,13 +1,27 @@
 {
   "name": "get_sec_filings",
   "description": "获取公司近期SEC公告列表",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "cik": { "type": "string", "description": "SEC CIK 编号，例如 '0000320183'" },
-      "form_type": { "type": "string", "description": "表单类型：10-K, 10-Q, 8-K, DEF 14A", "default": "10-K" },
-      "limit": { "type": "integer", "description": "返回数量", "default": 10 }
+      "cik": {
+        "type": "string",
+        "description": "SEC 中央索引键（CIK 编号）"
+      },
+      "form_type": {
+        "type": "string",
+        "default": "10-K",
+        "description": "SEC 表单类型（如 10-K/10-Q/8-K）"
+      },
+      "limit": {
+        "type": "integer",
+        "default": 10,
+        "description": "结果数量限制"
+      }
     },
-    "required": ["cik"]
+    "required": [
+      "cik"
+    ],
+    "description": "获取公司近期 SEC 公告"
   }
 }

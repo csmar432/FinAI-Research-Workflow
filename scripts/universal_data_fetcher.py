@@ -1,0 +1,590 @@
+"""
+universal_data_fetcher.py
+========================
+经济金融研究统一数据获取模块。
+
+【设计原则】
+每个数据需求都有4层fallback，确保任何情况下都能获取数据或明确标记为模拟：
+
+  Layer 1: MCP调用（Cursor MCP Tool，通过CallMcpTool）
+  Layer 2: Python CLI库（akshare/yfinance/baostock，直接pip安装）
+  Layer 3: 原始HTTP请求（requests/urllib，无需特殊库）
+  Layer 4: 标记为_synthetic（不可用时明确标记）
+
+【关税研究数据需求】
+  - A股财务数据: Tushare → akshare → baostock → efinance
+  - 专利数据:        CNRDS → USPTO公开数据 → 文本代理
+  - 实体清单事件:    BIS官网 → 手动整理 → 代理指标
+  - 宏观数据:        MCP(user-financial) → akshare → WorldBank API
+
+【用法】
+  from scripts.universal_data_fetcher import UniversalDataFetcher
+
+  fetcher = UniversalDataFetcher()
+  result = fetcher.fetch("a_stock_financial", ts_code="000001.SZ", years=[2015,2025])
+  print(result.data)      # DataFrame或None
+  print(result.source)   # "tushare" / "akshare" / "baostock" / "SYNTHETIC"
+  print(result.provenance) # "MCP→CLI→HTTP→synthetic"
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import sys
+import time
+import warnings
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+import numpy as np
+import pandas as pd
+
+warnings.filterwarnings("ignore")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("universal_fetcher")
+
+_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_PROJECT_ROOT))
+
+# ─── 数据来源枚举 ───────────────────────────────────────────────────────────────
+
+class DataSource(str, Enum):
+    MCP = "mcp"              # MCP服务器
+    CLI_AKSHARE = "cli_akshare"    # akshare Python库
+    CLI_BAOSTOCK = "cli_baostock"  # baostock Python库
+    CLI_YFINANCE = "cli_yfinance"  # yfinance Python库
+    HTTP_DIRECT = "http_direct"    # 直接HTTP请求
+    SYNTHETIC = "synthetic"      # 模拟数据（需用户授权）
+
+    @property
+    def tier(self) -> int:
+        tier_map = {
+            DataSource.MCP: 1,
+            DataSource.CLI_AKSHARE: 2,
+            DataSource.CLI_BAOSTOCK: 2,
+            DataSource.CLI_YFINANCE: 2,
+            DataSource.HTTP_DIRECT: 3,
+            DataSource.SYNTHETIC: 4,
+        }
+        return tier_map.get(self, 99)
+
+    @property
+    def is_available(self) -> bool:
+        return self != DataSource.SYNTHETIC
+
+
+@dataclass
+class DataResult:
+    """数据获取结果"""
+    data: Any              # DataFrame/dict 或 None
+    source: DataSource      # 最终数据来源
+    provenance: str        # 完整调用链，如 "MCP→akshare→synthetic"
+    available: bool        # 是否成功获取
+    error: str = ""       # 最后一次错误信息
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+
+    def __post_init__(self):
+        if not self.timestamp:
+            self.timestamp = datetime.now().isoformat()
+
+
+# ─── 已知制裁事件（初始数据，可后续从BIS官网更新）───────────────────────────────
+
+KNOWN_ENTITY_LIST: list[dict] = [
+    # 格式: {company, stock_code, bis_name, sanction_date, sanction_year, cohort, product_scope}
+    {"company": "中兴通讯", "stock_code": "000063.SZ", "bis_name": "Zhongxing Telecom",
+     "sanction_date": "2018-04-16", "sanction_year": 2018, "cohort": "2018_zte", "product_scope": "电信设备"},
+    {"company": "海康威视", "stock_code": "002415.SZ", "bis_name": "Hangzhou Hikvision",
+     "sanction_date": "2019-05-22", "sanction_year": 2019, "cohort": "2019_huawei", "product_scope": "监控设备"},
+    {"company": "大华股份", "stock_code": "002236.SZ", "bis_name": "Dahua Technology",
+     "sanction_date": "2019-05-22", "sanction_year": 2019, "cohort": "2019_huawei", "product_scope": "监控设备"},
+    {"company": "中芯国际", "stock_code": "688981.SH", "bis_name": "SMIC",
+     "sanction_date": "2020-12-18", "sanction_year": 2020, "cohort": "2020_smic", "product_scope": "半导体制造"},
+    {"company": "长江存储", "stock_code": "688072.SH", "bis_name": "YMTC",
+     "sanction_date": "2022-12-15", "sanction_year": 2022, "cohort": "2022_chip_ban", "product_scope": "NAND闪存"},
+    {"company": "北方华创", "stock_code": "002371.SZ", "bis_name": "Naura Technology",
+     "sanction_date": "2024-12-02", "sanction_year": 2024, "cohort": "2024_dec_140", "product_scope": "半导体设备"},
+    {"company": "中微公司", "stock_code": "688012.SH", "bis_name": "AMEC",
+     "sanction_date": "2024-12-02", "sanction_year": 2024, "cohort": "2024_dec_140", "product_scope": "刻蚀设备"},
+    {"company": "华大九天", "stock_code": "301269.SZ", "bis_name": "Empyrean Technology",
+     "sanction_date": "2024-12-02", "sanction_year": 2024, "cohort": "2024_dec_140", "product_scope": "EDA软件"},
+    {"company": "拓荆科技", "stock_code": "688072.SH", "bis_name": "Piotech",
+     "sanction_date": "2024-12-02", "sanction_year": 2024, "cohort": "2024_dec_140", "product_scope": "薄膜沉积设备"},
+]
+
+
+# ─── 数据获取器基类 ────────────────────────────────────────────────────────────
+
+class DataFetcher:
+    """单个数据类型的获取器基类"""
+
+    def __init__(self, name: str):
+        self.name = name
+        self._provenance: list[str] = []
+
+    def try_mcp(self, *args, **kwargs) -> tuple[bool, Any, str]:
+        """Layer 1: 尝试MCP调用（返回True表示成功）"""
+        return False, None, "MCP not implemented for this fetcher"
+
+    def try_cli(self, *args, **kwargs) -> tuple[bool, Any, str]:
+        """Layer 2: 尝试CLI库调用"""
+        return False, None, "CLI not implemented for this fetcher"
+
+    def try_http(self, *args, **kwargs) -> tuple[bool, Any, str]:
+        """Layer 3: 尝试直接HTTP请求"""
+        return False, None, "HTTP fallback not implemented"
+
+    def synthetic(self, *args, **kwargs) -> Any:
+        """Layer 4: 生成模拟数据"""
+        return None
+
+    def fetch(self, *args, **kwargs) -> DataResult:
+        """按顺序尝试所有层，返回最终结果"""
+        provenance = []
+
+        # Layer 1: MCP
+        try:
+            ok, data, err = self.try_mcp(*args, **kwargs)
+            if ok and data is not None:
+                provenance.append("mcp")
+                return DataResult(data=data, source=DataSource.MCP,
+                               provenance="→".join(provenance), available=True)
+        except Exception as e:
+            provenance.append(f"mcp_err:{str(e)[:30]}")
+
+        # Layer 2: CLI — only call methods that actually exist on this instance
+        cli_methods = [
+            (DataSource.CLI_AKSHARE, "try_akshare"),
+            (DataSource.CLI_BAOSTOCK, "try_baostock"),
+            (DataSource.CLI_YFINANCE, "try_yfinance"),
+        ]
+        for cls_source, method_name in cli_methods:
+            if not hasattr(self, method_name):
+                continue
+            cli_fn = getattr(self, method_name)
+            try:
+                ok, data, err = cli_fn(*args, **kwargs)
+                if ok and data is not None:
+                    provenance.append(cls_source.value)
+                    return DataResult(data=data, source=cls_source,
+                                   provenance="→".join(provenance), available=True)
+            except Exception as e:
+                provenance.append(f"{cls_source.value}_err:{str(e)[:20]}")
+
+        # Layer 3: HTTP
+        try:
+            ok, data, err = self.try_http(*args, **kwargs)
+            if ok and data is not None:
+                provenance.append("http")
+                return DataResult(data=data, source=DataSource.HTTP_DIRECT,
+                               provenance="→".join(provenance), available=True)
+        except Exception as e:
+            provenance.append(f"http_err:{str(e)[:20]}")
+
+        # Layer 4: Synthetic
+        try:
+            data = self.synthetic(*args, **kwargs)
+            provenance.append("synthetic")
+            return DataResult(
+                data=data,
+                source=DataSource.SYNTHETIC,
+                provenance="→".join(provenance),
+                available=False,
+                error=f"All layers exhausted. Synthetic data generated. {provenance[-1] if provenance else ''}"
+            )
+        except Exception as e:
+            provenance.append("synthetic_err")
+            return DataResult(
+                data=None, source=DataSource.SYNTHETIC,
+                provenance="→".join(provenance), available=False,
+                error=f"All data layers failed: {'; '.join(provenance)}"
+            )
+
+
+# ─── A股财务数据获取器 ────────────────────────────────────────────────────────
+
+class AStockFinancialFetcher(DataFetcher):
+    """A股财务数据获取器"""
+
+    def try_mcp(self, ts_code: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 1: MCP Tushare"""
+        # 注意：MCP调用需要在Cursor中通过CallMcpTool执行
+        # 这里检查环境变量是否有token，但不实际调用MCP
+        from dotenv import load_dotenv
+        load_dotenv(_PROJECT_ROOT / ".env", override=False)
+        load_dotenv(_PROJECT_ROOT / ".env.local", override=True)
+        import os
+        token = os.getenv("TUSHARE_TOKEN", "").strip()
+        if not token:
+            return False, None, "TUSHARE_TOKEN not set"
+        # MCP不可在脚本层直接调用，返回False让fallback生效
+        return False, None, "MCP requires CallMcpTool in Cursor context"
+
+    def try_akshare(self, stock: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 2a: akshare"""
+        try:
+            import akshare as ak
+            # 尝试获取财务指标
+            code = stock.replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+            df = ak.stock_financial_analysis_indicator(symbol=code, start_year="2015", end_year="2025")
+            if df is not None and not df.empty:
+                df["stock_code"] = stock
+                return True, df, ""
+        except Exception as e:
+            pass
+
+        # 尝试全市场财务摘要
+        try:
+            import akshare as ak
+            df = ak.stock_financial_abstract(symbol="全部")
+            if df is not None and not df.empty:
+                return True, df, ""
+        except Exception as e:
+            return False, None, str(e)
+        return False, None, "akshare returned empty data"
+
+    def try_baostock(self, stock: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 2b: baostock"""
+        try:
+            import baostock as bs
+            bs.login()
+            code_bs = stock.replace(".SH", "sh.").replace(".SZ", "sz.").replace(".BJ", "bj.")
+            rs = bs.query_profit_sheet_data(code_bs, start_date="2015-01-01", end_date="2025-12-31")
+            rows = []
+            while rs.error_code == "0" and rs.next():
+                rows.append(rs.get_row_data())
+            bs.logout()
+            if rows:
+                df = pd.DataFrame(rows, columns=rs.fields)
+                df["stock_code"] = stock
+                return True, df, ""
+        except Exception as e:
+            return False, None, str(e)
+        return False, None, "baostock returned empty data"
+
+    def try_yfinance(self, ticker: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 2c: yfinance（适用于港股和中概股）"""
+        # yfinance主要用于美股，A股部分有港股可尝试
+        if not ticker:
+            return False, None, "no ticker"
+        # 映射A股到港股/ADR
+        ticker_map = {
+            "000001.SZ": "000001.SZ",  # 平安银行
+            "600519.SH": "600519.SS",   # 贵州茅台
+            "0700.HK": "0700.HK",       # 腾讯
+        }
+        mapped = ticker_map.get(ticker, ticker)
+        if "." not in mapped or mapped.endswith(".HK"):
+            try:
+                import yfinance as yf
+                t = yf.Ticker(mapped)
+                financials = t.financials
+                if financials is not None and not financials.empty:
+                    return True, financials, ""
+            except Exception as e:
+                return False, None, str(e)
+        return False, None, "yfinance not applicable for this stock"
+
+    def try_http(self, stock: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 3: 直接HTTP请求到东方财富"""
+        try:
+            import requests
+            code_num = stock.replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+            exchange = "sh" if stock.endswith(".SH") else "sz"
+            url = f"https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={1 if exchange=='sh' else 0}.{code_num}&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56&klt=101&fqt=1&beg=20150101&end=20251231"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("data") and data["data"].get("klines"):
+                    return True, data, ""
+        except Exception as e:
+            return False, None, str(e)
+        return False, None, "HTTP fallback failed"
+
+
+# ─── 宏观数据获取器 ────────────────────────────────────────────────────────────
+
+class MacroDataFetcher(DataFetcher):
+    """宏观数据获取器"""
+
+    def try_akshare(self, indicator: str = "gdp", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 2: akshare宏观数据"""
+        try:
+            import akshare as ak
+            func_map = {
+                "gdp": ak.macro_china_gdp,
+                "cpi": ak.macro_china_cpi,
+                "ppi": ak.macro_china_ppi,
+                "m2": ak.macro_china_m2,
+                "pmi": ak.macro_china_pmi,
+                "lpr": ak.macro_china_lpr,
+                "shibor": ak.macro_china_shibor,
+                "fdi": ak.macro_china_fdi,
+                "trade": ak.macro_china_trade,
+                "fx": ak.macro_china_fx_reserves,
+            }
+            func = func_map.get(indicator.lower())
+            if func:
+                df = func()
+                if df is not None and not df.empty:
+                    return True, df, ""
+        except Exception as e:
+            return False, None, str(e)
+        return False, None, f"akshare macro:{indicator} failed"
+
+    def try_http(self, indicator: str = "gdp", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 3: World Bank API"""
+        try:
+            import urllib.request
+            indicator_codes = {
+                "gdp": "NY.GDP.MKTP.CD", "gdp_growth": "NY.GDP.MKTP.KD.ZG",
+                "cpi": "FP.CPI.TOTL.ZG", "m2": "FM.LBL.NGMA.GD.ZS",
+            }
+            code = indicator_codes.get(indicator.lower(), "NY.GDP.MKTP.CD")
+            url = f"http://api.worldbank.org/v2/country/CN/indicator/{code}?format=json&per_page=100"
+            req = urllib.request.Request(url, headers={"User-Agent": "FinResearch-Agent/1.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read())
+            if isinstance(data, list) and len(data) > 1:
+                records = data[1] or []
+                df = pd.DataFrame([{"year": r["date"], "value": r["value"]} for r in records])
+                return True, df, ""
+        except Exception as e:
+            return False, None, str(e)
+        return False, None, "World Bank API failed"
+
+
+# ─── 实体清单事件数据获取器 ──────────────────────────────────────────────────
+
+class EntityListFetcher(DataFetcher):
+    """实体清单事件数据获取器"""
+
+    def try_http(self, **kwargs) -> tuple[bool, Any, str]:
+        """Layer 3: BIS Entity List官网"""
+        try:
+            import requests
+            # BIS Entity List JSON格式
+            url = "https://www.bis.doc.gov/entity-list/downloads/current.csv"
+            resp = requests.get(url, timeout=15, headers={"User-Agent": "FinResearch-Agent/1.0"})
+            if resp.status_code == 200:
+                from io import StringIO
+                df = pd.read_csv(StringIO(resp.text))
+                return True, df, ""
+        except Exception as e:
+            pass
+
+        # 备用：Federal Register RSS
+        try:
+            url = "https://www.federalregister.gov/api/v1/documents.rss?conditions[agency_id]=13&conditions[doc_types][]=RULE&conditions[signing_date][gte]=2018-01-01"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                return True, {"source": "federal_register_rss", "content": resp.text[:5000]}, ""
+        except Exception:
+            pass
+        return False, None, "BIS Entity List download failed"
+
+    def synthetic(self, **kwargs) -> pd.DataFrame:
+        """Layer 4: 使用已知事件数据"""
+        df = pd.DataFrame(KNOWN_ENTITY_LIST)
+        df["_synthetic"] = True
+        log.warning("Entity List data is SYNTHETIC (known events only). "
+                    "For complete data, manually download from: https://www.bis.doc.gov/entity-list")
+        return df
+
+
+# ─── 专利数据获取器 ───────────────────────────────────────────────────────────
+
+class PatentDataFetcher(DataFetcher):
+    """专利数据获取器（使用CNRDS或替代方案）"""
+
+    def try_akshare(self, stock: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 2: akshare无直接专利数据，尝试年报文本"""
+        # akshare没有直接的专利接口，返回失败
+        return False, None, "akshare has no patent API"
+
+    def try_http(self, company_name: str = "", **kwargs) -> tuple[bool, Any, str]:
+        """Layer 3: CNIPA国家知识产权局公开接口"""
+        try:
+            import requests
+            # CNIPA专利检索接口
+            search_url = "http://cpquery.cponline.cnipa.gov.cn/searchs/search-word.jsp"
+            params = {"searchkey": company_name, "page": 1, "num": 50}
+            resp = requests.post(search_url, data=params, timeout=15)
+            if resp.status_code == 200:
+                return True, {"source": "cnipa", "content": resp.text[:5000]}, ""
+        except Exception:
+            pass
+
+        # USPTO公开专利检索
+        try:
+            import urllib.request
+            encoded = urllib.parse.quote(company_name)
+            url = f"https://api.patentsview.org/patents/query?q={{\"_or\":[{{\"assignee_first_name\":\"{company_name}\"}}]}}&o={{\"page\":1,\"per_page\":25}}"
+            req = urllib.request.Request(url, headers={"User-Agent": "FinResearch-Agent/1.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read())
+            if data.get("patents"):
+                return True, data, ""
+        except Exception:
+            pass
+        return False, None, "CNIPA and USPTO patent APIs failed"
+
+    def synthetic(self, stock: str = "", **kwargs) -> pd.DataFrame:
+        """Layer 4: 生成专利模拟数据（基于R&D强度代理）"""
+        import numpy as np
+        np.random.seed(42)
+        years = list(range(2015, 2026))
+        n = len(years)
+        is_sanctioned = stock in ["000063.SZ", "002415.SZ", "002236.SZ", "688981.SH", "688072.SH"]
+
+        # 简化模拟：制裁后企业专利申请数略有变化
+        patent_base = np.random.randint(10, 100, n)
+        if is_sanctioned:
+            # 制裁后专利变化（基于文献：可能增加也可能减少）
+            patent_qty = patent_base.copy()
+            for i, year in enumerate(years):
+                if year >= 2019:
+                    patent_qty[i] = int(patent_qty[i] * np.random.uniform(0.85, 1.2))
+        else:
+            patent_qty = patent_base
+
+        df = pd.DataFrame({
+            "stock_code": [stock] * n,
+            "year": years,
+            "patent_apply": patent_qty,
+            "inv_patent_apply": [max(1, int(p * np.random.uniform(0.4, 0.8))) for p in patent_qty],
+            "rd_expense_sim": [np.random.uniform(500, 5000) * 1e6] * n,
+            "_synthetic": True,
+            "_note": "SYNTHETIC patent data. For real data, use CNRDS or CNIPA."
+        })
+        log.warning(f"Patent data for {stock} is SYNTHETIC. "
+                    "Use CNRDS (via school library VPN) or CNIPA for real data.")
+        return df
+
+
+# ─── 统一数据获取器 ──────────────────────────────────────────────────────────
+
+class UniversalDataFetcher:
+    """
+    统一数据获取器
+    所有数据需求通过统一的接口访问，自动尝试四层fallback。
+    """
+
+    def __init__(self):
+        self._fetchers: dict[str, DataFetcher] = {
+            "a_stock_financial": AStockFinancialFetcher("a_stock_financial"),
+            "macro": MacroDataFetcher("macro"),
+            "entity_list": EntityListFetcher("entity_list"),
+            "patent": PatentDataFetcher("patent"),
+        }
+        self._results: list[DataResult] = []
+
+    def fetch(self, data_type: str, **kwargs) -> DataResult:
+        """获取指定类型的数据"""
+        fetcher = self._fetchers.get(data_type)
+        if not fetcher:
+            return DataResult(
+                data=None, source=DataSource.SYNTHETIC,
+                provenance="", available=False,
+                error=f"Unknown data type: {data_type}"
+            )
+
+        result = fetcher.fetch(**kwargs)
+        self._results.append(result)
+
+        # 记录provenance
+        status = "✅" if result.available else "⚠️"
+        log.info(f"{status} {data_type} | source={result.source.value} | provenance={result.provenance}")
+        if result.error and not result.available:
+            log.warning(f"  {result.error}")
+
+        return result
+
+    def fetch_a_stock_panel(
+        self,
+        stock_codes: list[str],
+        years: list[int],
+        variables: list[str] | None = None,
+    ) -> pd.DataFrame:
+        """批量获取A股面板数据（支持四层fallback）"""
+        all_rows = []
+
+        for code in stock_codes:
+            for year in years:
+                result = self.fetch("a_stock_financial", stock=code, year=year)
+                if result.data is not None and isinstance(result.data, pd.DataFrame):
+                    if "_synthetic" not in result.data.columns:
+                        result.data["stock_code"] = code
+                        result.data["year"] = year
+                        all_rows.append(result.data)
+
+        if not all_rows:
+            log.warning("No real data fetched for any stock. Generating SYNTHETIC panel.")
+            # 生成模拟面板
+            import numpy as np
+            np.random.seed(42)
+            panel_rows = []
+            for code in stock_codes:
+                for year in years:
+                    panel_rows.append({
+                        "stock_code": code, "year": year,
+                        "rd_ratio": np.random.uniform(2, 15),
+                        "roa": np.random.uniform(0.02, 0.15),
+                        "lev": np.random.uniform(0.3, 0.7),
+                        "size": np.random.uniform(20, 25),
+                        "_synthetic": True,
+                    })
+            return pd.DataFrame(panel_rows)
+
+        df = pd.concat(all_rows, ignore_index=True)
+        df["_source"] = result.source.value
+        df["_timestamp"] = datetime.now().isoformat()
+        return df
+
+    def fetch_entity_list_events(self) -> pd.DataFrame:
+        """获取实体清单事件数据"""
+        result = self.fetch("entity_list")
+        if result.data is not None and isinstance(result.data, pd.DataFrame):
+            return result.data
+        return pd.DataFrame(KNOWN_ENTITY_LIST)
+
+    def fetch_macro_panel(
+        self, indicators: list[str], start_year: int = 2015, end_year: int = 2025
+    ) -> pd.DataFrame:
+        """获取宏观数据面板"""
+        all_dfs = []
+        for indicator in indicators:
+            result = self.fetch("macro", indicator=indicator)
+            if result.data is not None and isinstance(result.data, pd.DataFrame):
+                result.data["indicator"] = indicator
+                result.data["_source"] = result.source.value
+                all_dfs.append(result.data)
+
+        if all_dfs:
+            return pd.concat(all_dfs, ignore_index=True)
+        return pd.DataFrame()
+
+    def get_provenance_report(self) -> dict:
+        """生成数据溯源报告"""
+        return {
+            "total_requests": len(self._results),
+            "available": sum(1 for r in self._results if r.available),
+            "synthetic": sum(1 for r in self._results if not r.available),
+            "by_source": {
+                s.value: sum(1 for r in self._results if r.source == s)
+                for s in DataSource
+            },
+            "details": [
+                {"type": r.source.value, "provenance": r.provenance,
+                 "available": r.available, "error": r.error}
+                for r in self._results
+            ],
+        }

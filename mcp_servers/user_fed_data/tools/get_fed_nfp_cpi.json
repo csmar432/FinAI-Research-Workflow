@@ -1,0 +1,20 @@
+{
+  "name": "get_fed_nfp_cpi",
+  "description": "获取NFP非农就业和CPI数据（同时获取，两者联动分析）。NFP: 每月第一个周五发布，影响FED政策预期。CPI: 每月10-15号发布，美联储首选通胀指标。数据来源: FRED PAYEMS 和 CPIAUCSL。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "start_year": {
+        "type": "integer",
+        "description": "起始年份",
+        "default": 2020
+      },
+      "end_year": {
+        "type": "integer",
+        "description": "结束年份",
+        "default": 2026
+      }
+    },
+    "description": "获取NFP非农就业和CPI数据（同时获取，两者联动分析）。"
+  }
+}

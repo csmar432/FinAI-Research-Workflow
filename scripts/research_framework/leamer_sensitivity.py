@@ -395,22 +395,49 @@ class LevinsohnPetrinEstimator:
     def fit(
         self,
         df: pd.DataFrame,
-        intermediate: str = "materials",
+        intermediate_input: str = "materials",
         labor: str = "labor",
         capital: str = "capital",
         output: str = "value_added",
         entity_var: str = "firm_id",
         time_var: str = "year",
+        min_obs: int = 3,
     ) -> dict:
         """
         Levinsohn-Petrin 与 Olley-Pakes 的区别：
         用中间投入 M_it 代替投资 I_it 作为生产率代理。
         优势：即使企业投资为0（大多数制造业常态），仍然可用。
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            企业面板数据，至少包含 entity_var 和 time_var。
+        intermediate_input : str
+            中间投入变量名（原材料、电力等）。
+        labor : str
+            劳动投入变量名。
+        capital : str
+            资本存量变量名。
+        output : str
+            产出/增加值变量名。
+        entity_var : str
+            企业 ID 变量名。
+        time_var : str
+            时间变量名。
+        min_obs : int
+            每个企业最小观测数，低于此值则跳过。
+
+        Returns
+        -------
+        dict
+            包含 beta_labor, beta_capital, productivity 等结果。
         """
-        df = df.dropna(subset=[intermediate, labor, capital, output]).copy()
+        df = df.dropna(subset=[intermediate_input, labor, capital, output]).copy()
+        if len(df) < min_obs:
+            return {"beta_labor": np.nan, "beta_capital": np.nan, "productivity": np.array([]), "error": "Insufficient observations"}
         df = df.sort_values([entity_var, time_var])
 
-        for col in [intermediate, labor, capital, output]:
+        for col in [intermediate_input, labor, capital, output]:
             df[f"ln_{col}"] = np.log(df[col].clip(lower=1e-8))
 
         results = {}
@@ -422,10 +449,10 @@ class LevinsohnPetrinEstimator:
             X_m = np.column_stack([
                 df[f"ln_{capital}"].values,
                 df[f"ln_{capital}"].values ** 2,
-                df[f"ln_{intermediate}"].values,
+                df[f"ln_{intermediate_input}"].values,
                 np.ones(len(df)),
             ])
-            y_m = df[f"ln_{intermediate}"].values
+            y_m = df[f"ln_{intermediate_input}"].values
             step1 = sm.OLS(y_m, X_m).fit()
             df["psi_k"] = step1.fittedvalues
             df["omega_hat_lp"] = df[f"ln_{output}"] - df["psi_k"]

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
 # setup-daemon.sh — Install the FinAI Event Monitor as a system service
 #

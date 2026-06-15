@@ -15,6 +15,15 @@ Server-Sent Events (SSE) 实时推送服务
 
 from __future__ import annotations
 
+__all__ = [
+    "SSEEvent",
+    "SSEHandler",
+    "SSEServer",
+    "get_sse_client_script",
+    "get_polling_script",
+    "create_flask_routes",
+]
+
 import json
 import queue
 
@@ -623,6 +632,233 @@ def create_flask_routes(app):
                 for a in agents
             ]
         })
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 流式写作器 — 论文打字机效果 + 回归结果推送
+# ═══════════════════════════════════════════════════════════════════════════
+
+class StreamingWriter:
+    """
+    流式写作器：支持论文打字机效果和回归结果分块推送。
+
+    使用方式：
+        writer = StreamingWriter(output_queue=my_queue, chunk_size=20, delay_ms=30)
+        for chunk in text_chunks:
+            writer.write(chunk)  # 推送到 SSE 队列
+
+        # 论文写作场景
+        async for event in writer.stream_text(paper_text):
+            sse.emit(event)
+
+        # 回归结果场景
+        for event in writer.stream_regression_results(reg_results):
+            sse.emit(event)
+    """
+
+    def __init__(
+        self,
+        output_queue: queue.Queue | None = None,
+        chunk_size: int = 20,
+        delay_ms: float = 30.0,
+    ):
+        self.output_queue = output_queue
+        self.chunk_size = chunk_size
+        self.delay_ms = delay_ms
+        self._chars_written = 0
+        self._chunk_count = 0
+
+    def write(self, text: str) -> "StreamingWriter":
+        """将文本分块并写入队列。返回 self 支持链式调用。"""
+        chunks = self._split_chunks(text)
+        for chunk in chunks:
+            event = SSEEvent(
+                event_type="stream_chunk",
+                data={
+                    "chunk": chunk,
+                    "chars_total": len(text),
+                    "chars_written": self._chars_written,
+                    "chunk_index": self._chunk_count,
+                    "is_complete": False,
+                },
+            )
+            self._emit_or_queue(event)
+            self._chars_written += len(chunk)
+            self._chunk_count += 1
+        return self
+
+    def _split_chunks(self, text: str) -> list[str]:
+        """将文本按 chunk_size 分块。"""
+        chunks, i = [], 0
+        while i < len(text):
+            end = i + self.chunk_size
+            # 不要在单词中间断行
+            if end < len(text):
+                newline = text.rfind("\n", i, end)
+                if newline > i:
+                    end = newline + 1
+                else:
+                    space = text.rfind(" ", i, end)
+                    if space > i:
+                        end = space + 1
+            chunks.append(text[i:end])
+            i = end
+        return chunks
+
+    def _emit_or_queue(self, event: SSEEvent):
+        if self.output_queue:
+            try:
+                self.output_queue.put_nowait(event)
+            except queue.Full:
+                pass
+        else:
+            self._default_handler(event)
+
+    def _default_handler(self, event: SSEEvent):
+        """默认处理器：打印到 stdout（可被 register 覆盖）。"""
+        pass  # Handled by SSEHandler queue
+
+    def complete(self) -> SSEEvent:
+        """发送完成事件。"""
+        self._chars_written = 0
+        self._chunk_count = 0
+        return SSEEvent(
+            event_type="stream_complete",
+            data={"total_chunks": self._chunk_count},
+        )
+
+    def stream_text(self, text: str, delay_ms: float | None = None):
+        """
+        异步流式输出文本（每次 yield 一个 chunk）。
+
+        Generator that yields SSEEvent for each chunk.
+        Caller should await/iterate and send events over SSE.
+        """
+        delay = delay_ms if delay_ms is not None else self.delay_ms
+        chunks = self._split_chunks(text)
+        total = len(chunks)
+        for idx, chunk in enumerate(chunks):
+            self._chars_written += len(chunk)
+            self._chunk_count = idx + 1
+            yield SSEEvent(
+                event_type="stream_chunk",
+                data={
+                    "chunk": chunk,
+                    "chars_total": len(text),
+                    "chars_written": self._chars_written,
+                    "chunk_index": idx + 1,
+                    "total_chunks": total,
+                    "is_complete": False,
+                    "progress_pct": round((idx + 1) / total * 100, 1),
+                },
+            )
+
+    def stream_regression_results(self, results: list[dict]) -> SSEEvent:
+        """
+        将回归结果分块推送（每个结果一条 SSE 事件）。
+
+        一次性推送所有回归结果（用于表格渲染）。
+        """
+        total = len(results)
+        for idx, result in enumerate(results):
+            yield SSEEvent(
+                event_type="reg_result_chunk",
+                data={
+                    "index": idx,
+                    "total": total,
+                    "model_name": result.get("model_name", f"Model {idx+1}"),
+                    "n_obs": result.get("n_obs", 0),
+                    "r_squared": result.get("r_squared", result.get("r2")),
+                    "coef_summary": _summarize_coefs(result.get("coefficients", [])),
+                    "is_last": idx == total - 1,
+                    "progress_pct": round((idx + 1) / total * 100, 1),
+                },
+            )
+
+    def stream_paper_sections(self, sections: dict[str, str]) -> SSEEvent:
+        """
+        分节推送论文草稿（Introduction/Method/Result 等）。
+
+        sections: {"introduction": "...", "literature_review": "...", ...}
+        """
+        section_order = [
+            "title", "abstract", "introduction", "literature_review",
+            "hypothesis", "data", "methodology", "results",
+            "discussion", "conclusion", "references",
+        ]
+        for section_key in section_order:
+            if section_key in sections:
+                content = sections[section_key]
+                yield SSEEvent(
+                    event_type="paper_section",
+                    data={
+                        "section": section_key,
+                        "content_length": len(content),
+                        "chunks": self._split_chunks(content),
+                        "progress_pct": round(
+                            sum(1 for s in section_order if s in sections and s != section_key)
+                            / max(len(sections), 1) * 100, 1
+                        ),
+                    },
+                )
+
+    def stream_checkpoint_event(self, stage_name: str, checkpoint_id: str, metadata: dict | None = None) -> SSEEvent:
+        """推送 checkpoint 事件（供前端显示进度条）。"""
+        return SSEEvent(
+            event_type="checkpoint_saved",
+            data={
+                "stage": stage_name,
+                "checkpoint_id": checkpoint_id,
+                "metadata": metadata or {},
+                "timestamp": _now(),
+            },
+        )
+
+    def stream_progress_event(self, stage: str, sub_stage: str, pct: float, message: str) -> SSEEvent:
+        """推送进度事件（stage → sub_stage → pct → message）。"""
+        return SSEEvent(
+            event_type="progress_update",
+            data={
+                "stage": stage,
+                "sub_stage": sub_stage,
+                "pct": round(pct, 1),
+                "message": message,
+                "timestamp": _now(),
+            },
+        )
+
+
+# ─── 辅助函数 ────────────────────────────────────────────────────────────
+
+def _now() -> float:
+    import time
+    return time.time()
+
+
+def _summarize_coefs(coefs: list[dict]) -> list[dict]:
+    """提取回归系数摘要（用于 SSE 推送）。"""
+    summary = []
+    for c in coefs:
+        summary.append({
+            "var": c.get("var", c.get("name", "unknown")),
+            "coef": c.get("coef", c.get("estimate")),
+            "se": c.get("se", c.get("std_error")),
+            "pval": c.get("pval", c.get("p_value")),
+            "sig": _format_sig(c.get("pval", c.get("p_value"))),
+        })
+    return summary
+
+
+def _format_sig(pval: float | None) -> str:
+    if pval is None:
+        return ""
+    if pval < 0.001:
+        return "***"
+    if pval < 0.01:
+        return "**"
+    if pval < 0.05:
+        return "*"
+    return ""
 
 
 # ═══════════════════════════════════════════════════════════════════════════

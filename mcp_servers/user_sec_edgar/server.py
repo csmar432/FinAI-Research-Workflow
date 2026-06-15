@@ -12,6 +12,8 @@ import logging
 import re
 from typing import Any
 
+import requests
+
 try:
     from mcp.server import Server
     from mcp.types import Tool, TextContent
@@ -29,6 +31,8 @@ APP_VERSION = "1.0.0"
 server = Server(APP_NAME)
 
 _HEADERS = {"User-Agent": "FinResearch/1.0 research@example.com"}
+_SESSION = requests.Session()
+_SESSION.headers.update(_HEADERS)
 
 
 def _safe_json_response(data: Any, error: str | None = None) -> list[TextContent]:
@@ -51,10 +55,9 @@ async def handle_get_cik_by_ticker(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "ticker is required")
 
     try:
-        import requests
-        resp = requests.get(
+        resp = _SESSION.get(
             "https://www.sec.gov/files/company_tickers.json",
-            headers=_HEADERS, timeout=15
+            timeout=15
         )
         resp.raise_for_status()
         data = resp.json()
@@ -84,10 +87,9 @@ async def handle_get_filings(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "cik is required")
 
     try:
-        import requests
-        resp = requests.get(
+        resp = _SESSION.get(
             f"https://data.sec.gov/submissions/CIK{cik}.json",
-            headers=_HEADERS, timeout=20
+            timeout=20
         )
         resp.raise_for_status()
         data = resp.json()
@@ -132,10 +134,9 @@ async def handle_get_10k(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "cik is required")
 
     try:
-        import requests
-        resp = requests.get(
+        resp = _SESSION.get(
             f"https://data.sec.gov/submissions/CIK{cik}.json",
-            headers=_HEADERS, timeout=20
+            timeout=20
         )
         resp.raise_for_status()
         data = resp.json()
@@ -185,10 +186,9 @@ async def handle_get_10q(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "cik is required")
 
     try:
-        import requests
-        resp = requests.get(
+        resp = _SESSION.get(
             f"https://data.sec.gov/submissions/CIK{cik}.json",
-            headers=_HEADERS, timeout=20
+            timeout=20
         )
         resp.raise_for_status()
         data = resp.json()
@@ -237,10 +237,9 @@ async def handle_get_8k(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "cik is required")
 
     try:
-        import requests
-        resp = requests.get(
+        resp = _SESSION.get(
             f"https://data.sec.gov/submissions/CIK{cik}.json",
-            headers=_HEADERS, timeout=20
+            timeout=20
         )
         resp.raise_for_status()
         data = resp.json()
@@ -284,7 +283,6 @@ async def handle_company_search(args: dict) -> list[TextContent]:
         return _safe_json_response(None, "company is required")
 
     try:
-        import requests
         # Use SEC full-text search
         params = {
             "q": company,
@@ -293,9 +291,9 @@ async def handle_company_search(args: dict) -> list[TextContent]:
             "startdt": "2020-01-01",
             "enddt": "2026-12-31",
         }
-        resp = requests.get(
+        resp = _SESSION.get(
             "https://efts.sec.gov/LATEST/search-index",
-            params=params, headers=_HEADERS, timeout=20
+            params=params, timeout=20
         )
         resp.raise_for_status()
         # Fallback: return direct SEC search link

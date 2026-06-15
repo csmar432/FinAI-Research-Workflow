@@ -25,7 +25,7 @@ from pathlib import Path
 SERVICE = "论文工作流"
 
 KEYS = {
-    "RELAY_API_KEY":    "中转 API Key（兼容 OpenAI 格式的代理服务，如 B.AI/Groq/Nexr/OpenRouter）",
+    "RELAY_API_KEY":    "中转 API Key（兼容 OpenAI 格式的代理服务，如 Relay/Groq/Nexr/OpenRouter）",
     "DEEPSEEK_API_KEY": "DeepSeek 直连 API Key",
     "ZHIPU_API_KEY":    "智谱 AI API Key",
     # MCP Server 专用

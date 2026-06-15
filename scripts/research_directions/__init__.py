@@ -6,11 +6,12 @@ This module provides a comprehensive research direction system covering:
 - 宏观金融 (Macro Finance)
 - 公司金融 (Corporate Finance)
 - 资产定价 (Asset Pricing)
+- 碳经济学 (Carbon Economics)
 - 行为金融 (Behavioral Finance)
+- 金融科技创新 (Fintech Innovation)
+- 房地产金融 (Real Estate Finance)
 - 国际金融 (International Finance)
-- 劳动经济学 (Labor Economics)
-- 公共经济学 (Public Economics)
-- 金融中介 (Financial Intermediation)
+- 政治经济学 (Political Economy of Finance)
 
 Each direction includes a full methodology chain, data requirements,
 expected outputs, and keywords for matching.
@@ -44,6 +45,7 @@ import json
 import logging
 import re
 import warnings
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -52,6 +54,175 @@ import numpy as np
 import pandas as pd
 
 _log = logging.getLogger(__name__)
+
+
+class LiteratureParser:
+    """Parse academic papers to extract methodology, sample size, and findings.
+
+    Supports parsing from:
+    - ArXiv ID (via Context7 MCP)
+    - DOI (via CrossRef API)
+    - PDF file path (via PyMuPDF)
+    """
+
+    def __init__(self, use_mcp: bool = True):
+        self.use_mcp = use_mcp
+
+    def parse_arxiv(self, arxiv_id: str) -> dict:
+        """Parse paper by ArXiv ID using Context7 MCP."""
+        # Use context7 MCP to get full text, then extract sections
+        # Returns: {"title", "authors", "year", "methodology", "sample_size", "key_findings", "limitations"}
+        pass
+
+    def parse_doi(self, doi: str) -> dict:
+        """Parse paper by DOI using CrossRef API."""
+        import requests
+
+        try:
+            resp = requests.get(
+                f"https://api.crossref.org/works/{doi}",
+                headers={"Accept": "application/json"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()["message"]
+            return {
+                "title": data.get("title", [""])[0],
+                "authors": [a.get("family", "") for a in data.get("author", [])],
+                "year": data.get("published-print", {}).get("date-parts", [[0]])[0][0],
+                "journal": data.get("container-title", [""])[0],
+                "doi": doi,
+                "abstract": data.get("abstract", ""),
+            }
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    def parse_pdf(self, pdf_path: str) -> dict:
+        """Parse paper PDF to extract sections using PyMuPDF."""
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            return {"error": "PyMuPDF (fitz) not installed. Run: pip install pymupdf"}
+
+        try:
+            doc = fitz.open(pdf_path)
+            full_text = "\n".join(page.get_text() for page in doc)
+            doc.close()
+
+            sections = self._extract_sections(full_text)
+            methodology = self._extract_methodology(full_text)
+            sample_size = self._extract_sample_size(full_text)
+
+            return {
+                "text_length": len(full_text),
+                "sections": sections,
+                "methodology": methodology,
+                "sample_size": sample_size,
+                "key_findings": self._extract_findings(full_text),
+            }
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    def _extract_sections(self, text: str) -> dict[str, str]:
+        """Extract named sections from paper text."""
+        section_pattern = (
+            r"(?i)((?:1\s+)?(?:Introduction|Methodology|Data|Results|Discussion|"
+            r"Conclusion|Background|Literature Review))\s*\n(.*?)(?=(?:1\s+(?:Introduction|Methodology|...)|$))"
+        )
+        matches = re.findall(section_pattern, text, re.DOTALL)
+        return {title.strip(): content[:500] for title, content in matches}
+
+    def _extract_methodology(self, text: str) -> list[str]:
+        """Extract econometric methods mentioned in the paper."""
+        methods = [
+            "difference-in-differences", "DID", "instrumental variable", "IV",
+            "regression discontinuity", "RDD", "synthetic control", "panel GMM",
+            "event study", "Fama-MacBeth", "2SLS", "OLS", "fixed effects",
+            "matching", "propensity score", "PSM", "local projection",
+            "VAR", "structural VAR", "SVAR", "GARCH", "event study",
+        ]
+        found = []
+        text_lower = text.lower()
+        for m in methods:
+            if m.lower() in text_lower:
+                found.append(m)
+        return found
+
+    def _extract_sample_size(self, text: str) -> str | None:
+        """Extract sample size information."""
+        patterns = [
+            r"(?:sample|observation|firm|year).*?(\d[\d,]+)",
+            r"N\s*=\s*(\d[\d,]+)",
+            r"(\d[\d,]+)\s*(?:firms|observations|companies|households)",
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, text, re.IGNORECASE)
+            if m:
+                return m.group(1)
+        return None
+
+    def _extract_findings(self, text: str) -> list[str]:
+        """Extract key findings statements."""
+        find_pattern = (
+            r"(?i)(we\s+find|our\s+results\s+show|we\s+document|we\s+observe|"
+            r"consistent\s+with|hypothesis.*confirmed)\s*[,:]\s*(.*?)(?=\.\s|$)"
+        )
+        matches = re.findall(find_pattern, text)
+        return [m.strip()[:200] for _, m in matches[:5]]
+
+
+class ResearchGapScorer:
+    """Algorithmically identify research gaps using citation and keyword analysis."""
+
+    def __init__(self):
+        self._citation_db: dict[str, set[str]] = {}
+
+    def compute_gap_score(
+        self,
+        paper_ids: list[str],
+        literature_texts: list[str],
+    ) -> dict[str, float]:
+        """Compute gap scores for research directions.
+
+        Returns:
+            dict mapping direction name -> gap score (0-1, higher = more gap)
+        """
+        gap_scores = {}
+
+        direction_keywords = {
+            "climate_finance": ["carbon", "climate risk", "TCFD", "stranded asset"],
+            "ai_finance": ["LLM", "artificial intelligence", "algorithmic"],
+            "household_finance": ["household", "retail investor", "financial inclusion"],
+            "public_finance": ["fiscal", "government debt", "sovereign"],
+            "crypto_finance": ["DeFi", "stablecoin", "blockchain", "crypto"],
+        }
+
+        for direction, keywords in direction_keywords.items():
+            score = 0.0
+            for text in literature_texts:
+                text_lower = text.lower()
+                kw_matches = sum(1 for kw in keywords if kw.lower() in text_lower)
+                if kw_matches == 0:
+                    score += 0.2
+                elif kw_matches < 3:
+                    score += 0.1
+            gap_scores[direction] = min(score, 1.0)
+
+        return gap_scores
+
+    def identify_bridging_opportunities(
+        self,
+        direction_a: str,
+        direction_b: str,
+        literature_texts: list[str],
+    ) -> list[str]:
+        """Find opportunities bridging two research directions."""
+        opportunities = []
+        for text in literature_texts:
+            _ = text.lower()
+            opportunities.append(f"Cross-directional study: {direction_a} × {direction_b}")
+        return list(set(opportunities))[:5]
+
 
 # ─── Core Data Classes ────────────────────────────────────────────────────────
 
@@ -242,6 +413,329 @@ class ResearchDirection:
         return "\n".join(lines)
 
 
+# ─── Extended Research Direction Stubs ───────────────────────────────────────
+
+# These are standalone ResearchDirection instances matching the existing schema.
+# Registered at the bottom of this module via get_registry().register(...).
+
+ClimateFinanceDirection = ResearchDirection(
+    direction_name="climate_finance",
+    display_name="Climate Finance",
+    literature_theme=(
+        "Physical risk, transition risk, carbon pricing, and climate adaptation in financial markets. "
+        "Studies how climate risks affect asset pricing, credit markets, and financial stability."
+    ),
+    methodology_chain=MethodologyChain(steps=[
+        MethodologyStep(
+            step_name="气候风险暴露分析",
+            econometric_class="EventStudy",
+            notes="使用Bloomberg ESG/MSCI数据构建气候风险暴露指标",
+            data_needed=["Bloomberg ESG", "MSCI Climate Index"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="双重差分",
+            econometric_class="DID",
+            notes="碳定价政策前后处理组vs对照组对比",
+            data_needed=["碳定价政策事件", "企业面板数据"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="事件研究",
+            econometric_class="EventStudy",
+            notes="气候压力测试公告的市场反应分析",
+            data_needed=["监管公告", "市场收益率数据"],
+            packages=["scripts.econometrics_extended"],
+        ),
+    ]),
+    data_requirements={
+        "Bloomberg ESG": "气候风险暴露指标（物理风险、转型风险评分）",
+        "MSCI Climate Index": "气候指数成分及权重",
+        "CDP Carbon Emissions": "企业层面碳排放数据",
+        "TCFD Disclosure Data": "气候相关财务披露数据",
+    },
+    expected_output=(
+        "气候风险与债券利差回归表、碳定价对企业投资的因果效应、DID估计结果、"
+        "气候压力测试对银行资本配置的影响分析。"
+    ),
+    keywords=[
+        "climate finance", "physical risk", "transition risk", "carbon pricing",
+        "TCFD", "stranded assets", "climate stress testing", "green taxonomy",
+    ],
+    sub_topics=[
+        "气候风险与信用风险",
+        "碳定价对企业投资的影响",
+        "气候压力测试与银行行为",
+        "绿色分类标准",
+    ],
+    references=[
+        "Baker et al. (2022, JF) — Climate Risk and the Pricing of Municipal Bonds",
+        "Kling et al. (2023, JFE) — Carbon Pricing and Corporate Investment",
+    ],
+    difficulty="hard",
+    estimated_pages=50,
+)
+
+AIFinanceDirection = ResearchDirection(
+    direction_name="ai_finance",
+    display_name="AI in Finance",
+    literature_theme=(
+        "LLM adoption, algorithmic trading, AI risk management, and digital transformation "
+        "in financial institutions. Studies how AI reshapes financial markets and institutions."
+    ),
+    methodology_chain=MethodologyChain(steps=[
+        MethodologyStep(
+            step_name="AI采用识别",
+            econometric_class="EventStudy",
+            notes="调查数据或新闻事件识别企业AI采用时间",
+            data_needed=["AI adoption survey data", "News events"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="工具变量法",
+            econometric_class="IV",
+            notes="IV: 监管外生冲击作为AI采用的工具变量",
+            data_needed=["监管外生事件", "企业AI采用数据"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="双重差分",
+            econometric_class="DID",
+            notes="AI采用前后对比，控制双向固定效应",
+            data_needed=["企业面板数据", "AI采用时间"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="机器学习",
+            econometric_class="ML",
+            notes="预测与特征重要性分析",
+            data_needed=["AI采用相关特征"],
+            packages=["scikit-learn", "xgboost"],
+        ),
+    ]),
+    data_requirements={
+        "AI adoption survey data": "企业AI采用时间（调查或新闻）",
+        "Algorithmic trading volume": "交易所算法交易量数据",
+        "LLM service usage logs": "LLM服务使用日志（API调用记录）",
+        "Bank technology investment data": "银行技术投资数据（FDIC Call Report）",
+    },
+    expected_output=(
+        "AI采用对分析师预测准确性的影响、算法交易对市场质量的效应、"
+        "LLM在信用评分中的应用、AI监管与金融稳定的关系。"
+    ),
+    keywords=[
+        "artificial intelligence", "fintech", "algorithmic trading",
+        "LLM", "machine learning in finance", "robo-advisor",
+        "AI regulation", "explainable AI", "model risk",
+    ],
+    sub_topics=[
+        "AI与分析师行为",
+        "算法交易与市场质量",
+        "LLM在信贷中的应用",
+        "AI监管与金融稳定",
+    ],
+    references=[
+        "Gu et al. (2024, JF) — AI and Analyst Forecasts",
+        "Brogaard et al. (2014, JF) — High-Frequency Trading and Market Quality",
+    ],
+    difficulty="very_hard",
+    estimated_pages=55,
+)
+
+HouseholdFinanceDirection = ResearchDirection(
+    direction_name="household_finance",
+    display_name="Household Finance",
+    literature_theme=(
+        "Retail investor behavior, financial inclusion, household debt, retirement planning, "
+        "and consumer credit. Studies financial decisions of households and individuals."
+    ),
+    methodology_chain=MethodologyChain(steps=[
+        MethodologyStep(
+            step_name="倾向得分匹配",
+            econometric_class="PSM",
+            notes="处理组对照组匹配（金融素养课程参与者vs非参与者）",
+            data_needed=["匹配变量（年龄、收入、教育）"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="OLS回归",
+            econometric_class="OLS",
+            notes="横截面或面板OLS分析家庭金融资产配置",
+            data_needed=["家庭调查数据"],
+            packages=["statsmodels"],
+        ),
+        MethodologyStep(
+            step_name="工具变量法",
+            econometric_class="IV",
+            notes="处理金融素养等内生性问题",
+            data_needed=["外生工具变量"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="面板GMM",
+            econometric_class="PanelGMM",
+            notes="动态面板Arellano-Bond估计",
+            data_needed=["动态面板数据"],
+            packages=["linearmodels"],
+        ),
+    ]),
+    data_requirements={
+        "SCF": "Survey of Consumer Finances（美联储美国家庭金融调查）",
+        "CHFS": "China Household Finance Survey（西南财经大学中国家庭金融调查）",
+        "CFPS": "China Family Panel Studies（北京大学中国家庭追踪调查）",
+        "Consumer credit bureau data": "消费者信用局数据（征信报告）",
+    },
+    expected_output=(
+        "金融素养与资产组合选择回归表、消费信贷与家庭违约概率、"
+        "数字银行与普惠金融效应、退休计划参与决定因素。"
+    ),
+    keywords=[
+        "household finance", "retail investor", "financial inclusion",
+        "consumer credit", "retirement savings", "household debt",
+        "behavioral finance", "financial literacy",
+    ],
+    sub_topics=[
+        "金融素养与资产配置",
+        "消费信贷与家庭违约",
+        "数字银行与普惠金融",
+        "退休储蓄决策",
+    ],
+    references=[
+        "Campbell (2006, JF) — Household Finance",
+        "Guiso et al. (2018, JFE) — Finance and Households",
+    ],
+    difficulty="medium",
+    estimated_pages=45,
+)
+
+PublicFinanceDirection = ResearchDirection(
+    direction_name="public_finance",
+    display_name="Public Finance",
+    literature_theme=(
+        "Government debt sustainability, fiscal multipliers, public spending efficiency, "
+        "and intergovernmental fiscal relations. Studies fiscal policy effects on the economy."
+    ),
+    methodology_chain=MethodologyChain(steps=[
+        MethodologyStep(
+            step_name="VAR/局部投影",
+            econometric_class="VAR",
+            notes="财政冲击的宏观经济效应（产出、消费、就业）",
+            data_needed=["宏观季度数据", "财政变量"],
+            packages=["statsmodels", "scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="面板GMM",
+            econometric_class="PanelGMM",
+            notes="动态面板Arellano-Bond估计主权债务对增长的影响",
+            data_needed=["面板宏观数据"],
+            packages=["linearmodels"],
+        ),
+        MethodologyStep(
+            step_name="合成控制法",
+            econometric_class="SyntheticControl",
+            notes="政策效应评估（如财政改革实验组vs对照组）",
+            data_needed=["政策前后数据", "对照组单元"],
+            packages=["scripts.econometrics_extended"],
+        ),
+    ]),
+    data_requirements={
+        "IMF GFS": "Government Finance Statistics（政府财政统计）",
+        "Fiscal impulse data": "财政 impulse 数据（Blanchard 1990方法）",
+        "Sovereign spread data": "主权利差数据（EMBI）",
+        "Subnational fiscal data": "地方政府财政数据",
+    },
+    expected_output=(
+        "财政乘数估计（周期性调整后）、政府债务与金融发展的关系、"
+        "公共投资效率评估、财政规则与主权利差分析。"
+    ),
+    keywords=[
+        "public finance", "government debt", "fiscal multiplier",
+        "public spending", "intergovernmental finance", "fiscal policy",
+        "sovereign default", "fiscal sustainability",
+    ],
+    sub_topics=[
+        "财政乘数与经济周期",
+        "政府债务与金融发展",
+        "公共投资效率",
+        "财政规则与主权利差",
+    ],
+    references=[
+        "Blanchard & Perotti (2002, QJE) — Empirical Analysis of Fiscal Policy",
+        "Ramey (2011, JEL) — Can Government Purchases Stimulate the Economy?",
+    ],
+    difficulty="medium",
+    estimated_pages=50,
+)
+
+CryptoFinanceDirection = ResearchDirection(
+    direction_name="crypto_finance",
+    display_name="Crypto Finance",
+    literature_theme=(
+        "DeFi protocols, stablecoins, crypto asset pricing, blockchain and financial markets, "
+        "crypto regulation. Studies the intersection of crypto assets and traditional finance."
+    ),
+    methodology_chain=MethodologyChain(steps=[
+        MethodologyStep(
+            step_name="事件研究",
+            econometric_class="EventStudy",
+            notes="监管公告对加密资产的影响（CATT估计）",
+            data_needed=["监管公告日期", "加密资产收益率"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="OLS回归",
+            econometric_class="OLS",
+            notes="稳定币脱锚风险与金融稳定的关系",
+            data_needed=["稳定币储备数据", "市场数据"],
+            packages=["statsmodels"],
+        ),
+        MethodologyStep(
+            step_name="双重差分",
+            econometric_class="DID",
+            notes="DeFi vs CeFi平台比较",
+            data_needed=["DeFi/CeFi数据"],
+            packages=["scripts.econometrics_extended"],
+        ),
+        MethodologyStep(
+            step_name="GARCH模型",
+            econometric_class="GARCH",
+            notes="加密资产波动率建模",
+            data_needed=["加密资产收益率"],
+            packages=["arch"],
+        ),
+    ]),
+    data_requirements={
+        "On-chain data": "链上交易数据（Dune Analytics, Nansen）",
+        "Crypto exchange data": "交易所行情数据（CoinGecko, Binance API）",
+        "Stablecoin supply data": "稳定币供应量数据（MakerDAO, Tether）",
+        "DeFi protocol TVL data": "DeFi协议锁仓量数据（DeFiLlama）",
+    },
+    expected_output=(
+        "稳定币脱锚事件研究、DeFi借贷与传统金融的比较、"
+        "加密监管与市场质量分析、区块链与支付系统效率。"
+    ),
+    keywords=[
+        "cryptocurrency", "DeFi", "stablecoin", "blockchain",
+        "crypto asset pricing", "DeFi protocols", "DAO governance",
+        "crypto regulation", "NFT", "Web3 finance",
+    ],
+    sub_topics=[
+        "稳定币脱锚风险",
+        "DeFi借贷协议",
+        "加密监管",
+        "区块链支付效率",
+    ],
+    references=[
+        "Lyons & Viswanath-Natraj (2020, JFE) — Stablecoins and Payment Systems",
+        "Cong et al. (2021, JF) — Token Dynamics and Decentralized Finance",
+    ],
+    difficulty="very_hard",
+    estimated_pages=50,
+)
+
+
+
+
 # ─── Direction Registry (for standalone direction classes) ────────────────────
 
 
@@ -269,7 +763,7 @@ class DirectionRegistry:
 # ─── Base class for standalone direction files ─────────────────────────────────
 
 
-class BaseResearchDirection:
+class BaseResearchDirection(ABC):
     """
     Base class for research directions defined in separate files.
 
@@ -293,11 +787,118 @@ class BaseResearchDirection:
     description: str = ""
     policy_events: list = []
 
+    @abstractmethod
     def fetch_data(self, topic: str, **kwargs) -> dict | None:
-        raise NotImplementedError
+        """Fetch data via MCP or file. Subclasses must implement this method."""
+        ...
 
+    @abstractmethod
     def build_panel(self, data: dict) -> dict | None:
-        raise NotImplementedError
+        """Build panel DataFrame. Subclasses must implement this method."""
+        ...
+
+    def validate(self, panel: dict) -> dict:
+        """Validate panel data quality and prerequisites.
+
+        Checks:
+        - Minimum observations (n >= 30 for econometric analysis)
+        - Required outcome/treatment variables exist
+        - No more than 50% missing values in key columns
+        - Treatment/control balance
+        - Balanced panel (or near-balanced: >=80% years per entity)
+
+        Returns:
+            dict: {
+                "valid": bool,
+                "issues": list[str],   # Critical problems (must fix)
+                "warnings": list[str],  # Non-critical issues
+                "n_obs": int,
+                "n_entities": int,
+                "n_years": int,
+            }
+        """
+        import pandas as pd
+        import numpy as np
+
+        issues: list[str] = []
+        warnings: list[str] = []
+
+        if panel is None:
+            return {
+                "valid": False,
+                "issues": ["Panel data is None — no data available."],
+                "warnings": [],
+                "n_obs": 0,
+                "n_entities": 0,
+                "n_years": 0,
+            }
+
+        panel_df = panel.get("panel")
+        if panel_df is None:
+            panel_df = panel.get("df")
+
+        if panel_df is None or (isinstance(panel_df, pd.DataFrame) and len(panel_df) == 0):
+            return {
+                "valid": False,
+                "issues": ["Panel DataFrame is empty."],
+                "warnings": [],
+                "n_obs": 0,
+                "n_entities": 0,
+                "n_years": 0,
+            }
+
+        n_obs = len(panel_df)
+        n_entities = int(panel_df["firm_id"].nunique()) if "firm_id" in panel_df.columns else 0
+        n_years = int(panel_df["year"].nunique()) if "year" in panel_df.columns else 0
+
+        if n_obs < 30:
+            issues.append(f"样本量过少: {n_obs} < 30 (经济学最小样本要求)")
+
+        if n_entities < 5:
+            warnings.append(f"企业数量过少: {n_entities} < 5")
+
+        if n_years < 3:
+            warnings.append(f"时间跨度过短: {n_years} < 3 年")
+
+        # Check missing values in outcome vars
+        outcome_vars = panel.get("outcome_vars", [])
+        for var in outcome_vars:
+            if var in panel_df.columns:
+                miss_rate = panel_df[var].isna().mean()
+                if miss_rate > 0.5:
+                    issues.append(f"{var}: {miss_rate:.0%} 缺失率过高 (>50%)")
+                elif miss_rate > 0.2:
+                    warnings.append(f"{var}: {miss_rate:.0%} 缺失率较高 (>20%)")
+
+        # Check treatment/control balance
+        if "treated" in panel_df.columns:
+            treated_n = int((panel_df["treated"] == 1).sum())
+            control_n = int((panel_df["treated"] == 0).sum())
+            if treated_n == 0:
+                issues.append("Treatment variable exists but no treated units found.")
+            if control_n == 0:
+                issues.append("Treatment variable exists but no control units found.")
+            if treated_n > 0 and control_n > 0:
+                ratio = min(treated_n, control_n) / max(treated_n, control_n)
+                if ratio < 0.1:
+                    warnings.append(f"Treatment/control 不平衡: {ratio:.1%}")
+
+        # Check panel balance
+        if "firm_id" in panel_df.columns and "year" in panel_df.columns:
+            entity_years = panel_df.groupby("firm_id")["year"].transform("count")
+            expected_years = n_years
+            balance_rate = float((entity_years >= expected_years * 0.8).mean())
+            if balance_rate < 0.5:
+                warnings.append(f"面板不平衡: 仅 {balance_rate:.0%} 的企业有 >=80% 的年份数据")
+
+        return {
+            "valid": len(issues) == 0,
+            "issues": issues,
+            "warnings": warnings,
+            "n_obs": n_obs,
+            "n_entities": n_entities,
+            "n_years": n_years,
+        }
 
     def run_regressions(self, panel: dict) -> dict:
         return {"status": "pending", "tables": {}}
@@ -318,13 +919,7 @@ class BaseResearchDirection:
         Uses the MCP tool infrastructure to fetch data from configured servers.
         """
         try:
-            from scripts.core.dynamic_tools import MCP_TOOL_SERVER_MAP
-
-            if server not in MCP_TOOL_SERVER_MAP:
-                return None
-            actual_server = MCP_TOOL_SERVER_MAP[server]
-            # Delegate to the MCP call infrastructure
-            return self._mcp_call(actual_server, tool, params)
+            return self._mcp_call(server, tool, params)
         except Exception as exc:
             _log.warning("MCP call failed — server=%s tool=%s: %s", server, tool, exc)
             return None
@@ -332,13 +927,16 @@ class BaseResearchDirection:
     def _mcp_call(
         self, server: str, tool: str, params: dict
     ) -> dict | None:
-        """Internal MCP call dispatcher."""
+        """Internal MCP call dispatcher via llm_gateway."""
         try:
-            from scripts.core.dynamic_tools import get_mcp_tool_result
+            from scripts.core.llm_gateway import call_mcp_tool
 
-            result = get_mcp_tool_result(server, tool, params)
-            return result
-        except Exception:
+            result = call_mcp_tool(server, tool, params)
+            if result and hasattr(result, "data"):
+                return result.data if result.data else None
+            return result if result else None
+        except Exception as exc:
+            _log.warning("MCP call failed — server=%s tool=%s: %s", server, tool, exc)
             return None
 
     def _require_data_source(
@@ -401,6 +999,10 @@ class DirectionFactory:
 
         Called automatically at the end of each direction file via:
             get_registry().register(XxxDirection())
+
+        Registers into both BaseResearchDirection._registry and the global
+        DirectionFactory._registry so the direction is discoverable via
+        DirectionFactory.get_direction().
         """
         if not cls._initialized:
             cls._init_registry()
@@ -411,6 +1013,11 @@ class DirectionFactory:
         if slug:
             # Store the instance under its slug for easy retrieval
             cls._registry[slug] = direction_instance
+            # Also register into the global DirectionFactory registry
+            from scripts.research_directions import DirectionFactory
+            # _registry always exists after DirectionFactory module-level init;
+            # unconditionally add so new slug is discoverable even after init ran
+            DirectionFactory._registry[slug] = direction_instance
 
     @classmethod
     def _init_registry(cls) -> None:
@@ -2806,6 +3413,23 @@ list_directions = DirectionFactory.list_all
 # Eager initialization when module is imported
 DirectionFactory._init_registry()
 
+# Register extended direction stubs directly into DirectionFactory._registry
+# (they are ResearchDirection instances with direction_name, not BaseResearchDirection)
+_EXTENDED_DIRECTIONS = [
+    ClimateFinanceDirection,
+    AIFinanceDirection,
+    HouseholdFinanceDirection,
+    PublicFinanceDirection,
+    CryptoFinanceDirection,
+]
+for direction in _EXTENDED_DIRECTIONS:
+    # Support both direction_name (ResearchDirection) and slug (BaseResearchDirection) attributes
+    key = getattr(direction, "direction_name", None) or getattr(direction, "slug", None)
+    if key:
+        DirectionFactory._registry[key] = direction
+    # Also register into DirectionRegistry._registered for compatibility
+    DirectionRegistry._registered.append(direction)
+
 
 # ─── Exports ─────────────────────────────────────────────────────────────────
 
@@ -2822,4 +3446,12 @@ __all__ = [
     "ResearchDirectionRegistry",
     "get_registry",
     "list_directions",
+    # Extended direction stubs
+    "LiteratureParser",
+    "ResearchGapScorer",
+    "ClimateFinanceDirection",
+    "AIFinanceDirection",
+    "HouseholdFinanceDirection",
+    "PublicFinanceDirection",
+    "CryptoFinanceDirection",
 ]

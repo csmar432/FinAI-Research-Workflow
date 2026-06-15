@@ -14,12 +14,14 @@
       },
       "per_page": {
         "type": "integer",
-        "default": 50
+        "default": 50,
+        "description": "每页结果数量"
       }
     },
     "required": [
       "country_code",
       "indicator"
-    ]
+    ],
+    "description": "从 World Bank API 获取宏观指标（GDP/CPI/人口/贸易等）。无需 API Key，覆盖全球所有国家。"
   }
 }

@@ -11,6 +11,11 @@ Writes feedback to memory, enabling the feedback loop.
 
 from __future__ import annotations
 
+__all__ = [
+    "Evaluation",
+    "ResearchReflector",
+]
+
 import re
 import time
 from dataclasses import dataclass, field

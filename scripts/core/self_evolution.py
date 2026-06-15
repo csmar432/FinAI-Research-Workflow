@@ -11,12 +11,22 @@ Reference: https://github.com/SkyworkAI/DeepResearchAgent
 
 from __future__ import annotations
 
+__all__ = [
+    "EvolutionEvent",
+    "SelfEvolutionEngine",
+    "SelfEvolutionAutoTrigger",
+]
+
 import json
+import logging
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from scripts.core.llm_gateway import LLMGateway
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -126,6 +136,13 @@ class SelfEvolutionEngine:
                 except Exception:
                     pass
 
+        logger.info(
+            f"Evolution activated: quality_baseline={self._quality_baseline}, "
+            f"agents={list(self._agents.keys())}, "
+            f"history_size={len(self._history)}, "
+            f"log_path={self._evolution_log_path}"
+        )
+
         return {
             "status": "activated",
             "activation_time": self._activation_time,
@@ -155,6 +172,13 @@ class SelfEvolutionEngine:
 
         self._is_active = False
 
+        logger.info(
+            f"Evolution deactivated: "
+            f"events_recorded={len(self._history)}, "
+            f"proposals_generated={len(self._proposals)}, "
+            f"assessments_run={len(self._assessments)}"
+        )
+
         return {
             "status": "deactivated",
             "events_recorded": len(self._history),
@@ -165,22 +189,6 @@ class SelfEvolutionEngine:
     def is_active(self) -> bool:
         """返回引擎是否已激活。"""
         return self._is_active
-
-    def register_agent(self, name: str, agent: Any) -> None:
-        """
-        向进化引擎注册一个 agent，以便在进化时更新其配置。
-
-        Parameters
-        ----------
-        name : str
-            Agent 名称。
-        agent : Any
-            Agent 实例（应有 config 属性或 patch_config 方法）。
-        """
-        self._agents[name] = agent
-        if self._is_active:
-            # 立即备份 golden config
-            self._golden_config[name] = getattr(agent, "config", {}) or {}
 
     def record_and_assess(
         self,
@@ -295,7 +303,11 @@ class SelfEvolutionEngine:
 
         try:
             response = self.gateway.generate(prompt, format_json=True)
-            data = json.loads(response.response)
+            try:
+                data = json.loads(response.response)
+            except json.JSONDecodeError as e:
+                logger.warning(f"propose_improvements: JSON decode error: {e}")
+                return {"proposals": [], "error": str(e)}
             self._proposals.extend([
                 {
                     "proposal": p,
@@ -434,6 +446,12 @@ class SelfEvolutionEngine:
             tags=["evolution", agent_name, "committed"],
         )
 
+        logger.info(
+            f"Evolution committed: agent={agent_name}, "
+            f"proposal={proposal.get('suggestion', proposal.get('target', ''))[:50]}, "
+            f"history_size={len(self._history)}"
+        )
+
         return {
             "committed": True,
             "agent_name": agent_name,
@@ -515,6 +533,56 @@ class SelfEvolutionEngine:
             for e in self._history
         ]
 
+    # ── Persistence ───────────────────────────────────────────────────────────
+
+    def save_proposals(self, path: str | Path | None = None) -> Path:
+        """Save all evolution proposals to a JSONL file."""
+        from pathlib import Path
+
+        if path is None:
+            path = Path(f".cache/evolution_proposals_{self._agent_name}.jsonl")
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            for p in self._proposals:
+                f.write(json.dumps(p) + "\n")
+        logger.info(f"Saved {len(self._proposals)} proposals to {path}")
+        return path
+
+    def load_proposals(self, path: str | Path) -> int:
+        """Load evolution proposals from a JSONL file."""
+        from pathlib import Path
+
+        path = Path(path)
+        if not path.exists():
+            logger.warning(f"Proposal file not found: {path}")
+            return 0
+        loaded = 0
+        with open(path) as f:
+            for line in f:
+                try:
+                    self._proposals.append(json.loads(line))
+                    loaded += 1
+                except json.JSONDecodeError:
+                    continue
+        logger.info(f"Loaded {loaded} proposals from {path}")
+        return loaded
+
+    # ── Evolution Hooks ───────────────────────────────────────────────────────
+
+    def on_feedback_received(self, agent_name: str, feedback_text: str) -> None:
+        """Hook called when human feedback is received."""
+        logger.info(f"Feedback received for {agent_name}: {feedback_text[:100]}...")
+
+    def on_checkpoint_restored(self, agent_name: str, checkpoint_id: str) -> None:
+        """Hook called when a checkpoint is restored."""
+        logger.info(f"Checkpoint {checkpoint_id} restored for {agent_name}")
+
+    def stream_events(self):
+        """Generator that yields EvolutionEvent objects for monitoring."""
+        for event in self._history:
+            yield event
+
     # ── Private Helpers ────────────────────────────────────────────────
 
     def _build_history_summary(self) -> str:
@@ -555,6 +623,9 @@ Agent: {agent_name}
         try:
             response = self.gateway.generate(prompt, format_json=True)
             return json.loads(response.response)
+        except json.JSONDecodeError as e:
+            logger.warning(f"_generate_proposals_heavy: JSON decode error: {e}")
+            return {"proposals": []}
         except Exception:
             return {"proposals": []}
 
@@ -662,6 +733,8 @@ Agent: {agent_name}
         if not hasattr(self, "_agents"):
             self._agents: dict[str, Any] = {}
         self._agents[name] = agent
+        if self._is_active:
+            self._golden_config[name] = getattr(agent, "config", {}) or {}
 
     def _get_agent_config_snapshot(self, agent_name: str) -> dict:
         """Get a snapshot of agent config for rollback."""
@@ -885,8 +958,9 @@ class SessionEvolutionIntegration:
                 if evolution_event:
                     # 记录进化事件到session
                     self.session.memory.push(
-                        unit_type="evolution",
-                        content=evolution_event,
+                        task=f"evolution_event:{agent_name}",
+                        result=evolution_event,
+                        metadata={"agent_name": agent_name, "unit_type": "evolution"},
                     )
 
             return result

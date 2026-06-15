@@ -51,9 +51,13 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "ReviewerCalibrator",
+    "CalibratorFeedbackLoop",
+    "BiasHistoryDB",
+    "PersistentCalibratorFeedbackLoop",
     "BiasType",
-    "CalibrationResult",
+    "BiasInstance",
     "BiasReport",
+    "CalibrationResult",
     "CalibrationReport",
 ]
 
@@ -742,3 +746,684 @@ class ReviewerCalibrator:
             method="ground_truth",
             ground_truth_id=ground_truth_id,
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 自动反馈环：偏见 → Prompt 调整
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class CalibratorFeedbackLoop:
+    """
+    Reviewer 偏见反馈闭环。
+
+    将偏见探测结果自动转化为 LLM prompt 调整指令，
+    形成「探测偏见 → 调整评分 → 验证效果」的闭环。
+
+    解决的问题（PROJECT_EVALUATION.md 指出）：
+    - Review 评分标准（REVIEWER_DIFFICULTY）为人工设置，无自动校准反馈
+
+    Usage:
+        loop = CalibratorFeedbackLoop(calibrator=ReviewerCalibrator())
+        feedback = loop.generate_prompt_adjustments(bias_report)
+        adjusted_reviewer = loop.apply_feedback(reviewer, feedback)
+        result = loop.verify_adjustment(adjusted_reviewer, bias_report)
+    """
+
+    def __init__(self, calibrator: ReviewerCalibrator):
+        self.calibrator = calibrator
+
+    # ── 偏见 → Prompt 调整映射 ──────────────────────────────────────────────
+
+    BIAS_PROMPT_RULES: dict[BiasType, dict] = {
+        BiasType.ORDER_EFFECT: {
+            "severity_tag": "order_effect",
+            "prompt_adjustment": (
+                "评分时请从最后一个维度开始，逐步向前评分。"
+                "避免先入为主的印象影响后续评分。"
+                "每个维度独立评分，不要参考其他维度的分数。"
+            ),
+            "score_correction": "reorder",  # 重排维度顺序
+        },
+        BiasType.FATIGUE: {
+            "severity_tag": "fatigue",
+            "prompt_adjustment": (
+                "评分时请保持注意力集中。"
+                "对论文后半部分的评价标准应与前半部分相同。 "
+                "如果感到疲劳，建议分段休息后继续评分。"
+            ),
+            "score_correction": "uplift_late",
+        },
+        BiasType.CENTRAL_TENDENCY: {
+            "severity_tag": "central_tendency",
+            "prompt_adjustment": (
+                "请使用更宽的评分范围：高质量论文给 8-10 分，"
+                "一般论文给 4-6 分，低质量论文给 1-3 分。"
+                "避免给所有论文都打 6-7 分的中等分数。"
+            ),
+            "score_correction": "spread_out",
+        },
+        BiasType.LENIENCY: {
+            "severity_tag": "leniency",
+            "prompt_adjustment": (
+                "请严格评分。高质量论文才能获得 8 分以上。"
+                "平庸或存在方法论问题的论文不应超过 6 分。"
+                "接受标准应与 JF/JFE 等顶刊的实际标准对齐。"
+            ),
+            "score_correction": "downscale",
+        },
+        BiasType.STRINGENCY: {
+            "severity_tag": "stringency",
+            "prompt_adjustment": (
+                "请适度宽松评分。如果论文方法正确、主要结论可靠，"
+                "就给 7-8 分。只有存在严重问题才给 3 分以下。"
+                "避免对所有论文都过于苛刻。"
+            ),
+            "score_correction": "upscale",
+        },
+        BiasType.METHODOLOGY_BIAS: {
+            "severity_tag": "methodology_bias",
+            "prompt_adjustment": (
+                "评分时对不同方法论保持中立。"
+                "无论论文使用 DID/IV/RCT/实验/理论/机器学习，"
+                "只要方法合理、结论可靠，就应获得公平评分。"
+            ),
+            "score_correction": "neutralize",
+        },
+    }
+
+    def generate_prompt_adjustments(
+        self,
+        bias_report: BiasReport,
+    ) -> list[dict]:
+        """
+        根据偏见报告生成 LLM prompt 调整指令。
+
+        Returns:
+            list of adjustment dicts with keys:
+              - bias_type: BiasType
+              - severity: float (0-1)
+              - adjustment: str (prompt text)
+              - correction_method: str
+        """
+        adjustments = []
+        for bias in bias_report.detected_biases:
+            rule = self.BIAS_PROMPT_RULES.get(bias.bias_type)
+            if not rule:
+                continue
+            # 只对中等及以上严重程度的偏见生成调整
+            if bias.severity >= 0.3:
+                adjustments.append({
+                    "bias_type": bias.bias_type.value,
+                    "severity": bias.severity,
+                    "severity_tag": rule["severity_tag"],
+                    "prompt_adjustment": rule["prompt_adjustment"],
+                    "correction_method": rule["score_correction"],
+                    "description": bias.description,
+                })
+        return adjustments
+
+    def build_adjusted_system_prompt(
+        self,
+        adjustments: list[dict],
+        base_prompt: str = "",
+    ) -> str:
+        """将偏见调整合并为一个增强的 system prompt。"""
+        if not adjustments:
+            return base_prompt
+
+        sections = [
+            "# 评分注意事项（基于偏见探测的自动调整）",
+            "",
+        ]
+        for adj in adjustments:
+            sections.append(
+                f"## {adj['severity_tag'].upper()}（严重度 {adj['severity']:.0%}）"
+            )
+            sections.append(adj["prompt_adjustment"])
+            sections.append("")
+
+        return (
+            (base_prompt + "\n\n" if base_prompt else "")
+            + "\n".join(sections)
+        )
+
+    def apply_score_corrections(
+        self,
+        original_scores: dict[str, float],
+        correction_method: str,
+        severity: float,
+    ) -> dict[str, float]:
+        """对原始评分应用偏见修正（severity 控制修正强度）。"""
+        corrected = dict(original_scores)
+        strength = min(severity, 1.0)  # 上限1.0
+
+        if correction_method == "downscale":
+            # 宽松偏见：分数偏高，向下调整
+            factor = 1.0 - strength * 0.15
+            for k in corrected:
+                corrected[k] = round(corrected[k] * factor, 2)
+
+        elif correction_method == "upscale":
+            # 严格偏见：分数偏低，向上调整
+            factor = 1.0 + strength * 0.15
+            for k in corrected:
+                corrected[k] = min(10.0, round(corrected[k] * factor, 2))
+
+        elif correction_method == "spread_out":
+            # 趋中偏见：扩大分数分布
+            mean = sum(corrected.values()) / len(corrected) if corrected else 7.0
+            for k in corrected:
+                delta = corrected[k] - mean
+                corrected[k] = round(mean + delta * (1 + strength * 0.5), 2)
+
+        elif correction_method == "reorder":
+            # 顺序偏见：不再重排分数，只是标记（分数不变）
+            pass
+
+        elif correction_method == "neutralize":
+            # 方法论偏见：中性化（不对分数本身调整，由 prompt 提示）
+            pass
+
+        # 确保所有分数在 [1, 10] 范围内
+        for k in corrected:
+            corrected[k] = max(1.0, min(10.0, corrected[k]))
+
+        return corrected
+
+    def verify_adjustment(
+        self,
+        adjusted_bias_report: BiasReport,
+        original_bias_report: BiasReport,
+    ) -> dict:
+        """验证偏见修正效果：对比修正前后的偏见严重度。"""
+        orig_map = {b.bias_type: b.severity for b in original_bias_report.detected_biases}
+        adj_map = {b.bias_type: b.severity for b in adjusted_bias_report.detected_biases}
+
+        improvements = {}
+        for bt, orig_sev in orig_map.items():
+            adj_sev = adj_map.get(bt, 0.0)
+            delta = orig_sev - adj_sev
+            improvements[bt.value] = {
+                "original_severity": orig_sev,
+                "adjusted_severity": adj_sev,
+                "improvement": delta,
+                "status": (
+                    "✅ FIXED" if adj_sev < 0.2
+                    else "⚠️ PARTIAL" if delta > 0.1
+                    else "❌ NO CHANGE"
+                ),
+            }
+        return improvements
+
+    def run_full_loop(
+        self,
+        reviewer_scores: dict[str, float],
+        bias_report: BiasReport,
+        original_prompt: str = "",
+    ) -> dict:
+        """
+        运行完整的反馈闭环。
+
+        Returns:
+            {
+                "adjustments": [偏见的调整列表],
+                "adjusted_prompt": 增强后的 system prompt,
+                "corrected_scores": 修正后的评分,
+                "verification": 修正效果验证结果,
+            }
+        """
+        adjustments = self.generate_prompt_adjustments(bias_report)
+        adjusted_prompt = self.build_adjusted_system_prompt(adjustments, original_prompt)
+
+        # 应用分数修正
+        corrected_scores = {}
+        for adj in adjustments:
+            correction = adj.get("correction_method", "none")
+            if correction not in ("reorder", "neutralize"):
+                corrected_scores = self.apply_score_corrections(
+                    reviewer_scores, correction, adj["severity"]
+                )
+                reviewer_scores = corrected_scores
+
+        return {
+            "adjustments": adjustments,
+            "adjusted_prompt": adjusted_prompt,
+            "corrected_scores": corrected_scores,
+            "verification": None,  # 需要重新运行偏见探测才能验证
+        }
+
+
+# ── 偏见报告 CLI ───────────────────────────────────────────────────────────────
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ReviewerCalibrator 偏见探测工具")
+    parser.add_argument("--bias-demo", action="store_true", help="演示偏见探测")
+    parser.add_argument("--loop-demo", action="store_true", help="演示反馈环")
+    args = parser.parse_args()
+
+    if args.bias_demo:
+        from scripts.core.dual_reviewer import DualReviewer
+
+        reviewer = DualReviewer()
+        calibrator = ReviewerCalibrator(reviewer=reviewer)
+        history = [
+            {
+                "review": {
+                    "dimension_scores": {
+                        "methodology": 7.0, "novelty": 8.0, "writing": 6.5,
+                        "theory": 7.5, "reproducibility": 7.0,
+                    },
+                    "overall_score": 7.2,
+                    "metadata": {"journal": "JF"},
+                }
+            },
+        ]
+        report = calibrator.detect_biases(history)
+        print(f"\n偏见探测报告:")
+        print(f"  检测到偏见数: {len(report.detected_biases)}")
+        for b in report.detected_biases:
+            print(f"  [{b.severity:.0%}] {b.bias_type.value}: {b.description}")
+
+    if args.loop_demo:
+        loop = CalibratorFeedbackLoop(calibrator=ReviewerCalibrator())
+        # 构建模拟偏见报告
+        bias = BiasInstance(
+            bias_type=BiasType.CENTRAL_TENDENCY,
+            severity=0.7,
+            description="所有评分集中在 6-7 分",
+            affected_dimensions=["all"],
+            statistical_evidence={"score_range": 0.5, "std": 0.3},
+            recommendation="建议使用更宽的评分范围",
+        )
+        report = BiasReport(
+            total_reviews=1,
+            detected_biases=[bias],
+            overall_bias_score=0.7,
+            is_calibration_needed=True,
+            bias_patterns={},
+            review_history_summary={},
+        )
+        adj = loop.generate_prompt_adjustments(report)
+        print(f"\n反馈环生成 {len(adj)} 条调整:")
+        for a in adj:
+            print(f"  [{a['severity_tag']}] {a['prompt_adjustment'][:60]}...")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 持久化与历史追踪：偏见历史数据库
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class BiasHistoryDB:
+    """
+    偏见历史持久化存储。
+
+    将每次偏见探测结果记录到 SQLite 数据库，支持：
+    - 偏见趋势分析（随时间的严重度变化）
+    - 期刊维度偏见对比
+    - 跨评审者偏见模式对比
+    - 自动导出 CSV/JSON
+
+    Usage:
+        db = BiasHistoryDB(db_path=".bias_history.db")
+        db.record_review(review_id, journal, bias_report)
+        trends = db.get_bias_trends(bias_type=BiasType.CENTRAL_TENDENCY)
+        db.export_csv("bias_history.csv")
+    """
+
+    def __init__(self, db_path: str = ".bias_history.db"):
+        self.db_path = db_path
+        self._ensure_schema()
+
+    def _ensure_schema(self) -> None:
+        import sqlite3
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS bias_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                review_id TEXT NOT NULL,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                journal TEXT,
+                bias_type TEXT NOT NULL,
+                severity REAL NOT NULL,
+                description TEXT,
+                affected_dimensions TEXT,
+                statistical_evidence TEXT,
+                recommendation TEXT,
+                overall_bias_score REAL,
+                adjustment_applied INTEGER DEFAULT 0,
+                adjustment_severity REAL,
+                adjustment_method TEXT,
+                UNIQUE(review_id, bias_type)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS review_metadata (
+                review_id TEXT PRIMARY KEY,
+                journal TEXT,
+                reviewer_name TEXT,
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                paper_title TEXT,
+                notes TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_bias_type
+            ON bias_records(bias_type, recorded_at)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_review_id
+            ON bias_records(review_id)
+        """)
+        conn.commit()
+        conn.close()
+
+    def record_review(self, review_id: str, journal: str, bias_report: BiasReport,
+                      metadata: dict | None = None) -> None:
+        """记录一次偏见探测结果。"""
+        import sqlite3, json
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Record metadata
+        meta = metadata or {}
+        cursor.execute("""
+            INSERT OR REPLACE INTO review_metadata
+            (review_id, journal, reviewer_name, paper_title, notes)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            review_id,
+            journal,
+            meta.get("reviewer_name", "unknown"),
+            meta.get("paper_title", ""),
+            meta.get("notes", ""),
+        ))
+
+        # Record each bias
+        for bias in bias_report.detected_biases:
+            cursor.execute("""
+                INSERT OR REPLACE INTO bias_records
+                (review_id, journal, bias_type, severity, description,
+                 affected_dimensions, statistical_evidence, recommendation,
+                 overall_bias_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                review_id,
+                journal,
+                bias.bias_type.value,
+                bias.severity,
+                bias.description,
+                json.dumps(bias.affected_dimensions),
+                json.dumps(bias.statistical_evidence),
+                bias.recommendation,
+                bias_report.overall_bias_score,
+            ))
+
+        conn.commit()
+        conn.close()
+
+    def record_adjustment(self, review_id: str, bias_type: BiasType,
+                          adjustment_severity: float, adjustment_method: str) -> None:
+        """记录一次偏见调整的应用结果。"""
+        import sqlite3
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("""
+            UPDATE bias_records
+            SET adjustment_applied = 1,
+                adjustment_severity = ?,
+                adjustment_method = ?
+            WHERE review_id = ? AND bias_type = ?
+        """, (adjustment_severity, adjustment_method, review_id, bias_type.value))
+        conn.commit()
+        conn.close()
+
+    def get_bias_trends(self, bias_type: BiasType | None = None,
+                        journal: str | None = None,
+                        limit: int = 100) -> list[dict]:
+        """获取偏见趋势数据。"""
+        import sqlite3, json
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        query = "SELECT recorded_at, severity, journal, adjustment_applied FROM bias_records WHERE 1=1"
+        params: list = []
+        if bias_type:
+            query += " AND bias_type = ?"
+            params.append(bias_type.value)
+        if journal:
+            query += " AND journal = ?"
+            params.append(journal)
+        query += " ORDER BY recorded_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+        return [
+            {"recorded_at": r[0], "severity": r[1], "journal": r[2], "adjusted": bool(r[3])}
+            for r in rows
+        ]
+
+    def get_bias_summary(self) -> dict:
+        """获取偏见汇总统计。"""
+        import sqlite3, statistics
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT bias_type, COUNT(*), AVG(severity), MAX(severity), MIN(severity),
+                   SUM(CASE WHEN adjustment_applied = 1 THEN 1 ELSE 0 END) as adjusted_count
+            FROM bias_records
+            GROUP BY bias_type
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+
+        summary = {}
+        for r in rows:
+            bias_type_str, count, avg_sev, max_sev, min_sev, adj_count = r
+            summary[bias_type_str] = {
+                "count": count,
+                "avg_severity": round(avg_sev, 3) if avg_sev else 0,
+                "max_severity": max_sev or 0,
+                "min_severity": min_sev or 0,
+                "adjusted_count": adj_count or 0,
+                "adjustment_rate": round((adj_count or 0) / count, 3) if count else 0,
+            }
+        return summary
+
+    def export_csv(self, path: str) -> None:
+        """导出偏见历史为 CSV。"""
+        import sqlite3, csv
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT b.review_id, b.recorded_at, b.journal, b.bias_type, b.severity,
+                   b.description, b.overall_bias_score, b.adjustment_applied,
+                   b.adjustment_severity, b.adjustment_method, m.paper_title
+            FROM bias_records b
+            LEFT JOIN review_metadata m ON b.review_id = m.review_id
+            ORDER BY b.recorded_at DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        if not rows:
+            return
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "review_id", "recorded_at", "journal", "bias_type", "severity",
+                "description", "overall_bias_score", "adjustment_applied",
+                "adjustment_severity", "adjustment_method", "paper_title"
+            ])
+            writer.writerows(rows)
+
+    def export_json(self, path: str) -> None:
+        """导出偏见历史为 JSON。"""
+        import sqlite3, json
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT review_id, journal, recorded_at, severity, bias_type, description, adjustment_applied FROM bias_records ORDER BY recorded_at DESC")
+        rows = cursor.fetchall()
+        conn.close()
+        records = [
+            {"review_id": r[0], "journal": r[1], "recorded_at": r[2],
+             "severity": r[3], "bias_type": r[4], "description": r[5],
+             "adjustment_applied": bool(r[6])}
+            for r in rows
+        ]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"records": records, "summary": self.get_bias_summary()}, f, indent=2, ensure_ascii=False)
+
+
+# ── 增强的反馈环：集成持久化 ───────────────────────────────────────────────────
+
+
+class PersistentCalibratorFeedbackLoop(CalibratorFeedbackLoop):
+    """
+    带持久化功能的增强版 CalibratorFeedbackLoop。
+
+    在 CalibratorFeedbackLoop 基础上添加：
+    1. 偏见历史 SQLite 存储
+    2. 自动调整建议生成（基于历史偏见模式）
+    3. 期刊标准化偏见基准
+    4. 趋势预警（偏见严重度上升趋势）
+    5. 调整效果追踪
+
+    Usage:
+        loop = PersistentCalibratorFeedbackLoop(
+            calibrator=ReviewerCalibrator(),
+            db_path=".bias_history.db"
+        )
+        loop.run_full_loop_with_persistence(review_id, journal, bias_report)
+    """
+
+    def __init__(self, calibrator: ReviewerCalibrator,
+                 db_path: str = ".bias_history.db"):
+        super().__init__(calibrator)
+        self.db = BiasHistoryDB(db_path)
+
+    def auto_calibration_advice(self) -> list[str]:
+        """
+        基于历史偏见模式，生成自动校准建议。
+
+        分析历史偏见数据，识别：
+        - 最频繁出现的偏见类型
+        - 调整后仍然存在的偏见
+        - 需要改变评分标准的期刊
+        """
+        import statistics
+        advice = []
+        summary = self.db.get_bias_summary()
+
+        if not summary:
+            advice.append("偏见历史为空，建议先积累 5-10 条评审记录后再分析趋势。")
+            return advice
+
+        # 最严重的偏见类型
+        sorted_by_severity = sorted(
+            summary.items(), key=lambda x: x[1]["avg_severity"], reverse=True
+        )
+        if sorted_by_severity:
+            top_type, top_stats = sorted_by_severity[0]
+            if top_stats["avg_severity"] > 0.6:
+                advice.append(
+                    f"最严重的偏见类型：{top_type}（平均严重度 {top_stats['avg_severity']:.0%}），"
+                    f"共出现 {top_stats['count']} 次，建议在 prompt 中加强该偏见类型的纠正指令。"
+                )
+
+        # 调整率低的偏见
+        low_adjust_rate = [
+            (bt, s) for bt, s in summary.items()
+            if s["adjustment_rate"] < 0.5 and s["count"] >= 3
+        ]
+        if low_adjust_rate:
+            advice.append(
+                f"有 {len(low_adjust_rate)} 种偏见类型的调整率低于 50%，"
+                "当前 prompt 调整策略可能不够有效，建议更换调整方法或加强 prompt 强度。"
+            )
+
+        # 总体偏见趋势
+        trends = self.db.get_bias_trends(limit=20)
+        if len(trends) >= 5:
+            severities = [t["severity"] for t in trends[:5]]
+            if len(severities) >= 3:
+                first_half = statistics.mean(severities[:len(severities)//2])
+                second_half = statistics.mean(severities[len(severities)//2:])
+                if second_half > first_half * 1.2:
+                    advice.append(
+                        f"⚠️ 偏见严重度呈上升趋势（近期均值 {second_half:.0%} > 早期均值 {first_half:.0%}），"
+                        "建议检查评审者是否出现疲劳或标准漂移。"
+                    )
+
+        if not advice:
+            advice.append("偏见状态良好，当前校准策略运行正常。")
+        return advice
+
+    def run_full_loop_with_persistence(
+        self,
+        review_id: str,
+        journal: str,
+        bias_report: BiasReport,
+        reviewer_scores: dict[str, float] | None = None,
+        original_prompt: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
+        """
+        运行完整的反馈闭环并持久化结果。
+
+        Returns:
+            {
+                "adjustments": [偏见的调整列表],
+                "adjusted_prompt": 增强后的 system prompt,
+                "corrected_scores": 修正后的评分,
+                "auto_advice": [自动校准建议],
+                "persistence": {"recorded": True, "adjustment_ids": [...]}
+            }
+        """
+        # 记录原始偏见
+        self.db.record_review(review_id, journal, bias_report, metadata)
+
+        # 执行反馈环
+        result = self.run_full_loop(
+            reviewer_scores=reviewer_scores or {},
+            bias_report=bias_report,
+            original_prompt=original_prompt,
+        )
+
+        # 记录调整应用
+        for adj in result.get("adjustments", []):
+            bt = BiasType(adj["bias_type"])
+            self.db.record_adjustment(
+                review_id, bt,
+                adj["severity"],
+                adj["correction_method"],
+            )
+
+        # 生成自动校准建议
+        result["auto_advice"] = self.auto_calibration_advice()
+        result["persistence"] = {"recorded": True, "db_path": self.db.db_path}
+        return result
+
+    def journal_bias_profile(self, journal: str) -> dict:
+        """生成特定期刊的偏见画像。"""
+        import statistics
+        trends = self.db.get_bias_trends(journal=journal, limit=100)
+        if not trends:
+            return {"journal": journal, "samples": 0, "message": "无数据"}
+
+        severities = [t["severity"] for t in trends]
+        bias_types = [t.get("bias_type", "unknown") for t in trends
+                      if "bias_type" in t]
+        return {
+            "journal": journal,
+            "samples": len(trends),
+            "avg_severity": round(statistics.mean(severities), 3),
+            "max_severity": max(severities),
+            "min_severity": min(severities),
+            "adjusted_rate": round(sum(1 for t in trends if t.get("adjusted")) / len(trends), 3),
+        }

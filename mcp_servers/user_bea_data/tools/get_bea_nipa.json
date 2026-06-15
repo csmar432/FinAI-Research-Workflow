@@ -12,6 +12,7 @@
         "type": "integer",
         "description": "年份"
       }
-    }
+    },
+    "description": "获取BEA NIPA(国民账户)数据。"
   }
 }

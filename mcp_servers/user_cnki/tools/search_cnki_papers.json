@@ -1,0 +1,44 @@
+{
+  "name": "search_cnki_papers",
+  "description": "搜索 CNKI（中国知网）学术论文。\n\n支持按主题词、作者、期刊、基金、DOI 等多维度检索，返回论文标题、作者、期刊、年份、摘要、被引次数等元数据。\n\n注意：CNKI 无免费公开 API，本工具通过网页爬虫实现。访问可能受限，建议设置合理的请求间隔（≥3秒）。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "搜索关键词，如：碳排放权交易 绿色创新 DID",
+        "required": true
+      },
+      "author": {
+        "type": "string",
+        "description": "作者姓名（可选）"
+      },
+      "journal": {
+        "type": "string",
+        "description": "期刊名称（可选），如：经济研究"
+      },
+      "year_from": {
+        "type": "integer",
+        "description": "起始年份（默认2020）",
+        "default": 2020
+      },
+      "year_to": {
+        "type": "integer",
+        "description": "结束年份（默认2024）",
+        "default": 2024
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "最大结果数（默认20，最大50）",
+        "default": 20
+      },
+      "search_type": {
+        "type": "string",
+        "description": "检索类型：theme（主题）/ author（作者）/ journal（期刊）/ fund（基金）",
+        "default": "theme"
+      }
+    },
+    "required": ["query"],
+    "description": "Search parameters for CNKI paper search. 数据源：中国知网（cnki.net），通过网页爬虫实现，需遵守 robots.txt。"
+  }
+}

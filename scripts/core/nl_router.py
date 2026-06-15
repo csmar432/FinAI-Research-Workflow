@@ -84,7 +84,7 @@ class NLCapability:
 TOOL_REGISTRY: list[NLCapability] = [
     NLCapability(
         server="user-yfinance",
-        tool="get_ticker_info",
+        tool="get_yf_quote",
         aliases=["stock info", "公司信息", "股票信息", "ticker info"],
         examples=[
             "Get info for AAPL",
@@ -95,7 +95,7 @@ TOOL_REGISTRY: list[NLCapability] = [
     ),
     NLCapability(
         server="user-yfinance",
-        tool="get_financials",
+        tool="get_yf_financials",
         aliases=["financial statement", "财务报表", "income statement", "balance sheet"],
         examples=[
             "Get financials for TSLA",
@@ -106,39 +106,39 @@ TOOL_REGISTRY: list[NLCapability] = [
     ),
     NLCapability(
         server="user-yfinance",
-        tool="get_sustainability",
+        tool="get_yf_financials",
         aliases=["ESG score", "ESG评级", "环境社会治理", "sustainability"],
         examples=[
             "Get ESG score for JNJ",
             "强生的ESG评分",
             "贵州茅台的ESG表现",
         ],
-        description="获取 ESG 评分和环境社会治理数据",
+        description="获取 ESG 评分和环境社会治理数据（通过 get_yf_financials statement_type=ratios）",
     ),
     NLCapability(
-        server="user-finviz-sec",
-        tool="get_financial_snapshot",
+        server="user-tushare",
+        tool="get_financial_report",
         aliases=["financial snapshot", "财务摘要", "关键财务指标"],
         examples=[
             "Financial snapshot for MSFT",
             "微软财务摘要",
         ],
-        description="获取财务摘要和关键指标",
+        description="获取财务摘要和关键指标（A股通过 Tushare）",
     ),
     NLCapability(
-        server="user-finviz-sec",
-        tool="get_analyst_ratings",
+        server="user-eastmoney-reports",
+        tool="get_analyst_rank",
         aliases=["analyst rating", "分析师评级", "recommendation", "目标价"],
         examples=[
             "Analyst ratings for NVDA",
             "英伟达分析师评级",
             "特斯拉的目标价和评级趋势",
         ],
-        description="获取分析师评级和目标价",
+        description="获取分析师评级和目标价（东方财富）",
     ),
     NLCapability(
         server="user-eodhd",
-        tool="get_macro_indicator",
+        tool="get_economic_indicators",
         aliases=[
             "GDP", "CPI", "inflation", "unemployment", "宏观指标",
             "国内生产总值", "消费者价格指数", "通货膨胀", "失业率",
@@ -148,7 +148,7 @@ TOOL_REGISTRY: list[NLCapability] = [
             "中国2010-2023年的CPI数据",
             "美国的GDP增长率",
         ],
-        description="获取宏观指标（GDP/CPI/失业率/人口等）",
+        description="获取宏观指标（GDP/CPI/失业率等，通过 EODHD get_economic_indicators）",
     ),
     NLCapability(
         server="user-eodhd",
@@ -196,7 +196,7 @@ TOOL_REGISTRY: list[NLCapability] = [
     ),
     NLCapability(
         server="user-brave-search",
-        tool="web_search",
+        tool="brave_web_search",
         aliases=["search", "搜索", "google search", "网络搜索"],
         examples=[
             "Search for carbon trading policy research",

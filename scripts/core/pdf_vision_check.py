@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import io
+import json
 import logging
 import subprocess
 from dataclasses import dataclass, field
@@ -246,9 +247,12 @@ class PDFVisionChecker:
                     ],
                     max_tokens=512,
                 )
-                import json
                 text = response.choices[0].message.content
-                data = json.loads(text)
+                try:
+                    data = json.loads(text)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"[PDFVisionChecker] VLM JSON parse error page {page_num}: {e}")
+                    return issues
                 for item in data.get("issues", []):
                     issues.append(PDFVisionIssue(
                         severity=item["severity"],
@@ -281,9 +285,12 @@ class PDFVisionChecker:
                         }
                     ],
                 )
-                import json
                 text = response.content[0].text
-                data = json.loads(text)
+                try:
+                    data = json.loads(text)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"[PDFVisionChecker] Anthropic VLM JSON parse error page {page_num}: {e}")
+                    return issues
                 for item in data.get("issues", []):
                     issues.append(PDFVisionIssue(
                         severity=item["severity"],

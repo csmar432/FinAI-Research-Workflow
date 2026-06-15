@@ -25,6 +25,27 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = [
+    "LangSmithTracer",
+    "StructuredLogger",
+    "OTelTracer",
+    "OtelSpan",
+    "MetricsCollector",
+    "EvaluationResult",
+    "EvaluationReport",
+    "LLMasJudge",
+    "Span",
+    "AgentObserver",
+    "PipelineObserver",
+    "_get_langsmith_tracer",
+    "wrap_llm_gateway",
+    "wrap_tool_selector",
+    "get_observer",
+    "reset_observer",
+    "wrap_orchestrator",
+    "auto_instrument",
+]
+
 import asyncio
 import functools
 import inspect
@@ -1060,7 +1081,7 @@ def wrap_orchestrator(orchestrator: Any, observer: AgentObserver) -> Any:
                                    result.hitl_paused_at is not None)
                 span.set_attribute("pipeline.stages_completed",
                                    len(result.stage_results))
-                observer.metrics().record_latency(
+                observer.metrics.record_latency(
                     "pipeline_latency_ms", result.total_latency_ms
                 )
                 return result

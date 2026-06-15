@@ -11,6 +11,12 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = [
+    "CitationCheckResult",
+    "CitationVerifier",
+    "main",
+]
+
 import json
 import logging
 import re
@@ -155,7 +161,14 @@ class CitationVerifier:
                 headers={"User-Agent": "PaperOrchestrator/1.0 (mailto:research@example.com)"},
             )
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+                try:
+                    data = json.loads(resp.read().decode("utf-8"))
+                except json.JSONDecodeError as e:
+                    logger.warning(f"CrossRef JSON decode failed for DOI {doi}: {e}")
+                    return CitationCheckResult(
+                        valid=True, verified=False, score=0.7,
+                        source="crossref", message=f"Response parse error: {e}"
+                    )
                 msg = data.get("message", {})
                 title = msg.get("title", [""])[0] if msg.get("title") else None
                 authors = msg.get("author", [])
@@ -187,7 +200,14 @@ class CitationVerifier:
             url = f"https://api.semanticscholar.org/graph/v1/paper/arXiv:{arxiv_id}?fields=title,authors,year"
             req = urllib.request.Request(url)
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+                try:
+                    data = json.loads(resp.read().decode("utf-8"))
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Semantic Scholar JSON decode failed for ArXiv {arxiv_id}: {e}")
+                    return CitationCheckResult(
+                        valid=True, verified=False, score=0.7,
+                        source="semantic_scholar", message=f"Response parse error: {e}"
+                    )
                 title = data.get("title", "")
                 authors = data.get("authors", [])
                 author_str = ", ".join(a.get("name", "") for a in authors[:3])

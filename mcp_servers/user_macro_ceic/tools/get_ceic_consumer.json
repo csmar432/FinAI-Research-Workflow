@@ -9,6 +9,7 @@
         "description": "指标: consumer_confidence/retail/income",
         "default": "consumer_confidence"
       }
-    }
+    },
+    "description": "获取消费者信心数据（CEIC风格）。"
   }
 }

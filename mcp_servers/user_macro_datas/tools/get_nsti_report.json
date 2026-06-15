@@ -3,6 +3,7 @@
   "description": "科技部公报数据指引（含分省R&D排名）",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "科技部《全国科技经费投入统计公报》数据指引（含分省R&D排名）"
   }
 }

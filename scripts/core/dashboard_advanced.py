@@ -15,6 +15,18 @@ Dashboard 高级组件
 
 from __future__ import annotations
 
+__all__ = [
+    "render_fleet_status",
+    "render_cost_analytics",
+    "render_execution_timeline",
+    "render_hitl_inbox",
+    "render_error_log",
+    "render_dag_visualization",
+    "render_advanced_views",
+    "COLORS",
+    "STATUS_LABELS",
+]
+
 import sys
 from pathlib import Path
 
@@ -33,6 +45,7 @@ from scripts.core.agent_state import (
     cost_tracker,
     hitl_manager,
 )
+from scripts.core.hitl_gate import HITLGate
 from scripts.core.visualizer import VizEdge, VizNode, WorkflowVisualizer
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -419,59 +432,130 @@ def render_execution_timeline():
 # ═══════════════════════════════════════════════════════════════════════════
 
 def render_hitl_inbox():
-    """渲染人工审核收件箱"""
+    """
+    渲染人工审核收件箱。
+
+    同时读取两个数据源并合并：
+      1. HITLManager（全局持久化层，经由 HITLGate 事件监听器同步）
+      2. HITLGate（各 pipeline 实例的本地状态）
+
+    合并后按时间倒序展示，防止漏掉跨进程/跨实例的审批请求。
+    """
     st.markdown("## 👤 人工审核收件箱")
 
-    # 获取待审核请求
-    pending = hitl_manager.get_pending()
-    all_requests = hitl_manager.get_all()
+    # ── 从两个数据源合并待审核请求 ────────────────────────────────────
+    from_hitl_mgr = []
+    from_gate = []
+    try:
+        from_hitl_mgr = hitl_manager.get_pending()
+    except Exception:
+        pass
+    try:
+        gate = HITLGate()
+        from_gate = gate.get_pending()
+    except Exception:
+        pass
+
+    # 合并去重（按 gate_id / request_id）
+    seen_ids = set()
+    all_pending = []
+    for rec in from_gate:
+        key = rec.gate_id
+        if key not in seen_ids:
+            seen_ids.add(key)
+            all_pending.append({"rec": rec, "source": "HITLGate"})
+    for req in from_hitl_mgr:
+        key = req.request_id
+        if key not in seen_ids:
+            seen_ids.add(key)
+            all_pending.append({"rec": req, "source": "HITLManager"})
 
     # 统计
-    col1, col2, col3 = st.columns(3)
-
+    n_gate = len(from_gate)
+    n_mgr = len(from_hitl_mgr)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("待审核", len(pending))
+        st.metric("总待审核", len(all_pending))
     with col2:
-        approved = len([r for r in all_requests if r.status == "approved"])
-        st.metric("已批准", approved)
+        st.metric("HITLGate", n_gate)
     with col3:
-        rejected = len([r for r in all_requests if r.status == "rejected"])
-        st.metric("已拒绝", rejected)
+        st.metric("HITLManager", n_mgr)
+    with col4:
+        all_reqs = []
+        try:
+            all_reqs = hitl_manager.get_all()
+        except Exception:
+            pass
+        approved = len([r for r in all_reqs if r.status == "approved"])
+        st.metric("已批准", approved)
 
     st.divider()
 
-    if pending:
+    if all_pending:
         st.markdown("### ⏳ 待审核请求")
 
-        for req in pending:
+        for item in all_pending:
+            rec = item["rec"]
+            source = item["source"]
             with st.container():
                 st.markdown("---")
 
                 col1, col2 = st.columns([4, 1])
 
                 with col1:
-                    st.markdown(f"**Agent**: {req.agent_id}")
-                    st.markdown(f"**决策点**: {req.decision_point}")
-                    st.markdown(f"**任务ID**: {req.task_id}")
-                    st.markdown(f"**创建时间**: {datetime.fromtimestamp(req.created_at).strftime('%Y-%m-%d %H:%M:%S')}")
+                    # 显示数据来源
+                    src_color = "#4A90E2" if source == "HITLGate" else "#f59e0b"
+                    st.markdown(f"<span style='color:{src_color};font-size:0.8em'>来源: {source}</span>", unsafe_allow_html=True)
 
-                    # 显示上下文
-                    if req.context:
-                        st.markdown("**上下文信息**:")
-                        st.json(req.context)
+                    # 兼容 HITLGate.ApprovalRecord 和 HITLManager.HITLRequest 两种类型
+                    if hasattr(rec, "gate_id"):
+                        # HITLGate.ApprovalRecord
+                        st.markdown(f"**Gate ID**: `{rec.gate_id}`")
+                        st.markdown(f"**Stage**: {rec.stage}")
+                        st.markdown(f"**问题**: {rec.question or '-'}")
+                        if rec.content:
+                            st.markdown("**内容摘要**:")
+                            st.json(rec.content)
+                        created_ts = getattr(rec, "held_at", 0)
+                        gate_id_key = rec.gate_id
+                    else:
+                        # HITLManager.HITLRequest
+                        st.markdown(f"**Agent**: {rec.agent_id}")
+                        st.markdown(f"**决策点**: {rec.decision_point}")
+                        st.markdown(f"**任务ID**: {rec.task_id}")
+                        if rec.context:
+                            st.markdown("**上下文信息**:")
+                            st.json(rec.context)
+                        created_ts = rec.created_at
+                        gate_id_key = rec.request_id
+
+                    if created_ts:
+                        st.markdown(f"**创建时间**: {datetime.fromtimestamp(created_ts).strftime('%Y-%m-%d %H:%M:%S')}")
 
                 with col2:
-                    # 审核按钮
-                    comment = st.text_area("审核意见", key=f"comment_{req.request_id}", height=100)
+                    comment = st.text_area("审核意见", key=f"comment_{gate_id_key}", height=100)
 
                     col_a, col_b = st.columns(2)
                     with col_a:
-                        if st.button("✅ 批准", key=f"approve_{req.request_id}", type="primary"):
-                            hitl_manager.approve(req.request_id, comment)
+                        if st.button("✅ 批准", key=f"approve_{gate_id_key}", type="primary"):
+                            # 优先使用 HITLGate API（如果 gate_id 可用）
+                            if hasattr(rec, "gate_id"):
+                                try:
+                                    gate = HITLGate()
+                                    gate.approve(gate_id_key, feedback=comment)
+                                except Exception:
+                                    pass
+                            hitl_manager.approve(gate_id_key, comment)
                             st.rerun()
                     with col_b:
-                        if st.button("❌ 拒绝", key=f"reject_{req.request_id}", type="secondary"):
-                            hitl_manager.reject(req.request_id, comment)
+                        if st.button("❌ 拒绝", key=f"reject_{gate_id_key}", type="secondary"):
+                            if hasattr(rec, "gate_id"):
+                                try:
+                                    gate = HITLGate()
+                                    gate.reject(gate_id_key, feedback=comment)
+                                except Exception:
+                                    pass
+                            hitl_manager.reject(gate_id_key, comment)
                             st.rerun()
     else:
         st.success("🎉 没有待审核的请求")
@@ -480,19 +564,18 @@ def render_hitl_inbox():
     st.divider()
     st.markdown("### 📝 审核历史")
 
-    if all_requests:
-        history = [r for r in all_requests if r.status != "pending"]
+    if all_reqs:
+        history = [r for r in all_reqs if r.status != "pending"]
         if history:
             data = []
             for r in history[:50]:
                 data.append({
-                    "Agent": r.agent_id,
-                    "决策点": r.decision_point,
+                    "Agent": getattr(r, "agent_id", "-") or "-",
+                    "决策点": getattr(r, "decision_point", "-") or "-",
                     "状态": "✅ 批准" if r.status == "approved" else "❌ 拒绝",
-                    "审核时间": datetime.fromtimestamp(r.reviewed_at).strftime("%Y-%m-%d %H:%M:%S") if r.reviewed_at else "-",
-                    "审核意见": r.reviewer_comment or "-"
+                    "审核时间": datetime.fromtimestamp(r.reviewed_at).strftime("%Y-%m-%d %H:%M:%S") if getattr(r, "reviewed_at", None) else "-",
+                    "审核意见": getattr(r, "reviewer_comment", "-") or "-"
                 })
-
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True, hide_index=True)
         else:

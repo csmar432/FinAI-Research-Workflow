@@ -29,9 +29,13 @@
       },
       "fields_of_study": {
         "type": "array",
-        "items": {"type": "string"},
+        "items": {
+          "type": "string"
+        },
         "description": "学科领域过滤（如 ['Economics', 'Computer Science']）",
-        "default": ["Economics"]
+        "default": [
+          "Economics"
+        ]
       },
       "limit": {
         "type": "integer",
@@ -44,6 +48,9 @@
         "default": 0
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ],
+    "description": "Search parameters for Semantic Scholar 学术论文搜索与引文网络分析（无需API Key，免费层 100req/5min） query"
   }
 }

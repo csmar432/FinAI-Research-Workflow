@@ -1,10 +1,9 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "created": "2026-06-04",
   "description": "中国经济金融领域主要政策试点数据库（2008-2024）。覆盖DID/IV/RDD研究中最常用的准自然实验，包含政策编码、处理组/对照组定义、适用方法论。",
   "maintainer": "论文-研报工作流项目",
   "last_updated": "2026-06-04",
-
   "policies": [
     {
       "id": "POL-2008-4万亿",
@@ -24,7 +23,11 @@
       "data_availability": "工业企业数据库（2005-2013）；上市公司财务数据；地方政府债务数据",
       "typical_variables": "企业投资（capx/asset）、工业产值、就业、负债率、ROA",
       "literature_example": "Han &amp; Kung (2015, JFE); 张成思等",
-      "key_confounders": ["同期房地产刺激政策", "货币宽松政策(2008-2010)", "产业振兴规划"],
+      "key_confounders": [
+        "同期房地产刺激政策",
+        "货币宽松政策(2008-2010)",
+        "产业振兴规划"
+      ],
       "geographic_scope": "全国（政策覆盖差异通过行业/地区交互识别）",
       "difficulty": "medium",
       "notes": "部分行业同时受到产业振兴规划覆盖，注意多政策叠加效应"
@@ -47,7 +50,10 @@
       "data_availability": "上市公司财务数据（税务信息）；工业企业数据库",
       "typical_variables": "企业税负、产量、投资、利润、污染排放",
       "literature_example": "He et al. (2019, REStat); 席鹏辉等",
-      "key_confounders": ["同期油气价格波动", "西部大开发政策"],
+      "key_confounders": [
+        "同期油气价格波动",
+        "西部大开发政策"
+      ],
       "geographic_scope": "新疆维吾尔自治区",
       "difficulty": "medium",
       "notes": "资源税改革后在全国推广（2011），可做两期DID或事件研究"
@@ -70,7 +76,11 @@
       "data_availability": "CSMAR电力数据；中电联数据；工业企业数据库",
       "typical_variables": "发电量、设备利用率、单位煤耗、污染物排放、企业绩效",
       "literature_example": "Zhang et al. (2019, EEH); Du et al.",
-      "key_confounders": ["煤炭价格波动", "清洁能源强制并网政策", "上大压小关停政策"],
+      "key_confounders": [
+        "煤炭价格波动",
+        "清洁能源强制并网政策",
+        "上大压小关停政策"
+      ],
       "geographic_scope": "全国（省级层面差异分析）",
       "difficulty": "high",
       "notes": "RDD适用条件：能效门槛附近的处理效应识别，需要干净的门槛变量"
@@ -93,7 +103,11 @@
       "data_availability": "工商注册数据；海关进出口数据；上市公司财务数据； FDI数据",
       "typical_variables": "FDI、外商投资、企业数量、贸易额、全要素生产率、利润率",
       "literature_example": "Chen et al. (2019, JIE); Cheng et al.",
-      "key_confounders": ["一带一路倡议（时间重叠）", "其他自贸区陆续设立", "上海国际金融中心建设"],
+      "key_confounders": [
+        "一带一路倡议（时间重叠）",
+        "其他自贸区陆续设立",
+        "上海国际金融中心建设"
+      ],
       "geographic_scope": "上海市（可与天津/广东/福建自贸区做对比）",
       "difficulty": "medium",
       "notes": "上海自贸区2014年后复制到其他省市，形成批次效应，适合做批次DID"
@@ -116,7 +130,11 @@
       "data_availability": "A股日度交易数据；沪深港通资金流向数据；分析师预测数据",
       "typical_variables": "股价收益率、波动性、换手率、流动性、外资持股比例、估值(PE/PB)",
       "literature_example": "Li et al. (2017, JF); Hu et al. (2020, JFE); Zhang et al.",
-      "key_confounders": ["深港通开通（2016）", "A股市场整体波动", "MSCI纳入A股（2018）"],
+      "key_confounders": [
+        "深港通开通（2016）",
+        "A股市场整体波动",
+        "MSCI纳入A股（2018）"
+      ],
       "geographic_scope": "上海证券交易所上市A股",
       "difficulty": "medium",
       "notes": "RDD适用：以上证180/380成分股入选门槛为断点，适合检验互联互通效应"
@@ -139,7 +157,11 @@
       "data_availability": "工业企业数据库；上市公司环保违规数据；污染源排放数据；专利数据（创新）",
       "typical_variables": "污染排放（SO2/COD/废水）、企业绩效（ROA/营收）、绿色专利、迁移决策",
       "literature_example": "Zhang et al. (2018, REStat); Chen et al. (2018, JPE); He et al. (2020, QJE)",
-      "key_confounders": ["供给侧改革（2015-2017）", "去产能政策", "煤改气/煤改电政策"],
+      "key_confounders": [
+        "供给侧改革（2015-2017）",
+        "去产能政策",
+        "煤改气/煤改电政策"
+      ],
       "geographic_scope": "全国（省级层面差异）",
       "difficulty": "medium-high",
       "notes": "2015-2016年中央环保督察组实地督察为处理强度提供了良好的工具变量"
@@ -162,7 +184,11 @@
       "data_availability": "工业企业数据库；钢铁/煤炭行业协会数据；上市公司财务数据；专利数据",
       "typical_variables": "产能利用率、价格、利润率、企业数量、僵尸企业比例、债务率",
       "literature_example": "Tan et al. (2020, JFE); Wang et al.",
-      "key_confounders": ["需求侧基建刺激（2016-2017）", "环保限产政策", "一带一路出口"],
+      "key_confounders": [
+        "需求侧基建刺激（2016-2017）",
+        "环保限产政策",
+        "一带一路出口"
+      ],
       "geographic_scope": "全国（河北/山西/山东/河南为重点省份）",
       "difficulty": "medium-high",
       "notes": "中央下达的产能指标是良好的工具变量（外生于市场需求波动）"
@@ -185,7 +211,11 @@
       "data_availability": "深市A股日度交易数据；沪深港通资金流向",
       "typical_variables": "股价收益率、外资持股、波动性、换手率、融资余额",
       "literature_example": "Fang et al. (2018, JFQA)",
-      "key_confounders": ["沪港通溢出效应", "A股纳入MSCI（2018）", "IPO加速（2017）"],
+      "key_confounders": [
+        "沪港通溢出效应",
+        "A股纳入MSCI（2018）",
+        "IPO加速（2017）"
+      ],
       "geographic_scope": "深圳证券交易所上市A股",
       "difficulty": "medium",
       "notes": "与沪港通（2014）构成阶梯式开放，适合做渐进DID"
@@ -208,7 +238,11 @@
       "data_availability": "工业企业数据库；上市公司年报（含环保税信息）；污染源在线监测数据",
       "typical_variables": "污染排放、企业税负、生产率、绿色专利、投资",
       "literature_example": "Wang et al. (2021, JEL); 童健等",
-      "key_confounders": ["新环保法（2015）叠加效应", "供给侧改革", "绿色信贷政策"],
+      "key_confounders": [
+        "新环保法（2015）叠加效应",
+        "供给侧改革",
+        "绿色信贷政策"
+      ],
       "geographic_scope": "全国（省级税率差异可用于IV设计）",
       "difficulty": "medium",
       "notes": "各省税率存在差异（0.6-12元/污染当量），省级税率差异可作为IV"
@@ -231,7 +265,11 @@
       "data_availability": "上市公司财务数据；社科院社会融资规模数据；银行信贷数据",
       "typical_variables": "融资成本、杠杆率、国有企业vs民营企业投资差异、违约率",
       "literature_example": "Zhang et al. (2021, JF); Cong et al.",
-      "key_confounders": ["经济下行周期", "贸易战（2018）", "疫情冲击（2020）"],
+      "key_confounders": [
+        "经济下行周期",
+        "贸易战（2018）",
+        "疫情冲击（2020）"
+      ],
       "geographic_scope": "全国",
       "difficulty": "high",
       "notes": "资管新规（2017-2018）设置的过渡期截止日期是良好的RDD断点"
@@ -254,7 +292,11 @@
       "data_availability": "光伏行业协会数据；上市公司光伏业务收入；专利数据",
       "typical_variables": "光伏装机量、企业营收、出口额、研发投入、专利申请",
       "literature_example": "Zheng et al. (2022, Nature Energy)",
-      "key_confounders": ["531前抢装潮（需求前置）", "中美贸易战光伏产品关税", "2021年整县屋顶光伏政策"],
+      "key_confounders": [
+        "531前抢装潮（需求前置）",
+        "中美贸易战光伏产品关税",
+        "2021年整县屋顶光伏政策"
+      ],
       "geographic_scope": "全国（江苏/浙江/山东/河北为光伏制造大省）",
       "difficulty": "medium",
       "notes": "政策冲击明确且集中（2018年6月1日），适合做事件研究+PSM-DID"
@@ -277,7 +319,11 @@
       "data_availability": "上市公司财务数据；社科院社会融资规模；银行信贷数据；信托/理财数据",
       "typical_variables": "融资成本、杠杆率、违约率、股票收益率、非标融资占比",
       "literature_example": "Liu et al. (2022, JFQA); Chen et al.",
-      "key_confounders": ["供给侧改革叠加", "经济下行", "中美贸易战"],
+      "key_confounders": [
+        "供给侧改革叠加",
+        "经济下行",
+        "中美贸易战"
+      ],
       "geographic_scope": "全国",
       "difficulty": "high",
       "notes": "2020年过渡期延至年底，疫情冲击可能混淆处理效应，需谨慎识别"
@@ -300,7 +346,11 @@
       "data_availability": "上市公司财务数据；股票质押数据；公司并购数据；信用债违约数据",
       "typical_variables": "融资成本、杠杆率、国有资本并购事件、民营企业数量变化、违约率",
       "literature_example": "Chen et al. (2020, JFE); Bai et al.",
-      "key_confounders": ["中美贸易战（2018-2019）", "经济下行周期", "民企自身经营问题"],
+      "key_confounders": [
+        "中美贸易战（2018-2019）",
+        "经济下行周期",
+        "民企自身经营问题"
+      ],
       "geographic_scope": "全国",
       "difficulty": "high",
       "notes": "贸易战和去杠杆双重冲击，需用IV或RDD分离两个冲击的效应"
@@ -323,7 +373,11 @@
       "data_availability": "科创板上市公司数据；IPO数据；上市公司专利数据；分析师覆盖数据",
       "typical_variables": "IPO时间、融资规模、上市后股价表现、研发投入、专利产出、分析师关注度",
       "literature_example": "Lin et al. (2022, JFQA)",
-      "key_confounders": ["创业板注册制改革（2020）", "科创50指数推出", "A股再融资政策放松"],
+      "key_confounders": [
+        "创业板注册制改革（2020）",
+        "科创50指数推出",
+        "A股再融资政策放松"
+      ],
       "geographic_scope": "上海证券交易所（科创板）；全国比较",
       "difficulty": "medium",
       "notes": "RDD适用：以科创板上市财务门槛（研发投入/营收占比）作为断点"
@@ -346,7 +400,11 @@
       "data_availability": "全国碳市场交易数据（2021-）；工业企业数据库；上市公司年报；污染排放数据",
       "typical_variables": "碳排放强度、能源消耗、绿色创新、生产率、碳配额价格",
       "literature_example": "Tang et al. (2023, JFE); Zhang et al. (2023, Nature Climate Change)",
-      "key_confounders": ["能耗双控政策（2021）", "电力市场化改革", "煤炭保供（2021-2022）"],
+      "key_confounders": [
+        "能耗双控政策（2021）",
+        "电力市场化改革",
+        "煤炭保供（2021-2022）"
+      ],
       "geographic_scope": "全国（电力行业）",
       "difficulty": "medium-high",
       "notes": "2021年能耗双控政策与碳市场同期叠加，注意政策混淆；碳市场逐步扩展至其他行业（钢铁/水泥/航空）"
@@ -369,7 +427,11 @@
       "data_availability": "海南工商注册数据；免税购物数据；旅游统计数据；港口贸易数据",
       "typical_variables": "贸易额、企业注册数、旅游收入、免税销售额、FDI、税收收入",
       "literature_example": "Zhang et al. (2023)",
-      "key_confounders": ["疫情冲击（2020-2022）", "其他自贸区政策叠加", "海南离岛免税额度多次上调"],
+      "key_confounders": [
+        "疫情冲击（2020-2022）",
+        "其他自贸区政策叠加",
+        "海南离岛免税额度多次上调"
+      ],
       "geographic_scope": "海南省",
       "difficulty": "medium",
       "notes": "疫情冲击是最重要的混淆因素，建议用合成控制法构造海南反事实"
@@ -392,7 +454,11 @@
       "data_availability": "绿色信贷数据；企业碳排放数据；上市公司ESG评级；债券发行数据",
       "typical_variables": "绿色信贷、绿色债券发行量、企业融资成本、碳排放强度、ESG评级、股价崩盘风险",
       "literature_example": "Wang et al. (2023, JFE); Hu et al.",
-      "key_confounders": ["碳市场启动（2021）", "能耗双控（2021）", "煤炭保供（2021-2022）"],
+      "key_confounders": [
+        "碳市场启动（2021）",
+        "能耗双控（2021）",
+        "煤炭保供（2021-2022）"
+      ],
       "geographic_scope": "全国",
       "difficulty": "medium-high",
       "notes": "省级绿色信贷占比差异可作为IV；政策本身是多工具组合，需分解各工具效应"
@@ -415,7 +481,11 @@
       "data_availability": "工信部专精特新企业名单；上市公司财务数据；专利数据；银行贷款数据",
       "typical_variables": "研发投入、专利产出、企业规模、利润率、融资约束、出口额",
       "literature_example": "Li et al. (2023)",
-      "key_confounders": ["科创板注册制", "北交所设立（2021）", "制造业强国政策"],
+      "key_confounders": [
+        "科创板注册制",
+        "北交所设立（2021）",
+        "制造业强国政策"
+      ],
       "geographic_scope": "全国",
       "difficulty": "medium",
       "notes": "认定批次清晰，适合做批次DID；认定标准包含研发强度等门槛，RDD适用"
@@ -438,7 +508,11 @@
       "data_availability": "北交所上市公司数据；新三板数据；上市公司创新数据",
       "typical_variables": "IPO数量、融资规模、上市后股价表现、研发投入、专利产出",
       "literature_example": "Chen et al. (2023)",
-      "key_confounders": ["北交所流动性问题", "科创板竞争", "全面注册制改革（2023）"],
+      "key_confounders": [
+        "北交所流动性问题",
+        "科创板竞争",
+        "全面注册制改革（2023）"
+      ],
       "geographic_scope": "全国（主要集中于北京/长三角/珠三角）",
       "difficulty": "medium",
       "notes": "与专精特新政策高度协同，两者结合构成完整中小企业支持体系"
@@ -461,7 +535,11 @@
       "data_availability": "上市公司年报；数据交易所交易数据；数字经济统计数据",
       "typical_variables": "数据要素收入、数据交易量、数字化转型投入、企业估值",
       "literature_example": "Zhou et al. (2024)",
-      "key_confounders": ["平台经济监管（2021-2022）", "数字中国建设", "数据安全法"],
+      "key_confounders": [
+        "平台经济监管（2021-2022）",
+        "数字中国建设",
+        "数据安全法"
+      ],
       "geographic_scope": "全国（数据交易所试点：上海/北京/深圳/贵州等）",
       "difficulty": "high",
       "notes": "政策效应观测期短（2022年底开始），且受平台监管政策混淆"
@@ -484,7 +562,10 @@
       "data_availability": "A股全量交易数据；IPO数据；上市公司财务数据",
       "typical_variables": "IPO时间、壳价值、退市率、上市后股价表现、信息披露质量",
       "literature_example": "初步研究（政策新）",
-      "key_confounders": ["市场整体环境（2023年震荡）", "北交所持续扩容"],
+      "key_confounders": [
+        "市场整体环境（2023年震荡）",
+        "北交所持续扩容"
+      ],
       "geographic_scope": "全国（主板上市公司）",
       "difficulty": "medium",
       "notes": "主板（注册制前为核准制）vs科创板（一直为注册制）构成良好准实验"
@@ -507,7 +588,11 @@
       "data_availability": "城投债数据；地方政府债务数据；信用债交易数据；银行贷款数据",
       "typical_variables": "城投债信用利差、融资成本、城投债发行量、地方债规模、地区GDP增速",
       "literature_example": "初步研究（政策新）",
-      "key_confounders": ["房地产市场下行", "土地财政萎缩", "经济下行压力"],
+      "key_confounders": [
+        "房地产市场下行",
+        "土地财政萎缩",
+        "经济下行压力"
+      ],
       "geographic_scope": "全国（贵州/云南/天津/广西等高债务省份为重点）",
       "difficulty": "high",
       "notes": "化债方案分批次推进，适合做渐进DID；城投债信用利差是良好的结果变量"
@@ -530,19 +615,74 @@
       "data_availability": "工商注册数据；上市公司年报；企业注销数据；司法诉讼数据",
       "typical_variables": "企业注销率、注册资本变化、股东维权诉讼、董监高变更",
       "literature_example": "初步研究（政策新）",
-      "key_confounders": ["经济下行（企业注销增加）", "市场主体三年倍增计划"],
+      "key_confounders": [
+        "经济下行（企业注销增加）",
+        "市场主体三年倍增计划"
+      ],
       "geographic_scope": "全国",
       "difficulty": "medium",
       "notes": "2024年7月1日实施，观测期短，需快速积累数据"
+    },
+    {
+      "id": "POL-2012-YGSZ",
+      "name": "营业税改征增值税改革",
+      "english_name": "Business Tax to Value-Added Tax Reform",
+      "category": "财政政策",
+      "sub_category": "税制改革",
+      "policy_level": "regional",
+      "announcement_date": "2011-11-16",
+      "start_date": "2012-01-01",
+      "end_date": "2016-04-30",
+      "description": "将营业税应税项目改为征收增值税，上海率先试点（2012年1月），2016年5月全国推广。营改增消除了重复征税，鼓励服务业专业化分工。",
+      "mechanism": "消除营业税重复征税，促进服务业专业化分工，降低企业税负",
+      "treated_units": "原缴纳营业税的服务业企业（交通运输、建筑、房地产、金融、生活服务等）",
+      "control_units": "未纳入试点地区同类企业；一般纳税人",
+      "identification_strategy": "交错DID（各地试点时间不同）+ 倾向得分匹配",
+      "data_availability": "工业企业数据库；上市公司财务数据；税务数据",
+      "typical_variables": "企业税负、服务业产出、就业、出口、企业专业化程度",
+      "literature_example": "Cai & Liu (2019, QJE); Liu & Mao (2023, JFE)",
+      "key_confounders": [
+        "增值税简并税率",
+        "供给侧改革"
+      ],
+      "geographic_scope": "全国（2012年上海率先试点，逐步扩大至10省市，2016年全国）",
+      "difficulty": "medium",
+      "notes": "注意营改增与增值税简并税率改革的叠加效应"
+    },
+    {
+      "id": "POL-2017-ETS",
+      "name": "碳排放权交易试点",
+      "english_name": "China National ETS Pilot Programs",
+      "category": "环境与能源政策",
+      "sub_category": "碳定价机制",
+      "policy_level": "regional",
+      "announcement_date": "2011-10-29",
+      "start_date": "2013-06-18",
+      "end_date": "2021-06-30",
+      "description": "中国碳排放权交易体系（ETS）试点阶段，2011年国家发改委批准7个试点省市（北京、上海、天津、重庆、湖北、广东、深圳），2013-2014年陆续启动交易。2017年全国统一市场启动建设，2021年7月正式启动全国碳市场（覆盖电力行业）。",
+      "mechanism": "碳定价机制通过提高高排放企业成本，倒逼绿色创新和清洁生产",
+      "treated_units": "试点地区纳入碳市场的重点排放企业（电力、钢铁、水泥、电解铝等）",
+      "control_units": "试点地区未纳入企业；非试点地区同类企业",
+      "identification_strategy": "交错DID（各试点启动时间不同）+ 合成控制法",
+      "data_availability": "企业专利数据（国家知识产权局）；工业企业数据库；上市公司财务数据",
+      "typical_variables": "绿色专利申请/授权、企业TFP、碳排放强度、就业、出口",
+      "literature_example": "Zhang et al. (2023, JFE); 李香勇等 (2022, 经济研究)",
+      "key_confounders": [
+        "绿色信贷政策",
+        "环保法修订",
+        "供给侧改革"
+      ],
+      "geographic_scope": "7个试点省市（北京、上海、天津、重庆、湖北、广东、深圳）",
+      "difficulty": "hard",
+      "notes": "各试点碳市场覆盖行业和配额分配方案不同，需注意异质性"
     }
   ],
-
   "metadata": {
-    "total_policies": 23,
+    "total_policies": 25,
     "coverage_period": "2008-01-01 to 2024-12-31",
     "categories": {
-      "财政政策": 2,
-      "环境与能源政策": 6,
+      "财政政策": 3,
+      "环境与能源政策": 7,
       "贸易与开放政策": 2,
       "资本市场开放": 2,
       "资本市场改革": 3,

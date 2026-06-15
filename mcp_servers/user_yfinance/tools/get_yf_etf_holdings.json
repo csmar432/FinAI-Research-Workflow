@@ -1,11 +1,18 @@
 {
   "name": "get_yf_etf_holdings",
-  "description": "获取ETF持仓明细",
-  "parameters": {
+  "description": "获取 ETF 持仓明细（持仓股票代码、权重、市值、持仓比例变化）。使用 Yahoo Finance API，无需 API Key。用于因子暴露分析、机构持仓研究和 Smart Beta 策略研究。",
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "ticker": { "type": "string", "description": "ETF代码，例如 'SPY'" }
+      "ticker": {
+        "type": "string",
+        "description": "ETF 代码（如 SPY、QQQ、513500.SH）",
+        "required": true
+      }
     },
-    "required": ["ticker"]
+    "required": [
+      "ticker"
+    ],
+    "description": "获取ETF持仓明细。使用 Yahoo Finance API，无需 API Key。"
   }
 }

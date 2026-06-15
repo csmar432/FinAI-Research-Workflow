@@ -1,13 +1,19 @@
 {
   "name": "pd_sql",
-  "description": "使用SQL查询数据框（pandasql）。\\n\\n",
+  "description": "使用SQL查询数据框（pandasql）。\\n\\nArgs:\\n  query: SQL语句\\n  save_as: 保存结果的数据框名称\\n\\nReturns: 查询结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "query": {
+        "type": "string"
+      },
+      "save_as": {
         "type": "string"
       }
     },
-    "required": []
+    "required": [
+      "query"
+    ],
+    "description": "使用SQL查询数据框（pandasql）。"
   }
 }

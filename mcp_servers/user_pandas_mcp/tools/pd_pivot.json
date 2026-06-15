@@ -1,13 +1,45 @@
 {
   "name": "pd_pivot",
-  "description": "数据透视表分析。\\n\\n",
+  "description": "对 pandas DataFrame 执行数据透视表分析，支持自定义索引/列/值/聚合函数，生成多维汇总交叉表。",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
+        "type": "string"
+      },
+      "index": {
+        "type": "string"
+      },
+      "columns": {
+        "type": "string"
+      },
+      "values": {
+        "type": "string"
+      },
+      "aggfunc": {
+        "type": "string",
+        "enum": [
+          "mean",
+          "sum",
+          "count",
+          "std",
+          "min",
+          "max"
+        ],
+        "default": "mean"
+      },
+      "fill_value": {
+        "type": "number"
+      },
+      "save_as": {
         "type": "string"
       }
     },
-    "required": []
+    "required": [
+      "name",
+      "index",
+      "values"
+    ],
+    "description": "对 pandas DataFrame 执行数据透视表分析，支持自定义索引/列/值/聚合函数，生成多维汇总交叉表。"
   }
 }

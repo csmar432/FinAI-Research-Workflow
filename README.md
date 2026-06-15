@@ -7,9 +7,27 @@
 [![PyPI version](https://img.shields.io/pypi/v/finai-research-workflow?color=blue)](https://pypi.org/project/finai-research-workflow/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/finai-research-workflow?color=blue)](https://pypi.org/project/finai-research-workflow/)
 [![arXiv](https://img.shields.io/badge/arXiv-cs.AI-b31b1b.svg)](https://arxiv.org/)
-[![CI](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/finai-research-workflow/ci.yml?branch=main&label=CI)](https://github.com/YOUR_USERNAME/finai-research-workflow/actions)
-[![docs](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/finai-research-workflow/docs.yml?branch=main&label=docs)](https://github.com/YOUR_USERNAME/finai-research-workflow/actions)
-[![GitHub stars](https://img.shields.io/github/stars/YOUR_USERNAME/finai-research-workflow?style=social)](https://github.com/YOUR_USERNAME/finai-research-workflow/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/csmar432/论文-研报工作流/ci.yml?branch=main&label=CI)](https://github.com/csmar432/论文-研报工作流/actions)
+[![docs](https://img.shields.io/github/actions/workflow/status/csmar432/论文-研报工作流/docs.yml?branch=main&label=docs)](https://github.com/csmar432/论文-研报工作流/actions)
+[![GitHub stars](https://img.shields.io/github/stars/csmar432/论文-研报工作流?style=social)](https://github.com/csmar432/论文-研报工作流/stargazers)
+
+---
+
+## Quick Navigation
+
+| I'm looking for... | Go here |
+|---|---|
+| **Complete Chinese guide** | [使用指南.md](使用指南.md) · 完整的 13 章中文手册 |
+| **Chinese architecture overview** | [使用指南.md - 系统概览](使用指南.md#1-系统概览) |
+| **Setup & installation** | [使用指南.md - 安装配置](使用指南.md#2-安装配置) |
+| **11-step workflow** | [使用指南.md - 完整工作流程](使用指南.md#7-完整工作流程) |
+| **49 econometric methods** | [使用指南.md - 实证分析方法](使用指南.md#8-实证分析方法) |
+| **43 MCP data sources** | [使用指南.md - MCP 数据源](使用指南.md#6-mcp-数据源) |
+| **17 AI Skills** | [knowledge/skills/](knowledge/skills/) |
+| **API reference** | [docs/api_reference.md](docs/api_reference.md) |
+| **Troubleshooting** | [使用指南.md - 常见问题](使用指南.md#13-常见问题) |
+
+> **For Chinese users:** The most comprehensive guide is **[使用指南.md](使用指南.md)** — a complete 13-chapter manual covering installation, workflows, data sources, econometric methods, paper writing, and FAQ.
 
 ---
 
@@ -41,14 +59,14 @@ Describe your research in plain Chinese — the agent handles the rest:
 |-------|--------|
 | Literature Review | Citation graph + gap analysis (arXiv / NBER / OpenAlex / JF / JFE / RFS) |
 | Research Design | DID/IV/RDD identification strategy + data sourcing plan |
-| Empirical Analysis | 33 econometric methods, automated robustness tests (18 types) |
+| Empirical Analysis | 49 econometric methods, automated robustness tests (18 types) |
 | Paper Draft | LaTeX manuscript in journal format (JF/JFE/RFS/经济研究/金融研究/管理世界) |
 | Review Loop | Adversarial review until submission-ready |
 
 **Architecture overview:**
 
 ![Architecture Diagram](.github/demo/architecture-diagram.svg)
-*Multi-agent pipeline: User Input → Cursor Agent → 5-Stage Research Pipeline → 34 MCP Servers → 33 Econometric Methods → LaTeX Paper*
+*Multi-agent pipeline: User Input → AI Agent → 5-Stage Research Pipeline → 43 MCP Servers → 49+ Econometric Methods → LaTeX Paper*
 
 > **Note:** Screenshots and demo videos coming soon. The project is actively maintained.
 
@@ -61,9 +79,9 @@ Describe your research in plain Chinese — the agent handles the rest:
 - **Write academic papers** — From literature review to LaTeX submission (JF/JFE/RFS/经济研究/金融研究/管理世界)
 - **Generate research reports** — Institutional-grade financial analysis for A-shares and global markets
 - **Run empirical analysis** — DID, IV, PSM, Panel GMM with automated validation
-- **Access financial data** — A-shares, US stocks, macro indicators via 34 MCP data servers (most require no API key)
+- **Access financial data** — A-shares, US stocks, macro indicators via 43 MCP data servers (most require no API key)
 
-> Architecture principle: **Cursor Claude (local) as the core, external AI as supplement.**
+> Architecture principle: **Local LLM (Claude Code / Cursor) as the core, external AI as supplement.**
 
 ---
 
@@ -72,13 +90,13 @@ Describe your research in plain Chinese — the agent handles the rest:
 | Feature | Description |
 |---------|-------------|
 | **Multi-Agent Pipeline** | Orchestrates 5-paper agents (outline → literature → plotting → writing → refinement) |
-| **34 MCP Data Servers** | A-share (Tushare), macro (World Bank, IMF, OECD), US stocks (yfinance), academic (arXiv, NBER, OpenAlex) — most require no API key |
-| **33 Econometric Methods** | DID (5 variants), RDD, synthetic control, panel GMM, spatial regression, IV/2SLS — JF/JFE/RFS standard |
+| **43 MCP Data Servers** | A-share (Tushare), macro (World Bank, IMF, OECD), US stocks (yfinance), academic (ArXiv, NBER, OpenAlex), SEC filings, ESG, options, forex, shipping, commodities, crypto, Chinese patents, customs data, fund/bond/option data, provincial statistics — most require no API key |
+| **49+ Econometric Methods** | DID (5 variants), RDD, synthetic control, panel GMM, spatial regression, IV/2SLS, causal ML, GARCH, survival analysis, panel cointegration — JF/JFE/RFS standard |
 | **Provenance Tracking** | Full data lineage from raw API to final chart/table |
 | **HITL Gates** | Human-in-the-loop approval at critical pipeline stages |
 | **6 Financial Analysts** | Parallel analysis: fundamental, valuation, risk, earnings, competitive, macro |
 | **Self-Evolution** | Continuous improvement based on task outcomes |
-| **34 Journal Templates** | JFE/JF/RFS + 28 Chinese journals (经济研究/金融研究/管理世界/会计研究 etc.) |
+| **70 Journal Templates** | JFE/JF/RFS/JBF/JIMF/MF + 50+ Chinese/Asian/European journals (经济研究/金融研究/管理世界/会计研究 etc.) |
 
 ---
 
@@ -101,9 +119,9 @@ cp .env.example .env
 # Other supported: ANTHROPIC_API_KEY, OPENAI_API_KEY
 
 # 4. Run your first research pipeline
-python scripts/agent_pipeline.py --topic "碳排放权交易对企业绿色创新的影响"
+python scripts/research_framework/pipeline.py --topic "碳排放权交易对企业绿色创新的影响"
 
-# Or use Cursor Agent (recommended) for the full interactive workflow
+# Or use an AI Agent (recommended) for the full interactive workflow
 ```
 
 ### Via Cursor (Recommended)
@@ -114,17 +132,17 @@ Simply describe your research goal in natural language:
 帮我分析碳排放权交易对企业绿色创新的影响，设计一篇实证论文，发表在经济研究
 ```
 
-Cursor Agent will automatically call all necessary modules.
+AI Agent will automatically call all necessary modules.
 
 ---
 
 ## Architecture
 
-The system uses a **layered agent architecture** with Cursor Agent as the orchestrator:
+The system uses a **layered agent architecture** with an AI Agent (Claude Code / Cursor / Codex) as the orchestrator:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                    Cursor Agent (Local Claude)                            │
+│                    AI Agent (Claude Code / Cursor / Codex)                           │
 │                                                                          │
 │   Natural Language → Multi-Agent Pipeline → LaTeX Paper + PDF             │
 │   "帮我研究关税政策对创新的影响，发表在经济研究"                            │
@@ -133,7 +151,7 @@ The system uses a **layered agent architecture** with Cursor Agent as the orches
           ┌───────────────────┼───────────────────┐
           ▼                   ▼                   ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────────────┐
-│   scripts/core/  │  │   34 MCP Servers │  │  research_framework/      │
+│   scripts/core/  │  │   43 MCP Servers │  │  research_framework/      │
 │                 │  │                  │  │                          │
 │  Memory         │  │  A-shares        │  │  modern_did.py            │
 │  Planner        │  │  US Stocks       │  │  synthetic_control.py     │
@@ -145,31 +163,63 @@ The system uses a **layered agent architecture** with Cursor Agent as the orches
 └─────────────────┘  └─────────────────┘  └──────────────────────────┘
 ```
 
-**Key numbers:** 34 MCP servers · 33 econometric methods · 16 Skills · 38 test files · >200 test cases
+**Key numbers:** 43 MCP servers · 49 econometric methods · 17 Skills · 41 research_framework modules · 12 research directions
 
 ---
 
 ## MCP Tools Overview
 
+> 43 servers total. Most require no API key. See [MCP Tool Marketplace](docs/tutorials/04-mcp-marketplace.md) for the complete tool catalog.
+
 | MCP Server | Function | API Key Required |
 |------------|----------|-----------------|
 | **user-tushare** | A-share data (quotes, financials, margin) | Yes |
-| **user-financial** | Global macro (GDP/CPI/M2 via World Bank + akshare) | No |
-| **user-eodhd** | US macro (yield curve, economic calendar) | Yes |
-| **user-eastmoney-reports** | Research reports, news, analyst rankings | No |
-| **user-yfinance** | US stock financials, ESG data | No |
-| **user-finviz-sec** | Stock screening, SEC filings | No |
-| **user-enhanced-finance** | Forex, shipping indices, commodities | No |
-| **user-arxiv** | Academic paper search and download | No |
-| **user-brave-search** | Web search for news and research | Yes |
+| **user-yfinance** | US stock, ETF, options, financials | No |
+| **user-sec-edgar** | SEC 10-K/10-Q/8-K filings | No |
+| **user-financial** | China macro (GDP/CPI/M2 via akshare + World Bank) | No |
+| **user-eodhd** | US yield curve, economic calendar | Yes |
+| **user-fed-data** | Federal Reserve, FOMC, Beige Book | No |
 | **user-wb-data** | World Bank Data API | No |
-| **user-imf-data** | IMF Data API | No |
+| **user-imf-data** | IMF World Economic Outlook | No |
+| **user-oecd-data** | OECD Economic Data | No |
+| **user-bea-data** | Bureau of Economic Analysis (US GDP) | No |
+| **user-eastmoney-reports** | Research reports, news, analyst rankings | No |
+| **user-enhanced-finance** | Forex, shipping indices, commodities | No |
+| **user-openalex** | 250M+ academic papers + citation graph | No |
+| **user-arxiv** | Academic paper search and download | No |
+| **user-context7** | Full-text retrieval for papers (ArXiv/DOI) | No |
+| **user-semantic-scholar** | AI-enhanced paper search | Optional |
 | **user-nber-wp** | NBER Working Papers | No |
-| **user-fed-data** | Federal Reserve Data (FOMC, Beige Book) | No |
-| **user-bea-data** | Bureau of Economic Analysis | No |
-| **user-oecd-data** | OECD Data API | No |
+| **user-brave-search** | Web search (Chinese/English news and research) | Yes |
+| **user-chinese-literature** | CSSCI, CNKI-style Chinese paper search | No |
 
 See [MCP Tool Marketplace Tutorial](docs/tutorials/04-mcp-marketplace.md) for details.
+
+---
+
+## Available Skills (17)
+
+Each skill is documented in `.claude/skills/` (Claude Code) and `.github/skills/` (GitHub Copilot). In Cursor, use the `Skill:` command directly.
+
+| Skill | Description | Key Modules |
+|-------|-------------|------------|
+| `fin-full-pipeline` | End-to-end: topic → paper PDF | `scripts/agent_pipeline.py` |
+| `fin-idea-discovery` | Idea generation + data validation | `scripts/research_framework/pipeline.py` |
+| `fin-lit-review` | Systematic literature review | `scripts/citation_graph.py`, MCP multi-source |
+| `fin-generate-idea` | 8-12 ranked ideas with实证验证 | MCP data validation |
+| `fin-novelty-check` | Novelty validation against JF/JFE/RFS | NBER, Chinese journals search |
+| `fin-experiment-design` | Complete empirical design | `modern_did.py`, `regression_engine.py` |
+| `fin-paper-writing` | Writing orchestration | `report_generator.py` |
+| `fin-paper-draft` | Body text generation (LaTeX) | `journal_template.py` |
+| `fin-paper-plan` | Outline generation | 70 journal templates |
+| `fin-paper-figure` | Chart generation (≥300 DPI) | `fin_charts.py`, `chart_factory.py` |
+| `fin-paper-convert` | LaTeX compilation | `xelatex`/`pdflatex` + journal templates |
+| `fin-review-loop` | Multi-round adversarial review | 5-dimension scoring |
+| `fin-submit-check` | Pre-submission checklist | Format, DPI, citations audit |
+| `fin-data-acquisition` | Data fetch + regression scripts | 43 MCP servers |
+| `fin-brief-generator` | Auto-generate `FIN_BRIEF.md` | 5 enhanced tools |
+| `fin-ref-paper` | BibTeX reference management | CrossRef DOI API |
+| `fin-viz-launch` | Natural language → academic charts | `chart_pipeline.py`, 20+ types |
 
 ---
 
@@ -203,7 +253,7 @@ See [MCP Tool Marketplace Tutorial](docs/tutorials/04-mcp-marketplace.md) for de
 
 ```bash
 # Paper pipeline
-python scripts/agent_pipeline.py --topic "碳排放权交易对企业绿色创新的影响"
+python scripts/research_framework/pipeline.py --topic "碳排放权交易对企业绿色创新的影响"
 
 # Financial report
 python scripts/demo_research_report.py --stock 000001.SZ
@@ -215,7 +265,10 @@ python scripts/core/mcp_tool_market.py --search "gdp" --report
 python scripts/event_monitor.py --interval 300 --test
 
 # Literature review
-python scripts/literature_manager.py --search "carbon trading innovation"
+python scripts/research_framework/pipeline.py --mode lit-review --topic "carbon trading innovation"
+
+# Or use an AI Agent directly
+# "帮我做碳交易创新领域的文献综述"
 
 # Journal template
 python scripts/journal_template.py --list
@@ -231,13 +284,13 @@ streamlit run scripts/dashboard.py --server.port 8050
 
 | Market | Source | Data Types |
 |--------|--------|------------|
-| **A-shares** | akshare (free) / Tushare Pro | Daily quotes, financials, margin, north flow |
+| **A-shares** | `user-tushare` (free) | Daily quotes, financials, margin, north flow |
 | **US Stocks** | yfinance + Finviz (free) | Quotes, financials, ESG, options, SEC filings |
 | **Macro (Global)** | World Bank + IMF + OECD (free) | GDP, CPI, population, trade, debt |
-| **Macro (China)** | akshare + NBS (free) | CPI, PPI, PMI, M2, FDI, retail sales |
+| **Macro (China)** | `user-financial` + NBS (free) | CPI, PPI, PMI, M2, FDI, retail sales |
 | **Macro (US)** | FRED + BEA + Fed (free) | NIPA, FOMC, Beige Book, yield curve |
-| **Fixed Income** | EODHD (key) / akshare (free) | Treasury yields, bond prices, credit spreads |
-| **Forex & Commodities** | akshare + Enhanced Finance (free) | FX rates, shipping indices, precious metals |
+| **Fixed Income** | EODHD (key) / `user-financial` (free) | Treasury yields, bond prices, credit spreads |
+| **Forex & Commodities** | `user-enhanced-finance` + `user-financial` (free) | FX rates, shipping indices, precious metals |
 | **Research Reports** | 东方财富 (free) | Analyst reports, news, sector analysis |
 | **Academic** | arXiv + NBER (free) | Working papers, citations |
 
@@ -257,7 +310,7 @@ See [MCP Marketplace Tutorial](docs/tutorials/04-mcp-marketplace.md) for full gu
 
 ### Adding a New Research Direction
 
-1. Create file: `scripts/research_directions/your_topic.py`
+1. Create file: `scripts/research_directions/carbon_economics.py` (copy from an existing direction like `green_finance.py` as template)
 2. Define `ResearchDirection` class with:
    - Research questions
    - Data requirements
@@ -297,7 +350,7 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=YOUR_USERNAME/finai-research-workflow&type=Timeline)](https://star-history.com/#YOUR_USERNAME/finai-research-workflow&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=csmar432/论文-研报工作流&type=Timeline)](https://star-history.com/#csmar432/论文-研报工作流&Timeline)
 
 ---
 
@@ -305,8 +358,8 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 | Layer | Technology |
 |-------|------------|
-| **AI Orchestration** | Cursor Agent, Claude API, OpenAI API, Anthropic API |
-| **Data (34 servers)** | akshare, yfinance, World Bank API, IMF API, Tushare Pro |
+| **AI Orchestration** | Claude Code / Cursor / Codex, Claude API, OpenAI API, Anthropic API |
+| **Data (43 servers)** | `user-tushare`, `user-yfinance`, `user-financial`, `user-sec-edgar`, `user-eastmoney-*`, World Bank API, IMF API |
 | **Econometrics** | statsmodels, linearmodels, scipy |
 | **Visualization** | matplotlib, seaborn, plotly |
 | **Pipeline** | Python 3.10+, DuckDB, FastAPI, Streamlit |

@@ -1,0 +1,23 @@
+{
+  "name": "get_cnki_paper_detail",
+  "description": "获取 CNKI 单篇论文的详细信息。\n\n通过 CNKI 论文详情页获取完整元数据，包括：摘要、关键词、作者信息、期刊信息、基金、DOI、分类号等。\n\n可通过 CNKI 论文 ID 或论文标题查询。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "cnki_id": {
+        "type": "string",
+        "description": "CNKI 论文 ID（如 CNKI:ODE...）"
+      },
+      "title": {
+        "type": "string",
+        "description": "论文标题（用于模糊匹配搜索）"
+      },
+      "fetch_citations": {
+        "type": "boolean",
+        "description": "是否获取引用该论文的其他论文（默认False）",
+        "default": false
+      }
+    },
+    "description": "Get detailed metadata for a CNKI paper. 数据源：中国知网详情页。"
+  }
+}

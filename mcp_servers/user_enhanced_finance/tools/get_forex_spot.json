@@ -1,8 +1,9 @@
 {
   "name": "get_forex_spot",
-  "description": "获取外汇即期汇率（主要货币对）。使用 akshare 东方财富接口，无需 API Key。",
+  "description": "获取外汇即期汇率（主要货币对）。使用 akshare 东方财富接口，无需 API Key。覆盖美元/欧元/英镑/日元/港元/澳元等主要货币兑人民币汇率。用于汇率风险、外汇市场和国际贸易研究。",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "获取外汇即期汇率（主要货币对）。使用 akshare 东方财富接口，无需 API Key。"
   }
 }

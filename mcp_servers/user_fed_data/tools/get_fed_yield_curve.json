@@ -8,6 +8,7 @@
         "type": "string",
         "description": "日期 YYYY-MM-DD"
       }
-    }
+    },
+    "description": "获取美债收益率曲线（2Y/5Y/10Y/30Y等期限）。"
   }
 }

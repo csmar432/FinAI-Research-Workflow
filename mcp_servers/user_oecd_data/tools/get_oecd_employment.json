@@ -15,6 +15,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取OECD就业数据。"
   }
 }

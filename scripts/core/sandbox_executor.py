@@ -15,6 +15,12 @@ with dependency analysis and environment management.
 
 from __future__ import annotations
 
+__all__ = [
+    "ExecutionResult",
+    "DependencyAnalyzer",
+    "FullSandboxExecutor",
+]
+
 import ast
 import json
 import os

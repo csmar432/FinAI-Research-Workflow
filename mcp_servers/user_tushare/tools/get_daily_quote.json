@@ -23,6 +23,7 @@
     },
     "required": [
       "ts_code"
-    ]
+    ],
+    "description": "获取A股日线行情数据（开盘/收盘/最高/最低/成交量/成交额）。使用 Tushare Pro API。"
   }
 }

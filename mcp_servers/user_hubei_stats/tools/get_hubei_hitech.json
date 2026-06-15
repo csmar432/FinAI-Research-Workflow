@@ -3,6 +3,7 @@
   "description": "湖北高新技术企业数量（akshare暂无分省数据，返回已知数据）",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "湖北高新技术企业数量（注：akshare暂无分省数据，返回已知数据和替代来源）"
   }
 }

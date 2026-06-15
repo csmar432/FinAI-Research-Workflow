@@ -37,11 +37,23 @@ _log.setLevel(logging.INFO)
 from scripts.research_framework.base import DataSource
 
 # ─────────────────────────────────────────
-# Remainder of the file (classes, ReportGenerator, TableFormatter, etc.)
-# is unchanged from this point.
+# LaTeX escaping helper (prevents injection in \includegraphics paths)
 # ─────────────────────────────────────────
 
-# ─────────────────────────────────────────
+def _latex_escape(s: str) -> str:
+    """Escape LaTeX special characters to prevent injection."""
+    return (
+        s.replace("\\", "\\textbackslash{}")
+         .replace("{", "\\{")
+         .replace("}", "\\}")
+         .replace("$", "\\$")
+         .replace("#", "\\#")
+         .replace("%", "\\%")
+         .replace("&", "\\&")
+         .replace("_", "\\_")
+         .replace("^", "\\textasciicircum{}")
+         .replace("~", "\\textasciitilde{}")
+    )
 # TRANSLATION DICTIONARIES
 # ─────────────────────────────────────────
 ZH_EN = {
@@ -217,9 +229,33 @@ class TableFormatter:
         n_col: str = "N",
         stats: list[str] = ["mean", "std", "min", "p50", "max"],
     ) -> str:
-        """Generate LaTeX descriptive stats table."""
+        """Generate LaTeX descriptive stats table.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Expected format from pandas describe():
+            - columns = variable names
+            - index = stat names (count, mean, std, min, 50%, max, ...)
+            If df.index contains column names instead (columns = stats), the df
+            will be auto-transposed for convenience.
+        """
+        # Auto-detect format: if stat names are in columns, transpose
+        stat_names = {"count", "mean", "std", "min", "50%", "max",
+                      "25%", "75%", "N", "n"}
+        if set(df.columns).issubset(stat_names) and set(df.index).issubset(stat_names):
+            df = df.T
+        elif not set(df.index).issubset(stat_names):
+            df = df.T
+
         stat_map = {"mean": "均值", "std": "标准差", "min": "最小值",
-                     "median": "中位数", "max": "最大值", "count": "N"}
+                     "median": "中位数", "max": "最大值", "count": "N",
+                     "50%": "中位数", "25%": "25%", "75%": "75%"}
+        # Normalize stat name: "p50" → "50%" (pandas convention)
+        def _norm(s: str) -> str:
+            if s == "p50":
+                return "50%"
+            return s
         col_spec = "l" + "c" * (len(stats) + 1)
 
         lines = [
@@ -236,8 +272,21 @@ class TableFormatter:
         for var in df.columns:
             row = [f"\\textit{{{var}}}"]
             for s in stats:
-                val = df.loc[var, s] if var in df.index and s in df.columns else float('nan')
-                row.append(f"{val:.4f}" if not pd.isna(val) else "—")
+                norm_s = _norm(s)
+                val = None
+                # 支持多种索引格式
+                if norm_s in df.index:
+                    val = df.loc[norm_s, var]
+                elif s in df.index:
+                    val = df.loc[s, var]
+                # Guard: val must be a number, not NaN
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    row.append("—")
+                else:
+                    try:
+                        row.append(f"{float(val):.4f}")
+                    except (ValueError, TypeError):
+                        row.append("—")
             lines.append("    " + " & ".join(row) + " \\\\")
         lines.extend([
             "    \\bottomrule",
@@ -356,8 +405,15 @@ class ReportGenerator:
                     if self.language == "zh"
                     else self._metadata.get("keywords_en", []))
 
+        # Journal template system: use article as the base class for standalone generation.
+        # When submitting to a specific journal, replace the .cls file:
+        #   JF/JFE → jf.cls / jfe.cls,  RFS → rfs.cls,
+        #   管理世界/经济研究/金融研究 → ctexart.cls
+        journal = self._metadata.get("journal", "") or ""
+        doc_class = "article"   # standalone-safe default
+
         lines = [
-            "\\documentclass[12pt,a4paper]{article}",
+            f"\\documentclass[12pt,a4paper]{{{doc_class}}}",
             "\\usepackage[utf8]{inputenc}",
             "\\usepackage{geometry}",
             "\\geometry{margin=1in}",
@@ -412,7 +468,7 @@ class ReportGenerator:
                     [tbl["data"]], [f"({i+1})" for i in range(1)],
                     list(tbl["data"].get("all_coefs", {}).keys())[:6],
                     title=cap, label=tbl["label"], notes=tbl["notes"],
-                    add_fallback_warning="warning" in prov,
+                    add_fallback_warning=bool(sim_vars),  # 有模拟数据时显示警告
                     simulated_vars=sim_vars,
                 )
                 lines.append(latex)
@@ -424,13 +480,28 @@ class ReportGenerator:
             lines.extend([
                 "\\begin{figure}[htbp]",
                 "  \\centering",
-                f"  \\includegraphics[width={fig['width']}\\textwidth]{{{fig['path'].name}}}",
-                f"  \\caption{{{cap}}}",
+                f"  \\includegraphics[width={fig['width']}\\textwidth]{{{_latex_escape(fig['path'].name)}}}",
+                f"  \\caption{{{_latex_escape(cap)}}}",
                 "\\end{figure}",
             ])
 
-        # References
-        lines.extend(["\\newpage", "\\section*{References}", "\\bibliographystyle{plainnat}", "\\bibliography{references}"])
+        # References — use bib file from output_dir if it exists; graceful fallback otherwise
+        bib_path = self.output_dir / "references.bib"
+        if bib_path.exists():
+            bib_cmd = f"\\bibliography{{{str(bib_path)}}}"
+        else:
+            _log.warning(
+                "references.bib not found in %s. "
+                "Run fin-ref-paper skill or create references.bib before compiling.",
+                self.output_dir
+            )
+            bib_cmd = "% \\bibliography{references}  % file not found"
+        lines.extend([
+            "\\newpage",
+            "\\section*{References}",
+            "\\bibliographystyle{plainnat}",
+            bib_cmd,
+        ])
 
         # Appendix
         lines.extend(["\\newpage", "\\appendix"])
@@ -476,7 +547,7 @@ class ReportGenerator:
     # ─────────────────────────────────────
     # WORD (DOCX) GENERATION
     # ─────────────────────────────────────
-    def generate_docx(self, filename: str = "paper.docx") -> Path:
+    def generate_docx(self, filename: str = "paper.docx") -> Path | None:
         """Generate Word document with REAL embedded tables (not images)."""
         try:
             from docx import Document as DocxDocument
@@ -721,6 +792,177 @@ class ReportGenerator:
         path = self.output_dir / "manifest.json"
         path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False, default=str))
         _log.info(f"Manifest saved: {path}")
+
+    # ─────────────────────────────────────
+    # PAPER GENERATION (P0-1: end-to-end PDF)
+    # ─────────────────────────────────────
+    def generate_paper(
+        self,
+        topic: str,
+        outline: dict,
+        data: pd.DataFrame | None = None,
+        regressions: dict | None = None,
+        references: list | None = None,
+        journal: str = "经济研究",
+        output_dir: str | Path | None = None,
+    ) -> Path:
+        """Generate a complete paper as .tex and .pdf.
+
+        This is the P0-1 entry point that wires the entire research pipeline
+        output into a submission-ready PDF.
+
+        Args:
+            topic: Research topic (used as paper title if no title in outline)
+            outline: Paper outline dict with keys:
+                abstract, intro/introduction, lit_review, method/methodology,
+                results, robustness/robustness_checks, conclusion
+            data: Optional DataFrame for reproducibility section
+            regressions: Dict of regression results keyed by table name
+            references: List of BibTeX entries (as str or dict)
+            journal: Target journal name (e.g. "经济研究", "JFE")
+            output_dir: Output directory (default: self.output_dir)
+
+        Returns:
+            Path to the generated .tex file
+        """
+        import logging as _rg_log
+        _rg_log = _rg_log.getLogger("report_generator.generate_paper")
+
+        # ── Output directory ───────────────────────────────────────────────────────
+        out_dir = Path(output_dir) if output_dir else self.output_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Determine language from journal
+        is_chinese = any(j in journal for j in [
+            "经济研究", "金融研究", "管理世界", "中国", "会计研究",
+            "财政研究", "世界经济", "统计研究", "数量经济",
+        ])
+        lang = "zh" if is_chinese else self.language
+        self.set_language(lang)
+
+        # ── Title ────────────────────────────────────────────────────────────────
+        title_zh = outline.get("title_zh") or outline.get("title") or topic
+        title_en = outline.get("title_en", title_zh)
+        self.set_title(title_zh, title_en)
+
+        # ── Abstract ────────────────────────────────────────────────────────────
+        abstract_zh = outline.get("abstract_zh") or outline.get("abstract", "")
+        abstract_en = outline.get("abstract_en", abstract_zh)
+        self.set_abstract(abstract_zh, abstract_en)
+
+        # ── Keywords ─────────────────────────────────────────────────────────────
+        if "keywords_zh" in outline:
+            self._metadata["keywords_zh"] = outline["keywords_zh"]
+        if "keywords_en" in outline:
+            self._metadata["keywords_en"] = outline["keywords_en"]
+
+        # ── Sections ─────────────────────────────────────────────────────────────
+        section_order = [
+            ("introduction", "Introduction"),
+            ("intro", "Introduction"),
+            ("lit_review", "Literature Review"),
+            ("literature_review", "Literature Review"),
+            ("method", "Methodology"),
+            ("methodology", "Methodology"),
+            ("data", "Data"),
+            ("results", "Results"),
+            ("main_results", "Main Results"),
+            ("heterogeneity", "Heterogeneity Analysis"),
+            ("mechanism", "Mechanism Analysis"),
+            ("robustness", "Robustness Checks"),
+            ("robustness_checks", "Robustness Checks"),
+            ("conclusion", "Conclusion"),
+            ("conclusions", "Conclusion"),
+        ]
+        processed_keys = set()
+        for key, label in section_order:
+            if key in outline and key not in processed_keys:
+                content = outline[key]
+                if isinstance(content, str):
+                    self.add_section(label, content, level=1)
+                elif isinstance(content, dict):
+                    title = content.get("title", label)
+                    body = content.get("content", content.get("text", ""))
+                    self.add_section(title, body, level=1)
+                processed_keys.add(key)
+
+        # Any remaining string keys in outline not yet processed → add as-is
+        for key, val in outline.items():
+            if key in processed_keys or not isinstance(val, str):
+                continue
+            self.add_section(key.replace("_", " ").title(), val, level=1)
+
+        # ── Regression tables ───────────────────────────────────────────────────
+        if regressions:
+            for tbl_name, tbl_data in regressions.items():
+                if isinstance(tbl_data, str):
+                    self.add_table(f"tab:{tbl_name}", tbl_data,
+                                   caption_zh=tbl_name, table_format="raw")
+                elif isinstance(tbl_data, dict):
+                    self.add_table(f"tab:{tbl_name}", tbl_data,
+                                   caption_zh=tbl_name)
+                elif isinstance(tbl_data, pd.DataFrame):
+                    self.add_table(f"tab:{tbl_name}", tbl_data,
+                                   caption_zh=tbl_name, table_format="descriptive")
+
+        # ── References ──────────────────────────────────────────────────────────
+        if references:
+            bib_path = out_dir / "references.bib"
+            bib_entries = "\n\n".join(
+                r if isinstance(r, str) else r.get("bibtex", str(r))
+                for r in references
+            )
+            bib_path.write_text(bib_entries, encoding="utf-8")
+            _rg_log.info("References written: %s", bib_path)
+
+        # ── Generate LaTeX ─────────────────────────────────────────────────────
+        tex_filename = self._sanitize_filename(topic) + ".tex"
+        tex_path = out_dir / tex_filename
+        gen_path = self.generate_tex(tex_filename)
+        _rg_log.info("LaTeX generated: %s", gen_path)
+
+        # ── Compile to PDF ─────────────────────────────────────────────────────
+        # Import journal_template lazily (avoids circular dep at module level)
+        try:
+            from scripts.journal_template import get_template
+        except ImportError:
+            _rg_log.warning("scripts.journal_template not available, skipping PDF compile")
+            return tex_path
+
+        template = get_template(journal)
+        if template is None:
+            _rg_log.warning("Unknown journal %r, using xelatex directly", journal)
+            template = get_template("JFE")  # fallback to JFE
+
+        engine = "xelatex" if is_chinese else "pdflatex"
+        _rg_log.info("Compiling %s with engine=%s", tex_path, engine)
+
+        try:
+            success = template.compile(str(tex_path), engine=engine, passes=2)
+            if success:
+                _rg_log.info("PDF compiled successfully: %s", tex_path.with_suffix(".pdf"))
+            else:
+                _rg_log.warning("PDF compilation returned False (check TeX installation)")
+        except Exception as e:
+            _rg_log.warning("PDF compilation failed: %s", e)
+
+        # ── Save manifest ──────────────────────────────────────────────────────
+        self.save_manifest({
+            "topic": topic,
+            "journal": journal,
+            "tex_path": str(tex_path),
+            "output_dir": str(out_dir),
+        })
+
+        return tex_path
+
+    @staticmethod
+    def _sanitize_filename(topic: str) -> str:
+        """Convert a topic string into a safe filename."""
+        import re
+        safe = re.sub(r"[^\w\u4e00-\u9fff\- ]", "_", topic)
+        safe = re.sub(r"[\s]+", "_", safe.strip())
+        return safe[:80] or "paper"
 
 
 __all__ = ["ReportGenerator", "TableFormatter"]

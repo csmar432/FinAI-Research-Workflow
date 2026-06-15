@@ -10,6 +10,12 @@ Reference: https://github.com/mollendorff-ai/sentinel
 
 from __future__ import annotations
 
+__all__ = [
+    "GateState",
+    "ApprovalRecord",
+    "HITLGate",
+]
+
 import json
 import sqlite3
 import threading
@@ -111,6 +117,7 @@ class HITLGate:
     """
 
     _write_lock = threading.Lock()
+    _pending_lock = threading.Lock()
 
     def __init__(self, db_path: str = ".cache/hitl_gates.db"):
         self._pending: dict[str, ApprovalRecord] = {}
@@ -118,6 +125,17 @@ class HITLGate:
         self._listeners: list = []
         self._db_path = db_path
         self._init_db()
+
+        # ── Auto-register HITLManager as listener ──────────────────────────
+        # 双向同步：HITLGate 的每个操作事件都同步到全局 HITLManager，
+        # 保证 Dashboard / orchestrator / AgentPipeline 读取同一份数据
+        try:
+            from scripts.core.agent_state import HITLManager
+            _hm = HITLManager()
+            if _hm not in self._listeners:
+                self.register_listener(_hm._on_gate_event)
+        except Exception:
+            pass
 
     # ── Database ───────────────────────────────────────────────────────────────
 
@@ -152,19 +170,27 @@ class HITLGate:
             (GateState.PENDING.value,),
         )
         for row in cur.fetchall():
-            rec = ApprovalRecord(
-                gate_id=row[0],
-                stage=row[1],
-                state=GateState[row[2]],
-                content=json.loads(row[3]) if row[3] else {},
-                question=row[4] or "",
-                feedback=row[5] or "",
-                held_at=row[6],
-                decided_at=row[7],
-                approved_by=row[8],
-                rejected_by=row[9],
-            )
-            self._pending[rec.gate_id] = rec
+                try:
+                    content_val = json.loads(row[3]) if row[3] else {}
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    _log.warning(
+                        "HITLGate[%s]: corrupted content in approval_records at row %d: %s ...",
+                        gate_id, row[0], repr(row[3][:100]) if row[3] else "empty"
+                    )
+                    content_val = {}
+                rec = ApprovalRecord(
+                    gate_id=row[0],
+                    stage=row[1],
+                    state=GateState[row[2]],
+                    content=content_val,
+                    question=row[4] or "",
+                    feedback=row[5] or "",
+                    held_at=row[6],
+                    decided_at=row[7],
+                    approved_by=row[8],
+                    rejected_by=row[9],
+                )
+                self._pending[rec.gate_id] = rec
 
     # ── Gate Operations ─────────────────────────────────────────────────
 
@@ -174,9 +200,10 @@ class HITLGate:
         content: dict,
         question: str = "请审核以下内容并决定是否继续：",
         gate_id: str | None = None,
+        timeout: int | None = None,
     ) -> str:
         """
-        Pause the pipeline and wait for human approval.
+        Create a pending approval gate.
 
         Parameters
         ----------
@@ -188,6 +215,10 @@ class HITLGate:
             Specific question or instruction for the reviewer.
         gate_id : str | None
             Optional explicit gate ID. If None, auto-generates one.
+        timeout : int | None
+            Seconds to wait for a decision. If None, waits indefinitely.
+            When timeout expires, the gate remains open and returns the gate_id.
+            Use wait_for_decision() separately for timeout handling.
 
         Returns
         -------
@@ -205,7 +236,8 @@ class HITLGate:
             held_at=time.time(),
         )
 
-        self._pending[gid] = record
+        with self._pending_lock:
+            self._pending[gid] = record
 
         # Persist to SQLite
         with self._write_lock:
@@ -254,7 +286,8 @@ class HITLGate:
         ApprovalRecord
             The completed approval record.
         """
-        record = self._pending.pop(gate_id, None)
+        with self._pending_lock:
+            record = self._pending.pop(gate_id, None)
         if record is None:
             raise ValueError(f"Gate '{gate_id}' not found or already decided")
 
@@ -263,8 +296,6 @@ class HITLGate:
         record.decided_at = time.time()
         record.approved_by = approved_by
 
-        # Persist: update state in-place rather than deleting.
-        # This preserves audit history even after process restart.
         with self._write_lock:
             self._db.execute(
                 "UPDATE approval_records SET state=?, feedback=?, decided_at=?, approved_by=? "
@@ -273,7 +304,8 @@ class HITLGate:
             )
             self._db.commit()
 
-        self._history.append(record)
+        with self._pending_lock:
+            self._history.append(record)
         self._notify("approve", record)
 
         return record
@@ -304,7 +336,8 @@ class HITLGate:
         if not feedback:
             raise ValueError("feedback is required for rejection")
 
-        record = self._pending.pop(gate_id, None)
+        with self._pending_lock:
+            record = self._pending.pop(gate_id, None)
         if record is None:
             raise ValueError(f"Gate '{gate_id}' not found or already decided")
 
@@ -313,8 +346,6 @@ class HITLGate:
         record.decided_at = time.time()
         record.rejected_by = rejected_by
 
-        # Persist: update state in-place rather than deleting.
-        # This preserves audit history even after process restart.
         with self._write_lock:
             self._db.execute(
                 "UPDATE approval_records SET state=?, feedback=?, decided_at=?, rejected_by=? "
@@ -323,7 +354,8 @@ class HITLGate:
             )
             self._db.commit()
 
-        self._history.append(record)
+        with self._pending_lock:
+            self._history.append(record)
         self._notify("reject", record)
 
         return record
@@ -332,16 +364,58 @@ class HITLGate:
 
     def get_record(self, gate_id: str) -> ApprovalRecord | None:
         """Get the current state of a gate (pending or historical)."""
-        if gate_id in self._pending:
-            return self._pending[gate_id]
-        for record in self._history:
-            if record.gate_id == gate_id:
-                return record
+        with self._pending_lock:
+            if gate_id in self._pending:
+                return self._pending[gate_id]
+            for record in self._history:
+                if record.gate_id == gate_id:
+                    return record
         return None
 
     def get_pending(self) -> list[ApprovalRecord]:
         """Return a copy of all pending gates (prevents external mutation)."""
-        return [ApprovalRecord(**r.__dict__.copy()) for r in self._pending.values()]
+        with self._pending_lock:
+            return [ApprovalRecord(**vars(r)) for r in self._pending.values()]
+
+    def wait_for_decision(
+        self,
+        gate_id: str,
+        timeout: int | None = None,
+    ) -> ApprovalRecord | None:
+        """
+        Block until a gate receives a human decision (approve or reject).
+
+        This replaces direct polling of _pending dict with a thread-safe
+        polling loop that uses the public get_record() API.
+
+        Parameters
+        ----------
+        gate_id : str
+            The gate ID returned by hold().
+        timeout : int | None
+            Maximum seconds to wait. If None, waits indefinitely.
+
+        Returns
+        -------
+        ApprovalRecord | None
+            The final record after decision, or None if timeout expired.
+        """
+        deadline = (time.time() + timeout) if timeout else None
+        poll_interval = 0.5
+
+        while True:
+            rec = self.get_record(gate_id)
+            if rec is None:
+                # Gate was decided and removed from pending
+                return rec
+            if rec.state != GateState.PENDING:
+                # State changed (approved/rejected)
+                return rec
+
+            if deadline is not None and time.time() >= deadline:
+                return None  # Timeout
+
+            time.sleep(poll_interval)
 
     def get_history(
         self,
@@ -420,16 +494,74 @@ class HITLGate:
         Register a callback for gate state changes.
 
         Callback signature: callback(event_type: str, record: ApprovalRecord)
+
+        Idempotent — registering the same callback twice has no effect.
         """
-        self._listeners.append(callback)
+        if callback not in self._listeners:
+            self._listeners.append(callback)
 
     def _notify(self, event: str, record: ApprovalRecord) -> None:
         """Notify all listeners of a gate state change."""
         for listener in self._listeners:
             try:
                 listener(event, record)
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[HITLGate] Listener error in '{event}': {exc}", flush=True)
+
+    def get_state(self) -> dict[str, Any]:
+        """
+        Serialise the complete gate state for checkpoint persistence.
+
+        Returns a dict with pending records, history, and statistics that can be
+        stored by CheckpointManager and used to reconstruct the gate via
+        HITLGate.from_state().
+        """
+        return {
+            "pending": [
+                {
+                    "gate_id": r.gate_id,
+                    "stage": r.stage,
+                    "state": r.state.value,
+                    "content": r.content,
+                    "question": r.question,
+                    "feedback": r.feedback,
+                    "held_at": r.held_at,
+                    "decided_at": r.decided_at,
+                    "approved_by": r.approved_by,
+                    "rejected_by": r.rejected_by,
+                }
+                for r in self._pending.values()
+            ],
+            "history_count": len(self._history),
+            "stats": self.stats(),
+        }
+
+    @classmethod
+    def from_state(cls, state: dict, db_path: str = ".cache/hitl_gates.db") -> HITLGate:
+        """
+        Reconstruct a HITLGate from a serialised state dict.
+
+        Restores pending approval records and gate statistics from a checkpoint.
+        """
+        gate = cls(db_path)
+
+        # Rebuild pending records
+        for entry in state.get("pending", []):
+            rec = ApprovalRecord(
+                gate_id=entry["gate_id"],
+                stage=entry["stage"],
+                state=GateState(entry["state"]),
+                content=entry.get("content", {}),
+                question=entry.get("question", ""),
+                feedback=entry.get("feedback", ""),
+                held_at=entry.get("held_at", time.time()),
+                decided_at=entry.get("decided_at"),
+                approved_by=entry.get("approved_by"),
+                rejected_by=entry.get("rejected_by"),
+            )
+            gate._pending[rec.gate_id] = rec
+
+        return gate
 
     def __repr__(self) -> str:
         pending = len(self._pending)

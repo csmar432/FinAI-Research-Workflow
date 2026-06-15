@@ -27,6 +27,7 @@
     },
     "required": [
       "indicator"
-    ]
+    ],
+    "description": "获取中国宏观经济指标。使用 akshare 接口，无需 API Key。"
   }
 }

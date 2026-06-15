@@ -14,9 +14,11 @@ Usage:
 
 from __future__ import annotations
 
-import json, sys, warnings
+import json, logging, sys, warnings
 from pathlib import Path
 warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
+_log = logging.getLogger("user-imf-data")
 
 _SERVER_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SERVER_DIR.parent.parent
@@ -133,6 +135,7 @@ async def handle_weo(args: dict) -> list[TextContent]:
         start_year, end_year = year_range.split("-")
         start_year, end_year = int(start_year), int(end_year)
     except Exception:
+        _log.warning(f"handle_weo: failed to parse year_range '{year_range}': {e}")
         start_year, end_year = 2010, 2025
 
     # IMF WEO database via IFS API
@@ -191,8 +194,8 @@ async def handle_weo(args: dict) -> list[TextContent]:
                     "data": sorted(data, key=lambda x: x["year"]),
                     "note": f"IMF IFS数据 ({indicator_label})"
                 }, ensure_ascii=False))]
-        except Exception:
-            pass
+        except Exception as e:
+            _log.warning(f"handle_weo: failed to parse IMF JSON for {country}/{indicator}: {e}")
 
     return [TextContent(type="text", text=json.dumps({
         "_error": True, "_mock": False,
@@ -259,8 +262,8 @@ async def handle_bop(args: dict) -> list[TextContent]:
                     "data": sorted(data, key=lambda x: x["year"]),
                     "note": f"IMF国际收支({indicator_label})，单位：十亿美元"
                 }, ensure_ascii=False))]
-        except Exception:
-            pass
+        except Exception as e:
+            _log.warning(f"handle_bop: failed to parse BOP JSON for {country}/{indicator}: {e}")
 
     return [TextContent(type="text", text=json.dumps({
         "_error": True, "_mock": False,
@@ -328,8 +331,8 @@ async def handle_ifs(args: dict) -> list[TextContent]:
                     "data": sorted(data, key=lambda x: x["year"]),
                     "note": f"IMF IFS: {ifs_label}"
                 }, ensure_ascii=False))]
-        except Exception:
-            pass
+        except Exception as e:
+            _log.warning(f"handle_ifs: failed to parse IFS JSON for {country}/{indicator}: {e}")
 
     return [TextContent(type="text", text=json.dumps({
         "_error": True, "_mock": False,

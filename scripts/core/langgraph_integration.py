@@ -37,8 +37,11 @@ Usage:
 from __future__ import annotations
 
 import logging
+import time as _time
+import uuid as _uuid
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, TypedDict, Callable, Protocol
 
 logger = logging.getLogger(__name__)
@@ -49,6 +52,11 @@ __all__ = [
     "LiteAgentState",
     "is_langgraph_available",
     "get_langgraph_compile",
+    "ResearchAgentState",
+    "ResearchStage",
+    "create_research_graph",
+    "create_research_pipeline",
+    "LiteTracer",
 ]
 
 
@@ -192,7 +200,8 @@ class StateGraph:
         """添加有向边。"""
         if source not in self.nodes:
             raise ValueError(f"Node '{source}' not defined. Call add_node('{source}', fn) first.")
-        if target not in self.nodes:
+        # "__end__" is a sentinel — always allowed as target (terminates graph)
+        if target not in self.nodes and target != "__end__":
             raise ValueError(f"Node '{target}' not defined. Call add_node('{target}', fn) first.")
         self.edges.append((source, target))
         return self
@@ -289,7 +298,6 @@ class LiteCompiledGraph:
         Returns:
             最终状态字典
         """
-        import uuid, time
         state = dict(initial_state) if initial_state else {}
         state.setdefault("iter_count", 0)
         state.setdefault("stage_outputs", {})
@@ -324,10 +332,10 @@ class LiteCompiledGraph:
 
             # 保存 checkpoint
             chk = LiteCheckpoint(
-                checkpoint_id=f"{checkpoint_id}_{current_node}_{int(time.time())}",
+                checkpoint_id=f"{checkpoint_id}_{current_node}_{int(_time.time())}",
                 state=dict(state),
                 node_name=current_node,
-                timestamp=time.time(),
+                timestamp=_time.time(),
             )
             self.checkpoint_store.save(chk)
             state["checkpoint_id"] = chk.checkpoint_id
@@ -367,7 +375,6 @@ class LiteCompiledGraph:
         """
         流式执行，每次 yield 当前节点的状态。
         """
-        import uuid, time
         state = dict(initial_state) if initial_state else {}
         state.setdefault("iter_count", 0)
         state.setdefault("stage_outputs", {})
@@ -392,10 +399,10 @@ class LiteCompiledGraph:
 
             # 保存 checkpoint
             chk = LiteCheckpoint(
-                checkpoint_id=f"stream_{uuid.uuid4().hex[:8]}",
+                checkpoint_id=f"stream_{_uuid.uuid4().hex[:8]}",
                 state=dict(state),
                 node_name=current_node,
-                timestamp=time.time(),
+                timestamp=_time.time(),
             )
             self.checkpoint_store.save(chk)
 
@@ -414,6 +421,283 @@ class LiteCompiledGraph:
         """从 checkpoint 恢复状态。"""
         chk = self.checkpoint_store.load(checkpoint_id)
         return chk.state if chk else None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LiteTracer — minimal in-process tracing without a LangSmith key
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class LiteTracer:
+    """
+    Minimal in-process tracer that records node enter/exit events with timing.
+
+    No LangSmith API key is required. Stores events in memory and can export
+    them as a JSON list.
+
+    Usage::
+
+        tracer = LiteTracer()
+        tracer.log_node("lit_review", "enter", 0, {"topic": "碳排放权"})
+        # ... run node ...
+        tracer.log_node("lit_review", "exit", 125.3, {"status": "done"})
+        trace = tracer.get_trace()
+        tracer.export_json(Path("trace.json"))
+
+    The tracer is also called automatically inside ``LiteCompiledGraph.invoke()``
+    when it is set as the graph's tracer via ``LiteCompiledGraph.set_tracer()``.
+    """
+
+    def __init__(self):
+        self._events: list[dict] = []
+        self._node_stack: list[tuple[str, float]] = []  # (node_name, enter_time)
+
+    # ── Public API ─────────────────────────────────────────────────────────
+
+    def log_node(
+        self,
+        node_name: str,
+        event_type: str,
+        duration_ms: float | None = None,
+        state_summary: dict | None = None,
+    ) -> None:
+        """
+        Record a node event.
+
+        Parameters
+        ----------
+        node_name : str
+            Name of the graph node.
+        event_type : str
+            One of "enter", "exit", "error".
+        duration_ms : float | None
+            Elapsed time since the node entered. None for "enter" events.
+        state_summary : dict | None
+            Optional snapshot of the current state to attach.
+        """
+        import time as _time
+
+        event: dict[str, object] = {
+            "node": node_name,
+            "event": event_type,
+            "timestamp": _time.time(),
+        }
+        if duration_ms is not None:
+            event["duration_ms"] = round(duration_ms, 3)
+        if state_summary is not None:
+            # Only store top-level scalar keys to keep trace compact
+            event["state_summary"] = {
+                k: v
+                for k, v in state_summary.items()
+                if isinstance(v, (str, int, float, bool, type(None)))
+            }
+        self._events.append(event)
+
+    def get_trace(self) -> list[dict]:
+        """Return a copy of all recorded events."""
+        return list(self._events)
+
+    def export_json(self, path: Path | str) -> None:
+        """
+        Write all events to a JSON file.
+
+        Parameters
+        ----------
+        path : Path | str
+            Destination file path.
+        """
+        import json
+
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            json.dumps(self._events, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    def clear(self) -> None:
+        """Discard all recorded events."""
+        self._events.clear()
+        self._node_stack.clear()
+
+    def summary(self) -> dict:
+        """
+        Return a human-readable summary of the recorded trace.
+
+        Includes per-node counts, total duration, and error count.
+        """
+        node_durations: dict[str, list[float]] = {}
+        error_count = 0
+        for ev in self._events:
+            if ev["event"] == "enter":
+                self._node_stack.append((ev["node"], ev["timestamp"]))
+            elif ev["event"] == "exit":
+                if self._node_stack and self._node_stack[-1][0] == ev["node"]:
+                    _, enter_ts = self._node_stack.pop()
+                    elapsed_ms = (ev["timestamp"] - enter_ts) * 1000
+                    node_durations.setdefault(ev["node"], []).append(elapsed_ms)
+            elif ev["event"] == "error":
+                error_count += 1
+
+        avg_durations = {
+            node: round(sum(durations) / len(durations), 3)
+            for node, durations in node_durations.items()
+        }
+        return {
+            "total_events": len(self._events),
+            "unique_nodes": list(node_durations.keys()),
+            "node_count": {node: len(durations) for node, durations in node_durations.items()},
+            "avg_duration_ms": avg_durations,
+            "error_count": error_count,
+        }
+
+    # ── Internal helpers (called by LiteCompiledGraph) ─────────────────────
+
+    def _enter_node(self, node_name: str, state: dict) -> None:
+        """Record node entry. Called by LiteCompiledGraph."""
+        self.log_node(node_name, "enter", None, state)
+
+    def _exit_node(self, node_name: str, duration_ms: float, state: dict) -> None:
+        """Record node exit. Called by LiteCompiledGraph."""
+        self.log_node(node_name, "exit", duration_ms, state)
+
+    def _error_node(self, node_name: str, duration_ms: float, error: str) -> None:
+        """Record node error. Called by LiteCompiledGraph."""
+        self.log_node(node_name, "error", duration_ms, {"error": error})
+
+
+# ── Patch LiteCompiledGraph to call LiteTracer ──────────────────────────
+
+_original_lite_invoke = LiteCompiledGraph.invoke
+
+
+def _patched_invoke(self, initial_state: dict | None = None) -> dict:
+    """
+    Patched invoke that calls self._tracer (LiteTracer) on each node.
+
+    Tracer is optional — if not set the behaviour is identical to the
+    original implementation.
+    """
+    tracer: LiteTracer | None = getattr(self, "_tracer", None)
+    state = dict(initial_state) if initial_state else {}
+    state.setdefault("iter_count", 0)
+    state.setdefault("stage_outputs", {})
+    state.setdefault("error", None)
+
+    checkpoint_id = f"chk_{_uuid.uuid4().hex[:8]}"
+    current_node = self.graph.entry_point
+    visited: set[str] = set()
+    max_iter = 100
+
+    while current_node and current_node != "__end__" and state["iter_count"] < max_iter:
+        state["iter_count"] += 1
+        state["current_stage"] = current_node
+
+        if self.debug:
+            logger.info(f"[Graph] Executing node: {current_node}")
+
+        enter_ts = _time.time()
+        if tracer is not None:
+            tracer._enter_node(current_node, state)
+
+        try:
+            node_func = self.graph.nodes[current_node].func
+            node_output = node_func(state)
+            if node_output:
+                state.update(node_output)
+            state["stage_outputs"][current_node] = state.copy()
+        except Exception as e:
+            logger.error(f"[Graph] Node '{current_node}' error: {e}")
+            state["error"] = str(e)
+            if tracer is not None:
+                tracer._error_node(current_node, (_time.time() - enter_ts) * 1000, str(e))
+            break
+
+        exit_ts = _time.time()
+        if tracer is not None:
+            tracer._exit_node(current_node, (exit_ts - enter_ts) * 1000, state)
+
+        # Save checkpoint
+        chk = LiteCheckpoint(
+            checkpoint_id=f"{checkpoint_id}_{current_node}_{int(exit_ts)}",
+            state=dict(state),
+            node_name=current_node,
+            timestamp=exit_ts,
+        )
+        self.checkpoint_store.save(chk)
+        state["checkpoint_id"] = chk.checkpoint_id
+
+        next_node = self._get_next_node(current_node, state)
+        if self.debug:
+            logger.info(f"[Graph] {current_node} -> {next_node}")
+        current_node = next_node
+
+    if self.debug:
+        logger.info(f"[Graph] Finished at '{current_node}' after {state['iter_count']} iterations")
+
+    return state
+
+
+LiteCompiledGraph.invoke = _patched_invoke
+
+
+def _patched_stream(self, initial_state: dict | None = None):
+    """Patched stream that calls LiteTracer when set."""
+    tracer: LiteTracer | None = getattr(self, "_tracer", None)
+    state = dict(initial_state) if initial_state else {}
+    state.setdefault("iter_count", 0)
+    state.setdefault("stage_outputs", {})
+
+    current_node = self.graph.entry_point
+    while current_node and current_node != "__end__" and state["iter_count"] < 100:
+        state["iter_count"] += 1
+        state["current_stage"] = current_node
+
+        enter_ts = _time.time()
+        if tracer is not None:
+            tracer._enter_node(current_node, state)
+
+        try:
+            node_func = self.graph.nodes[current_node].func
+            node_output = node_func(state)
+            if node_output:
+                state.update(node_output)
+            state["stage_outputs"][current_node] = dict(state)
+        except Exception as e:
+            state["error"] = str(e)
+            if tracer is not None:
+                tracer._error_node(current_node, (_time.time() - enter_ts) * 1000, str(e))
+            yield {"node": current_node, "state": state, "error": True}
+            break
+
+        yield {"node": current_node, "state": dict(state)}
+
+        exit_ts = _time.time()
+        if tracer is not None:
+            tracer._exit_node(current_node, (exit_ts - enter_ts) * 1000, state)
+
+        chk = LiteCheckpoint(
+            checkpoint_id=f"stream_{_uuid.uuid4().hex[:8]}",
+            state=dict(state),
+            node_name=current_node,
+            timestamp=exit_ts,
+        )
+        self.checkpoint_store.save(chk)
+
+        current_node = self._get_next_node(current_node, state)
+
+    yield {"node": "__end__", "state": state}
+
+
+LiteCompiledGraph.stream = _patched_stream
+
+
+def _set_tracer(self, tracer: LiteTracer) -> None:
+    """Attach a LiteTracer to this compiled graph."""
+    self._tracer = tracer
+
+
+LiteCompiledGraph.set_tracer = _set_tracer
 
 
 # ─── 便捷路由函数 ──────────────────────────────────────────────────────
@@ -511,3 +795,251 @@ class LangGraphCompatibleWrapper:
         # 编译（带 checkpoint）
         checkpointer = MemorySaver()
         return lg.compile(checkpointer=checkpointer)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 研究专用状态与流水线
+# ═════════════════════════════════════════════════════════════════════════════
+
+class ResearchStage(str, Enum):
+    """研究流水线阶段。"""
+    IDLE = "idle"
+    TOPIC_DEFINITION = "topic_definition"
+    LITERATURE_REVIEW = "literature_review"
+    IDEA_GENERATION = "idea_generation"
+    NOVELTY_CHECK = "novelty_check"
+    EXPERIMENT_DESIGN = "experiment_design"
+    DATA_ACQUISITION = "data_acquisition"
+    DATA_VALIDATION = "data_validation"
+    REGRESSION = "regression"
+    DIAGNOSTICS = "diagnostics"
+    ROBUSTNESS = "robustness"
+    PAPER_WRITING = "paper_writing"
+    REVIEW_LOOP = "review_loop"
+    SUBMISSION_CHECK = "submission_check"
+    COMPLETE = "complete"
+    ERROR = "error"
+
+
+class ResearchAgentState(TypedDict, total=False):
+    """
+    研究流水线的完整状态。
+
+    与 LangGraph StateGraph 兼容，可直接传入 LiteCompiledGraph.invoke()
+    或 LangGraph StateGraph。
+    """
+    # 核心字段
+    topic: str                          # 研究主题
+    venue: str                          # 目标期刊
+    language: str                       # 语言 (en/zh)
+    current_stage: ResearchStage        # 当前阶段
+    stage_outputs: dict[str, dict]      # 每个阶段的输出
+    stage_errors: dict[str, str]       # 每个阶段的错误
+
+    # 阶段间共享数据
+    literature_papers: list[dict]       # 文献综述结果
+    research_ideas: list[dict]          # 候选研究想法
+    selected_idea: dict | None         # 选中的想法
+    experiment_design: dict | None      # 实验设计
+    data_sources: dict                  # 数据源
+    validation_report: dict | None      # 数据验证报告
+    regression_results: list[dict]       # 回归结果
+    diagnostics_report: dict | None     # 诊断报告
+    robustness_results: list[dict]      # 稳健性结果
+    paper_outline: dict | None          # 论文大纲
+    paper_draft: str                    # 论文草稿
+    review_feedback: list[dict]          # review 反馈
+    submission_check: dict | None       # 投稿前检查
+
+    # 元信息
+    checkpoint_id: str | None
+    iter_count: int
+    hitl_approved: bool
+    hitl_pending: bool
+    error: str | None
+    is_complete: bool
+
+
+def create_research_graph() -> StateGraph:
+    """
+    创建研究流水线 StateGraph。
+
+    完整的 8 步研究流程：
+      Topic → LitReview → Idea → Novelty → Design → Data → Regression → Paper
+
+    Returns:
+        StateGraph: 可编译的研究流水线图
+
+    Example:
+        graph = create_research_graph()
+        app = graph.compile()
+        result = app.invoke(ResearchAgentState(
+            topic="碳排放权交易与绿色创新",
+            venue="经济研究",
+            language="zh",
+            current_stage=ResearchStage.TOPIC_DEFINITION,
+        ))
+    """
+    @dataclass
+    class _RS:
+        topic: str = ""
+        venue: str = ""
+        language: str = "zh"
+        current_stage: str = "idle"
+        stage_outputs: dict = field(default_factory=dict)
+        stage_errors: dict = field(default_factory=dict)
+        literature_papers: list = field(default_factory=list)
+        research_ideas: list = field(default_factory=list)
+        selected_idea: dict | None = None
+        experiment_design: dict | None = None
+        data_sources: dict = field(default_factory=dict)
+        validation_report: dict | None = None
+        regression_results: list = field(default_factory=list)
+        diagnostics_report: dict | None = None
+        robustness_results: list = field(default_factory=list)
+        paper_outline: dict | None = None
+        paper_draft: str = ""
+        review_feedback: list = field(default_factory=list)
+        submission_check: dict | None = None
+        checkpoint_id: str | None = None
+        iter_count: int = 0
+        hitl_approved: bool = False
+        hitl_pending: bool = False
+        error: str | None = None
+        is_complete: bool = False
+
+    graph = StateGraph(schema=_RS, name="research_pipeline")
+
+    def lit_review_fn(state: dict) -> dict:
+        topic = state.get("topic", "")
+        logger.info(f"[Graph] Running literature review for: {topic}")
+        return {
+            "current_stage": "literature_review",
+            "stage_outputs": {**state.get("stage_outputs", {}), "literature_review": {"status": "done"}},
+        }
+
+    def idea_gen_fn(state: dict) -> dict:
+        logger.info("[Graph] Generating research ideas")
+        return {
+            "current_stage": "idea_generation",
+            "stage_outputs": {**state.get("stage_outputs", {}), "idea_generation": {"status": "done"}},
+        }
+
+    def novelty_fn(state: dict) -> dict:
+        logger.info("[Graph] Checking novelty")
+        return {
+            "current_stage": "novelty_check",
+            "stage_outputs": {**state.get("stage_outputs", {}), "novelty_check": {"status": "done"}},
+        }
+
+    def design_fn(state: dict) -> dict:
+        logger.info("[Graph] Designing experiment")
+        return {
+            "current_stage": "experiment_design",
+            "stage_outputs": {**state.get("stage_outputs", {}), "experiment_design": {"status": "done"}},
+        }
+
+    def data_fn(state: dict) -> dict:
+        logger.info("[Graph] Acquiring data")
+        return {
+            "current_stage": "data_acquisition",
+            "stage_outputs": {**state.get("stage_outputs", {}), "data_acquisition": {"status": "done"}},
+        }
+
+    def regression_fn(state: dict) -> dict:
+        logger.info("[Graph] Running regression")
+        return {
+            "current_stage": "regression",
+            "stage_outputs": {**state.get("stage_outputs", {}), "regression": {"status": "done"}},
+        }
+
+    def writing_fn(state: dict) -> dict:
+        logger.info("[Graph] Writing paper")
+        return {
+            "current_stage": "paper_writing",
+            "paper_draft": f"# {state.get('topic', 'Research Paper')}\n\n[Draft content]",
+            "stage_outputs": {**state.get("stage_outputs", {}), "paper_writing": {"status": "done"}},
+        }
+
+    graph.add_node("lit_review", lit_review_fn)
+    graph.add_node("idea_generation", idea_gen_fn)
+    graph.add_node("novelty_check", novelty_fn)
+    graph.add_node("experiment_design", design_fn)
+    graph.add_node("data_acquisition", data_fn)
+    graph.add_node("regression", regression_fn)
+    graph.add_node("paper_writing", writing_fn)
+
+    # 线性流水线 + 循环节点
+    graph.add_edge("lit_review", "idea_generation")
+    graph.add_edge("idea_generation", "novelty_check")
+
+    def should_continue_after_novelty(state: dict) -> str:
+        error = state.get("error")
+        if error:
+            return "idea_generation"  # 回到想法生成
+        return "experiment_design"
+
+    graph.add_conditional_edges(
+        "novelty_check",
+        should_continue_after_novelty,
+        {"experiment_design": "experiment_design", "idea_generation": "idea_generation"}
+    )
+    graph.add_edge("experiment_design", "data_acquisition")
+    graph.add_edge("data_acquisition", "regression")
+    graph.add_edge("regression", "paper_writing")
+    graph.add_edge("paper_writing", "__end__")
+
+    return graph
+
+
+def create_research_pipeline(topic: str, venue: str = "经济研究", language: str = "zh") -> dict:
+    """
+    创建并返回完整的研究流水线（快捷函数）。
+
+    相当于：
+        graph = create_research_graph()
+        app = graph.compile(checkpoint_store=CheckpointStore())
+        return app.invoke(initial_state)
+
+    Args:
+        topic: 研究主题
+        venue: 目标期刊
+        language: 论文语言
+
+    Returns:
+        dict: 最终状态
+    """
+    graph = create_research_graph()
+    store = CheckpointStore()
+    app = graph.compile(checkpoint_store=store)
+
+    initial_state = ResearchAgentState(
+        topic=topic,
+        venue=venue,
+        language=language,
+        current_stage=ResearchStage.TOPIC_DEFINITION,
+        stage_outputs={},
+        stage_errors={},
+        literature_papers=[],
+        research_ideas=[],
+        selected_idea=None,
+        experiment_design=None,
+        data_sources={},
+        validation_report=None,
+        regression_results=[],
+        diagnostics_report=None,
+        robustness_results=[],
+        paper_outline=None,
+        paper_draft="",
+        review_feedback=[],
+        submission_check=None,
+        checkpoint_id=None,
+        iter_count=0,
+        hitl_approved=False,
+        hitl_pending=False,
+        error=None,
+        is_complete=False,
+    )
+
+    logger.info(f"Starting research pipeline for topic: {topic}")
+    return app.invoke(initial_state)

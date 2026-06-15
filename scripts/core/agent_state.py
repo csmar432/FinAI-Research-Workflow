@@ -14,14 +14,41 @@ Agent 状态与事件管理系统
 
 from __future__ import annotations
 
+__all__ = [
+    "AgentStatus",
+    "EventType",
+    "ErrorType",
+    "AgentState",
+    "Event",
+    "CostRecord",
+    "HITLRequest",
+    "EventBus",
+    "AgentStateManager",
+    "CostTracker",
+    "ErrorClassifier",
+    "HITLManager",
+    "event_bus",
+    "agent_state_manager",
+    "cost_tracker",
+    "hitl_manager",
+    "get_fleet_status",
+    "get_total_cost",
+    "get_pending_hitl",
+    "record_api_call",
+]
+
+import logging
 import queue
 import threading
 import time
 import uuid
+
+logger = logging.getLogger(__name__)
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 枚举定义
@@ -121,27 +148,30 @@ class HITLRequest:
 class EventBus:
     """事件总线 - 发布/订阅模式"""
 
-    _instance = None
+    _instance: EventBus | None = None
     _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
+                    instance = super().__new__(cls)
+                    instance._initialized = False
+                    cls._instance = instance
         return cls._instance
 
     def __init__(self):
         if self._initialized:
             return
-        self._initialized = True
-
-        self._subscribers: dict[EventType, list[Callable]] = defaultdict(list)
-        self._all_subscribers: list[Callable] = []
-        self._event_queue: queue.Queue = queue.Queue()
-        self._running = False
-        self._thread: threading.Thread | None = None
+        with self._lock:
+            if self._initialized:
+                return
+            self._subscribers: dict[EventType, list[Callable]] = defaultdict(list)
+            self._all_subscribers: list[Callable] = []
+            self._event_queue: queue.Queue = queue.Queue()
+            self._running = False
+            self._thread: threading.Thread | None = None
+            self._initialized = True
 
     def subscribe(self, event_type: EventType, callback: Callable[[Event], None]):
         """订阅特定事件类型"""
@@ -210,25 +240,30 @@ class EventBus:
 class AgentStateManager:
     """Agent状态管理器"""
 
-    _instance = None
+    _instance: AgentStateManager | None = None
+    _init_lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            with cls._init_lock:
+                if cls._instance is None:
+                    instance = super().__new__(cls)
+                    instance._initialized = False
+                    cls._instance = instance
         return cls._instance
 
     def __init__(self):
         if self._initialized:
             return
-        self._initialized = True
-
-        self._agents: dict[str, AgentState] = {}
-        self._history: list[Event] = []
-        self._lock = threading.Lock()
-        # Share a single global EventBus across all singletons
-        self._event_bus = _get_shared_eventbus()
-        self._event_bus.start()
+        with self._init_lock:
+            if self._initialized:
+                return
+            self._agents: dict[str, AgentState] = {}
+            self._history: list[Event] = []
+            self._lock = threading.Lock()
+            self._event_bus = _get_shared_eventbus()
+            self._event_bus.start()
+            self._initialized = True
 
     def register_agent(self, agent_id: str, name: str, metadata: dict = None) -> AgentState:
         """注册Agent"""
@@ -381,58 +416,119 @@ class AgentStateManager:
 class CostTracker:
     """成本追踪器"""
 
-    _instance = None
+    _instance: CostTracker | None = None
+    _init_lock = threading.Lock()
 
     # Token定价（每1M token的美元价格）
     # 键名必须与 build_model_pool() 中 ModelConfig.model_id 严格一致
     PRICING: dict[str, dict[str, float]] = {
         # DeepSeek 直连
-        "deepseek-chat":     {"input": 0.14,  "output": 0.28},   # deepseek-v4-flash (直连API名)
-        "deepseek-v4-pro":   {"input": 0.50,  "output": 2.00},   # deepseek-v4-pro (直连API名)
-        "deepseek-r1":       {"input": 0.55,  "output": 2.20},   # deepseek-r1
-        # Relay (B.AI) — GPT 系列
-        "gpt-5.4-mini":     {"input": 0.15,  "output": 0.60},   # GPT-5.4-Mini
-        "gpt-5.5-instant":  {"input": 0.10,  "output": 0.40},   # GPT-5.5-Instant
-        # Relay (B.AI) — Claude 系列
-        "claude-sonnet-4.6":{"input": 3.00,  "output": 15.00},  # Claude Sonnet 4.6
-        "claude-opus-4.7":  {"input": 15.00, "output": 75.00},  # Claude Opus 4.7
-        # Relay (B.AI) — DeepSeek via relay
-        "deepseek-v4-pro":  {"input": 0.50,  "output": 2.00},   # DeepSeek-V4-Pro via B.AI relay
-        # Relay (B.AI) — 其他
-        "glm-5.1":          {"input": 0.10,  "output": 0.30},   # GLM-5.1
+        "deepseek-v4-flash": {"input": 0.14,  "output": 0.28},   # DeepSeek V4 Flash
+        "deepseek-v4-pro":   {"input": 0.50,  "output": 2.00},   # DeepSeek V4 Pro
+        "deepseek-r1":       {"input": 0.55,  "output": 2.20},   # DeepSeek R1
+        # Relay — GPT 系列
+        "gpt-4o-mini":      {"input": 0.15,  "output": 0.60},   # GPT-4o-Mini
+        # Relay — Claude 系列
+        "claude-sonnet-4-20250514": {"input": 3.00, "output": 15.00},  # Claude Sonnet
+        "claude-3-5-sonnet-20241022": {"input": 3.00, "output": 15.00}, # Claude 3.5 Sonnet
+        # Relay — 其他
+        "glm-4-plus":        {"input": 0.10,  "output": 0.30},   # GLM-4-Plus
+        "moonshot-v1-8k":    {"input": 0.10,  "output": 0.30},   # Kimi K2.5
         # 本地
-        "llama3.3":         {"input": 0.00,  "output": 0.00},   # Ollama 本地模型（免费）
-        # 旧别名兼容（fallback）
+        "llama3.2":          {"input": 0.00,  "output": 0.00},   # Ollama 本地模型（免费）
+        # 旧别名兼容（fallback，指向实际 model_id）
+        "deepseek-chat":     {"input": 0.14,  "output": 0.28},   # 旧名 → deepseek-v4-flash
+        "deepseek-v3":       {"input": 0.50,  "output": 2.00},   # 旧名 → deepseek-v4-pro
         "gpt-4o":           {"input": 5.00,  "output": 15.00},  # 旧名 fallback
         "gpt-4o-mini":      {"input": 0.15,  "output": 0.60},   # 旧名 fallback
-        "claude-sonnet-4-7":{"input": 3.00,  "output": 15.00}, # 旧名 fallback
-        "claude-opus-4":    {"input": 15.00, "output": 75.00}, # 旧名 fallback
-        "deepseek-v4-flash":{"input": 0.14,  "output": 0.28},   # 旧名 fallback (→ deepseek-chat)
-        "gemini-3.5-flash": {"input": 0.35,  "output": 1.05},  # Gemini via B.AI (已禁用，仅保留定价)
-        "kimi-k2.5":        {"input": 0.10,  "output": 0.30},   # Kimi K2.5
     }
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            with cls._init_lock:
+                if cls._instance is None:
+                    instance = super().__new__(cls)
+                    instance._initialized = False
+                    cls._instance = instance
         return cls._instance
 
     def __init__(self):
         if self._initialized:
             return
-        self._initialized = True
+        with self._init_lock:
+            if self._initialized:
+                return
+            self._records: list[CostRecord] = []
+            self._agent_costs: dict[str, dict] = defaultdict(lambda: {
+                "total_input_tokens": 0,
+                "total_output_tokens": 0,
+                "total_cost": 0.0,
+                "call_count": 0
+            })
+            self._lock = threading.Lock()
+            self._event_bus = _get_shared_eventbus()
+            self._pricing: dict[str, dict[str, float]] = {}
+            self._initialized = True
+        self._load_pricing_from_config()
 
-        self._records: list[CostRecord] = []
-        self._agent_costs: dict[str, dict] = defaultdict(lambda: {
-            "total_input_tokens": 0,
-            "total_output_tokens": 0,
-            "total_cost": 0.0,
-            "call_count": 0
-        })
-        self._lock = threading.Lock()
-        # Share the single global EventBus across all singletons
-        self._event_bus = _get_shared_eventbus()
+    def _load_pricing_from_config(self, config_path: str | None = None) -> bool:
+        """
+        Load token pricing from config file, overlaying defaults.
+
+        Config format (JSON):
+            {"model_pricing": {"gpt-4o": {"input": 5.0, "output": 15.0}}}
+
+        Supports paths relative to the project root or absolute paths.
+        """
+        import json
+        if config_path is None:
+            candidates = [
+                Path("config/model_pricing.json"),
+                Path("config/llm_config.json"),
+                Path(".cache/model_pricing.json"),
+            ]
+            for candidate in candidates:
+                expanded = candidate.expanduser()
+                if not expanded.is_absolute():
+                    expanded = Path(__file__).parent.parent.parent / candidate
+                if expanded.exists():
+                    config_path = str(expanded)
+                    break
+
+        if config_path is None:
+            return False
+
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                data = json.load(fh)
+
+            pricing_data = (
+                data.get("model_pricing")
+                or data.get("pricing")
+                or data.get("models", {}).get("pricing", {})
+            )
+
+            loaded = 0
+            for model_id, cost_info in pricing_data.items():
+                if isinstance(cost_info, dict) and "input" in cost_info and "output" in cost_info:
+                    self._pricing[model_id] = {
+                        "input": float(cost_info["input"]),
+                        "output": float(cost_info["output"]),
+                    }
+                    loaded += 1
+
+            if loaded > 0:
+                logger.info("[CostTracker] Loaded %d pricing entries from %s", loaded, config_path)
+            return loaded > 0
+        except Exception as exc:
+            logger.debug("[CostTracker] Could not load pricing config from %s: %s", config_path, exc)
+            return False
+
+    def get_pricing(self, model: str) -> dict[str, float]:
+        """Return pricing for a model, checking instance config then class defaults."""
+        if model in self._pricing:
+            return self._pricing[model]
+        return self.PRICING.get(model, {"input": 1.0, "output": 2.0})
 
     def record(
         self,
@@ -444,7 +540,7 @@ class CostTracker:
     ) -> CostRecord:
         """记录一次API调用"""
         # 计算成本
-        pricing = self.PRICING.get(model, {"input": 1.0, "output": 2.0})
+        pricing = self.get_pricing(model)
         cost = (input_tokens / 1_000_000) * pricing["input"] + \
                (output_tokens / 1_000_000) * pricing["output"]
 
@@ -605,25 +701,41 @@ class ErrorClassifier:
 # ═══════════════════════════════════════════════════════════════════════════
 
 class HITLManager:
-    """人工审核管理器"""
+    """人工审核管理器
 
-    _instance = None
+    Features:
+        - Thread-safe singleton via double-check locking
+        - Timeout enforcement: pending requests auto-reject after configurable seconds
+        - Shared EventBus for all HITL events
+        - Rich query API: pending, history, by agent, by stage
+    """
+
+    _instance: HITLManager | None = None
+    _init_lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            with cls._init_lock:
+                if cls._instance is None:
+                    instance = super().__new__(cls)
+                    instance._initialized = False
+                    cls._instance = instance
         return cls._instance
 
-    def __init__(self):
+    def __init__(
+        self,
+        default_timeout_seconds: float | None = 600.0,
+    ):
         if self._initialized:
             return
-        self._initialized = True
-
-        self._requests: dict[str, HITLRequest] = {}
-        self._lock = threading.Lock()
-        # Share the single global EventBus across all singletons
-        self._event_bus = _get_shared_eventbus()
+        with self._init_lock:
+            if self._initialized:
+                return
+            self._requests: dict[str, HITLRequest] = {}
+            self._lock = threading.Lock()
+            self._event_bus = _get_shared_eventbus()
+            self.default_timeout_seconds = default_timeout_seconds
+            self._initialized = True
 
     def create_request(
         self,
@@ -707,13 +819,75 @@ class HITLManager:
 
         return True
 
+    def check_timeouts(self, timeout_seconds: float | None = None) -> list[HITLRequest]:
+        """
+        Check all pending requests for timeout and auto-reject expired ones.
+
+        Parameters
+        ----------
+        timeout_seconds : float | None
+            Override the default timeout. None uses self.default_timeout_seconds.
+
+        Returns
+        -------
+        list[HITLRequest]
+            List of requests that were auto-rejected due to timeout.
+        """
+        timeout = timeout_seconds if timeout_seconds is not None else self.default_timeout_seconds
+        if timeout is None:
+            return []
+
+        now = time.time()
+        expired: list[HITLRequest] = []
+
+        with self._lock:
+            for req in list(self._requests.values()):
+                if req.status == "pending" and (now - req.created_at) > timeout:
+                    req.status = "rejected"
+                    req.reviewed_at = now
+                    req.reviewer_comment = f"自动超时回退（>{timeout}s 无响应）"
+                    expired.append(req)
+
+                    event = Event(
+                        event_id=str(uuid.uuid4()),
+                        event_type=EventType.HITL_REJECT,
+                        agent_id=req.agent_id,
+                        timestamp=now,
+                        data={
+                            "request_id": req.request_id,
+                            "comment": req.reviewer_comment,
+                            "auto_rejected": True,
+                            "elapsed_seconds": now - req.created_at,
+                        }
+                    )
+                    self._event_bus.publish(event)
+
+        return expired
+
     def get_pending(self) -> list[HITLRequest]:
-        """获取待审核请求"""
+        """获取待审核请求（仅返回真正 pending 状态的）"""
         with self._lock:
             return [
                 req for req in self._requests.values()
                 if req.status == "pending"
             ]
+
+    def get_pending_with_elapsed(self) -> list[dict]:
+        """获取待审核请求，含已等待时间和超时预警。"""
+        timeout = self.default_timeout_seconds
+        now = time.time()
+        with self._lock:
+            result = []
+            for req in self._requests.values():
+                if req.status == "pending":
+                    elapsed = now - req.created_at
+                    result.append({
+                        "request": req,
+                        "elapsed_seconds": elapsed,
+                        "timeout_warning": timeout is not None and elapsed > timeout * 0.8,
+                        "is_expired": timeout is not None and elapsed > timeout,
+                    })
+            return result
 
     def get_request(self, request_id: str) -> HITLRequest | None:
         """获取请求详情"""
@@ -722,6 +896,90 @@ class HITLManager:
     def get_all(self) -> list[HITLRequest]:
         """获取所有请求"""
         return list(self._requests.values())
+
+    def restore_from_checkpoint(self, hitl_state: dict | None) -> int:
+        """
+        从 checkpoint 中恢复 HITL 请求状态。
+
+        仅恢复 pending 状态的请求（用户可能还在等待审批）。
+        已被批准/拒绝的请求不会被重新激活。
+
+        Parameters
+        ----------
+        hitl_state : dict | None
+            checkpoint 中保存的 HITL 状态，格式：
+            {
+                "pending_requests": [
+                    {"request_id": "...", "agent_name": "...",
+                     "task_id": "...", "step_name": "...", "created_at": ...},
+                    ...
+                ],
+                "collected_at": ...
+            }
+
+        Returns
+        -------
+        int
+            恢复的 pending 请求数量。
+        """
+        if not hitl_state or "pending_requests" not in hitl_state:
+            return 0
+
+        restored = 0
+        now = time.time()
+        preserved_statuses = {"pending"}
+
+        with self._lock:
+            for req_data in hitl_state["pending_requests"]:
+                request_id = req_data["request_id"]
+                # 如果请求已存在于当前状态，跳过
+                if request_id in self._requests:
+                    continue
+
+                # 重建请求（使用新 request_id 避免与新请求冲突）
+                # 原始 created_at 保留以便计算等待时间
+                original_created_at = req_data.get("created_at", now)
+                new_request_id = str(uuid.uuid4())
+
+                request = HITLRequest(
+                    request_id=new_request_id,
+                    agent_id=req_data.get("agent_name", "unknown"),
+                    task_id=req_data.get("task_id", "unknown"),
+                    decision_point=req_data.get("step_name", "checkpoint_resume"),
+                    # Restore context from serialized summary if full context unavailable
+                    context=req_data.get("context", req_data.get("context_summary", {})),
+                    created_at=original_created_at,
+                    # 状态设为 pending，等待用户确认是否恢复
+                    status="pending",
+                )
+
+                self._requests[new_request_id] = request
+
+                # 发布事件以便监听器知道有恢复的请求
+                event = Event(
+                    event_id=str(uuid.uuid4()),
+                    event_type=EventType.HITL_REQUEST,
+                    agent_id=request.agent_id,
+                    timestamp=now,
+                    data={
+                        "request_id": new_request_id,
+                        "restored_from": request_id,
+                        "step_name": req_data.get("step_name", ""),
+                        "task_id": req_data.get("task_id", ""),
+                        "restored_at": now,
+                        "waiting_since": original_created_at,
+                    },
+                )
+                self._event_bus.publish(event)
+                restored += 1
+
+        if restored > 0:
+            logger.warning(
+                "[HITLManager] Restored %d pending HITL requests from checkpoint. "
+                "These will require re-approval after resume.",
+                restored,
+            )
+        return restored
 
 
 # ═══════════════════════════════════════════════════════════════════════════

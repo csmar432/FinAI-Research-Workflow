@@ -182,13 +182,13 @@ VARIABLE_REGISTRY: dict[AShareVariable, VariableSpec] = {
     AShareVariable.INSTITUTIONAL_HOLD: VariableSpec(
         variable=AShareVariable.INSTITUTIONAL_HOLD,
         display_name="机构持股",
-        mcp_server=None,
+        mcp_server="user-tushare",
         mcp_tool="get_institutional_holdings",
-        tushare_api="pro.inst_tp",
-        akshare_func="ak.stock_individual_fund_flow_em",
+        tushare_api="pro.top_holders / pro.fund_holding",
+        akshare_func="ak.stock_shareholder_change",
         local_file=None,
-        availability=VariableAvailability.NEEDS_NEW_TOOL,
-        description="机构投资者（基金/QFII/社保/保险）持股数据",
+        availability=VariableAvailability.AVAILABLE,
+        description="机构投资者（基金/QFII/社保/保险）持股数据和前10大股东信息",
         research_uses=[
             "机构持股集中度（机构持股比例）",
             "长期机构投资者 vs 短期机构投资者行为差异",
@@ -253,30 +253,58 @@ except ImportError:
 # ─── MCP call helper (replicate minimal version to avoid import dependency) ─
 
 def _call_mcp_tool(server: str, tool: str, params: dict, retries: int = 2) -> Any | None:
-    """Call an MCP tool via subprocess. Minimal implementation."""
+    """
+    Call an MCP tool via subprocess.
+
+    Tries these approaches in order:
+    1. Server's _invoke(tool_name, arguments) entry point (standardized)
+    2. asyncio.run(handle_xxx(**params)) via handler function name inference
+    3. Falls back gracefully on failure
+
+    Returns raw string output or None.
+    """
     import subprocess, sys
-    payload = _json.dumps({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {"name": tool, "arguments": params},
-    })
+    server_module = server.replace("-", "_")
+    cwd = str(Path.cwd())
+
     for attempt in range(retries + 1):
         try:
+            # Approach 1: Standard _invoke entry point (preferred)
             result = subprocess.run(
-                ["python", "-c",
-                 f"import sys, json; "
-                 f"from pathlib import Path; "
-                 f"sys.path.insert(0, '{Path.cwd()}'); "
-                 f"from mcp_servers.{server.replace('-', '_')}.server import *; "
-                 f"import asyncio; "
-                 f"result = asyncio.run(handle_{tool.replace('get_', '')}({params})); "
-                 f"print(json.dumps(result[0].text if result else '{{}}'))"],
-                capture_output=True, text=True, timeout=15,
-                cwd=str(Path.cwd()),
+                [
+                    sys.executable, "-c",
+                    f"import sys, json; "
+                    f"from pathlib import Path; "
+                    f"sys.path.insert(0, '{cwd}'); "
+                    f"from mcp_servers.{server_module}.server import _invoke; "
+                    f"_res = _invoke({repr(tool)}, {params}); "
+                    f"print(json.dumps(_res, ensure_ascii=False, default=str))"
+                ],
+                capture_output=True, text=True, timeout=30,
+                cwd=cwd,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
+
+            # Approach 2: Handler function name inference (fallback for servers without _invoke)
+            handler_name = f"handle_{tool.replace('get_', '')}"
+            result2 = subprocess.run(
+                [
+                    sys.executable, "-c",
+                    f"import sys, json, asyncio; "
+                    f"from pathlib import Path; "
+                    f"sys.path.insert(0, '{cwd}'); "
+                    f"from mcp_servers.{server_module}.server import {handler_name}; "
+                    f"_params = {params}; "
+                    f"_r = asyncio.run({handler_name}(**_params) if asyncio.iscoroutinefunction({handler_name}) else {handler_name}(**_params)); "
+                    f"print(json.dumps(_r[0].text if isinstance(_r, (list, tuple)) and _r else str(_r) if _r else '{{}}', ensure_ascii=False, default=str))"
+                ],
+                capture_output=True, text=True, timeout=30,
+                cwd=cwd,
+            )
+            if result2.returncode == 0 and result2.stdout.strip():
+                return result2.stdout.strip()
+
         except Exception:
             pass
     return None
@@ -800,7 +828,49 @@ class AShareVariableFetcher:
         start_date: str | None,
         end_date: str | None,
     ) -> VariableResult:
-        """Fetch institutional holdings data. Requires new MCP tool."""
+        """Fetch institutional holdings data via the new user-tushare MCP tool."""
+        if not ts_code:
+            return VariableResult(
+                variable=AShareVariable.INSTITUTIONAL_HOLD, data=None,
+                source=DataSource.SIMULATED,
+                source_detail="",
+                available=False,
+                is_simulated=True,
+                error="ts_code is required for institutional_holdings",
+            )
+
+        # Try MCP tool first
+        mcp_result = self._mcp_tushare_institutional(ts_code, start_date, end_date)
+        if mcp_result is not None and not mcp_result.empty:
+            df = self._normalize_institutional_df(mcp_result)
+            self.tracker.record(
+                "institutional_holdings",
+                DataSource.MCP_TUSHARE,
+                "user-tushare:get_institutional_holdings",
+            )
+            return VariableResult(
+                variable=AShareVariable.INSTITUTIONAL_HOLD, data=df,
+                source=DataSource.MCP_TUSHARE,
+                source_detail="user-tushare:get_institutional_holdings",
+                available=True,
+            )
+
+        # Fallback: akshare directly
+        akshare_result = self._akshare_institutional(ts_code, start_date, end_date)
+        if akshare_result is not None and not akshare_result.empty:
+            df = self._normalize_institutional_df(akshare_result)
+            self.tracker.record(
+                "institutional_holdings",
+                DataSource.MCP_TUSHARE,
+                "akshare:stock_shareholder_change (fallback)",
+            )
+            return VariableResult(
+                variable=AShareVariable.INSTITUTIONAL_HOLD, data=df,
+                source=DataSource.MCP_TUSHARE,
+                source_detail="akshare:stock_shareholder_change (fallback)",
+                available=True,
+            )
+
         return VariableResult(
             variable=AShareVariable.INSTITUTIONAL_HOLD, data=None,
             source=DataSource.SIMULATED,
@@ -808,15 +878,78 @@ class AShareVariableFetcher:
             available=False,
             is_simulated=True,
             error=(
-                "institutional_holdings: No MCP tool available.\n"
+                "Institutional holdings data unavailable.\n"
                 "  Options:\n"
-                "  (1) Tushare Pro: pro.inst_tp() [requires premium subscription]\n"
-                "  (2) akshare: ak.stock_individual_fund_flow_em() [free, for 主力资金]\n"
-                "  (3) CSMAR: institutional holdings gold standard [requires institutional account]\n"
-                "  (4) Public: scrape 巨潮资讯网 (cninfo.com.cn) for 机构持股变动\n"
-                "  Recommendation: implement akshare fallback in user-tushare MCP first."
+                "  (1) Set TUSHARE_TOKEN in .env for full institutional data (QFII/fund/trust/broker/社保)\n"
+                "  (2) Use akshare directly: pip install akshare (free, provides 机构持股比例)\n"
+                "  (3) CSMAR institutional data (requires institutional account)\n"
             ),
         )
+
+    def _mcp_tushare_institutional(
+        self, ts_code: str, start_date: str | None, end_date: str | None,
+    ) -> pd.DataFrame | None:
+        """Call user-tushare MCP get_institutional_holdings tool."""
+        try:
+            result = _call_mcp_tool_via_http(
+                "user-tushare", "get_institutional_holdings",
+                {
+                    "ts_code": ts_code,
+                    "start_date": start_date or "20180101",
+                    "end_date": end_date,
+                },
+            )
+            if result is None:
+                return None
+            data_list = result.get("data", []) if isinstance(result, dict) else []
+            if not data_list:
+                return None
+            return pd.DataFrame(data_list)
+        except Exception as exc:
+            if self.verbose:
+                _log.debug(f"MCP tushare institutional call failed: {exc}")
+            return None
+
+    def _akshare_institutional(
+        self, ts_code: str, start_date: str | None, end_date: str | None,
+    ) -> pd.DataFrame | None:
+        """Fallback: call akshare directly for institutional holdings."""
+        try:
+            import akshare as ak
+            symbol = ts_code.replace(".SZ", "").replace(".SH", "")
+            df = ak.stock_shareholder_change(indicator="机构持股", symbol=symbol)
+            if df is None or df.empty:
+                return None
+            if start_date:
+                df = df[df["公告日期"] >= start_date]
+            if end_date:
+                df = df[df["公告日期"] <= end_date]
+            return df
+        except ImportError:
+            return None
+        except Exception as exc:
+            if self.verbose:
+                _log.debug(f"akshare institutional failed: {exc}")
+            return None
+
+    def _normalize_institutional_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize an institutional holdings DataFrame to standard columns."""
+        if df.empty:
+            return df
+        rename_map = {}
+        for col in df.columns:
+            cl = str(col).lower()
+            if "holder" in cl and "name" in cl:
+                rename_map[col] = "holder_name"
+            elif "holder" in cl and "type" in cl:
+                rename_map[col] = "holder_type"
+            elif "pct" in cl or "比例" in col or "持股" in col:
+                rename_map[col] = "hold_pct"
+            elif "ann" in cl or "date" in cl or "公告" in col:
+                rename_map[col] = "ann_date"
+            elif "ts_code" in cl or "code" in cl:
+                rename_map[col] = "ts_code"
+        return df.rename(columns=rename_map)
 
     def _fetch_analyst(self, ts_code: str | None) -> VariableResult:
         """Fetch analyst coverage for a stock."""

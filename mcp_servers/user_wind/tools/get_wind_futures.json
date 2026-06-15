@@ -9,6 +9,7 @@
         "description": "期货类型: commodity(商品)/financial(金融)",
         "default": "commodity"
       }
-    }
+    },
+    "description": "获取期货行情数据（模拟Wind风格）。"
   }
 }

@@ -10,17 +10,22 @@
           "names",
           "spot",
           "hist"
-        ]
+        ],
+        "description": "数据类型（如 spot/daily/weekly 等）"
       },
       "concept_name": {
-        "type": "string"
+        "type": "string",
+        "description": "概念名称或代码"
       },
       "start_date": {
-        "type": "string"
+        "type": "string",
+        "description": "起始日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       },
       "end_date": {
-        "type": "string"
+        "type": "string",
+        "description": "结束日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
       }
-    }
+    },
+    "description": "获取概念板块数据（板块列表/行情/历史走势）。使用 akshare 东方财富接口，无需 API Key。"
   }
 }

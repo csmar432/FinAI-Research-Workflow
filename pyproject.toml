@@ -53,23 +53,25 @@ dependencies = [
     # ── 文档解析 ─────────────────────────────────────────────────────────────
     "pdfplumber>=0.11.0",
     "python-docx>=1.1.0",
-    "python-pptx>=0.6.23",
+    # python-pptx (PPT生成): 已移至 legacy 组，未集成
     "Pillow>=10.3.0",
     # ── 文本与格式 ───────────────────────────────────────────────────────────
     "markdown>=3.4.0",
     "requests>=2.31.0",
     "beautifulsoup4>=4.12.0",
-    "lxml>=4.9.0",
+    # lxml (XML/HTML解析): 已移至 legacy 组，未集成
     # ── 金融数据 ─────────────────────────────────────────────────────────────
     "akshare>=1.18.63",
     "yfinance>=0.2.0",
+    "fastmcp>=0.1.0",
+    "mcp>=1.0.0",
     # ── LLM / AI ─────────────────────────────────────────────────────────────
     "openai>=2.0.0",
     "anthropic>=7.0.0",
     "httpx>=0.27.0",
     "tiktoken>=0.7.0",
     # ── 计量经济 ─────────────────────────────────────────────────────────────
-    "linearmodels>=4.17",
+    # linearmodels 已在 optional-dependencies.econometrics 中声明
     # ── 环境变量 / 配置 ─────────────────────────────────────────────────────
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
@@ -103,14 +105,17 @@ rag = [
 ]
 
 deep-learning = [
-    "torch>=2.2.0",
-    "accelerate>=0.30.0",
+    # torch>=2.2.0 and accelerate>=0.30.0 are listed here as
+    # heavyweight optional dependencies for future deep learning modules.
+    # They are NOT currently imported by any scripts/ or tests/ file.
+    # Uncomment when needed: "torch>=2.2.0", "accelerate>=0.30.0",
 ]
 
 econometrics = [
     "linearmodels>=4.17",
     "pandas-datareader>=0.10.0",
     "pandasql>=0.7.3",
+    "diff-in-diff2>=1.0.0",
 ]
 
 knowledge = [
@@ -130,18 +135,30 @@ monitor = [
     "apscheduler>=3.10.0",
 ]
 
+# Legacy: packages declared in dependencies but not currently imported in scripts/tests.
+# Kept here for reference — uncomment individually when needed.
+# Removing from main dependencies reduces install time by ~45s.
+legacy = [
+    "tiktoken>=0.7.0",       # Tokenizer (未使用，可被openai代替)
+    "lxml>=4.9.0",            # XML/HTML解析 (beautifulsoup4依赖但未显式import)
+    "neo4j>=5.0.0",           # 图数据库 (未使用，knowledge图谱用networkx)
+    "pyvis>=0.3.0",           # 网络可视化 (未使用)
+    "pypandoc>=0.8.0",       # Pandoc包装器 (未使用)
+    "python-pptx>=0.6.23",   # PPT生成 (未使用)
+]
+
 all = [
-    "finai-research-workflow[dev,rag,deep-learning,econometrics,knowledge,sandbox,browser,monitor]",
+    "finai-research-workflow[dev,rag,deep-learning,econometrics,knowledge,sandbox,browser,monitor,legacy]",
 ]
 
 [project.scripts]
 finai-test = "pytest:main"
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/finai-research-workflow"
-Documentation = "https://github.com/YOUR_USERNAME/finai-research-workflow#readme"
-Repository = "https://github.com/YOUR_USERNAME/finai-research-workflow"
-Issues = "https://github.com/YOUR_USERNAME/finai-research-workflow/issues"
+Homepage = "https://github.com/csmar432/论文-研报工作流"
+Documentation = "https://github.com/csmar432/论文-研报工作流#readme"
+Repository = "https://github.com/csmar432/论文-研报工作流"
+Issues = "https://github.com/csmar432/论文-研报工作流/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["scripts"]

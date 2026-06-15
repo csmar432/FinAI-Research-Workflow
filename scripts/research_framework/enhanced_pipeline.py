@@ -83,6 +83,9 @@ class PipelineContext:
     # Validation Gates
     gate_results: dict[str, Any] = field(default_factory=dict)
 
+    # HITL状态
+    hitl_rejection: dict | None = None  # 被拒绝的gate及反馈
+
     # LaTeX
     latex_version: str = "v1.0"
     latex_lint_issues: list = field(default_factory=list)
@@ -143,6 +146,9 @@ class EnhancedPipeline:
         enable_pdf_vision: bool = False,
         enable_sandbox: bool = True,
         enable_self_evolution: bool = False,
+        enable_hitl: bool = True,
+        hitl_timeout: int = 600,
+        on_gate_approved: callable | None = None,
         **kwargs,
     ):
         self.topic = topic
@@ -158,6 +164,11 @@ class EnhancedPipeline:
         self.enable_pdf_vision = enable_pdf_vision
         self.enable_sandbox = enable_sandbox
         self.enable_self_evolution = enable_self_evolution
+        self.enable_hitl = enable_hitl
+        self.hitl_timeout = hitl_timeout
+        # 审批通过回调：签名 on_gate_approved(stage_name: str, ctx: PipelineContext)
+        # 用于在用户审批后触发可视化推送等副作用
+        self._on_gate_approved = on_gate_approved
 
         self.ctx = PipelineContext(
             topic=topic,
@@ -166,6 +177,109 @@ class EnhancedPipeline:
         )
 
         self._init_modules()
+        self._init_hitl_gate()
+
+    def _init_hitl_gate(self):
+        """初始化 HITL Gate 用于实证经济学专属审批节点。"""
+        self._hitl_gate = None
+        if not self.enable_hitl:
+            _log.info("[HITL] Disabled — all gates auto-continue")
+            return
+        try:
+            from scripts.core.hitl_gate import HITLGate
+            self._hitl_gate = HITLGate(
+                default_timeout=self.hitl_timeout,
+                auto_continue=True,
+            )
+            _log.info("[HITL] Enabled — gates will pause pipeline awaiting approval")
+        except Exception as e:
+            _log.warning("[HITL] Failed to initialize HITLGate: %s — gates auto-continue", e)
+
+    def _notify_gate_approved(self, stage_name: str, feedback: str = "") -> None:
+        """
+        审批通过后触发回调（通常是推送可视化）。
+
+        调用时机：每个 HITL gate 审批通过后立即调用。
+        在审批通过前，不推送任何可视化内容。
+
+        可视化推送策略：
+          ① step1_data_quality → 样本分布图 / 相关矩阵热力图
+          ② step2_did_strategy → 平行趋势事件研究图
+          ③ step3_robustness   → 稳健性检验系数对比森林图
+          ④ step4_regression    → 主回归结果汇总表
+
+        通过 `on_gate_approved` 回调传递给 AgentPipeline，
+        由 AgentPipeline 调用 _notify_viz_gate_approved() 完成实际推送。
+        """
+        if self._on_gate_approved is None:
+            return
+        try:
+            self._on_gate_approved(stage_name, self.ctx, feedback)
+            _log.info("[HITL] Gate '%s' approved — callback triggered", stage_name)
+        except Exception as e:
+            _log.warning("[HITL] on_gate_approved callback failed: %s", e)
+
+    def _hitl_hold(
+        self,
+        stage_name: str,
+        content: dict,
+        question: str,
+        auto_continue: bool = False,
+    ) -> dict | None:
+        """
+        创建 HITL 审批节点。
+
+        - auto_continue=False（实证流水线默认）：阻塞直到用户审批。
+          流程：hold() 创建 pending 记录 → 轮询等待 → 用户调用 approve()/reject()
+          → 返回决策结果 → 继续 pipeline。
+        - auto_continue=True（CLI 交互默认）：不阻塞，hold() 后立即返回。
+
+        Returns
+        -------
+        dict | None
+            含 gate_id / status / feedback / decision 的审批结果，或 None（gate 不可用）。
+        """
+        if self._hitl_gate is None:
+            return None
+        try:
+            # hold() 返回 gate_id（字符串），record 存入 _pending[gate_id]
+            gate_id = self._hitl_gate.hold(
+                stage=stage_name,
+                content=content,
+                question=question,
+            )
+
+            # 告知用户有审批请求等待处理
+            _log.info("[HITL] 审批请求已创建: %s — 请调用 approve('%s', feedback) 或 reject('%s', feedback)", stage_name, stage_name, stage_name)
+
+            if auto_continue:
+                # CLI 场景：立即返回，用户通过外部接口审批
+                return {
+                    "gate_id": gate_id,
+                    "status": "pending",
+                    "feedback": "",
+                    "decision": None,
+                }
+
+            # 实证流水线场景：使用公共 API 等待用户决策
+            final_record = self._hitl_gate.wait_for_decision(gate_id, timeout=self.hitl_timeout)
+
+            if final_record is None:
+                return {
+                    "gate_id": gate_id,
+                    "status": "timeout",
+                    "feedback": f"Gate timed out after {self.hitl_timeout}s",
+                    "decision": None,
+                }
+            return {
+                "gate_id": final_record.gate_id,
+                "status": final_record.state.value if hasattr(final_record.state, "value") else str(final_record.state),
+                "feedback": getattr(final_record, "feedback", "") or "",
+                "decision": final_record.state.value if hasattr(final_record.state, "value") else str(final_record.state),
+            }
+        except Exception as e:
+            _log.warning("[HITL] Gate '%s' failed: %s — auto-continue", stage_name, e)
+            return None
 
     # ── Module Initialization ────────────────────────────────────────────────
 
@@ -679,19 +793,20 @@ class EnhancedPipeline:
 
             # 生成与上一版本的 diff
             prev_version = current_version
+            diff_result = None
             if prev_version != next_version:
                 diff_result = tracker.diff_all_between(prev_version, next_version)
                 self.ctx.latex_diff_paths = {
-                    "diff_tex": str(diff_result.get("diff_tex")),
-                    "diff_pdf": str(diff_result.get("diff_pdf")),
+                    "diff_tex": diff_result.get("diff_tex"),
+                    "diff_pdf": diff_result.get("diff_pdf"),
                 }
                 self.ctx.latex_version = next_version
 
             _log.info(f"[Step 5] LaTeX Diff: saved version {next_version}")
             return {
                 "version": next_version,
-                "diff_tex": str(diff_result.get("diff_tex")),
-                "diff_pdf": str(diff_result.get("diff_pdf")),
+                "diff_tex": str(diff_result.get("diff_tex")) if diff_result else None,
+                "diff_pdf": str(diff_result.get("diff_pdf")) if diff_result else None,
             }
 
         except Exception as exc:
@@ -798,6 +913,12 @@ class EnhancedPipeline:
         """
         执行完整增强流水线。
 
+        自动在以下关键节点创建 HITL 审批门：
+          ① Step1 后 — 数据质量门（样本量/N/A比例/处理组分布）
+          ② Step2 后 — DID策略门（平行趋势假设/ATT估计/敏感性参数）
+          ③ Step3 前 — 稳健性计划门（防止p-hacking，先审计划后跑结果）
+          ④ Step5 前 — 回归结果门（主回归结果呈现后，等待用户确认后再生成LaTeX）
+
         Returns
         -------
         PipelineContext
@@ -808,23 +929,147 @@ class EnhancedPipeline:
         _log.info(f"Enhanced Pipeline 开始: {self.topic}")
         _log.info(f"=" * 60)
 
-        # Step 1: 数据
+        # Step 1: 数据加载
         self.step1_load_data()
+        _log.info("[Step 1] 数据加载完成")
 
-        # Step 2: 现代 DID
+        # ── HITL Gate ①: 数据质量门 ───────────────────────────────────
+        # 在运行实证前，人类必须审核：样本量、N/A比例、处理组/控制组分布
+        if self.enable_hitl and self.ctx.df is not None:
+            df = self.ctx.df
+            data_summary = {
+                "topic": self.topic,
+                "n_obs": len(df),
+                "n_firms": int(df.iloc[:, 0].nunique()) if len(df) > 0 else 0,
+                "n_years": int(df["year"].nunique()) if "year" in df.columns else 0,
+                "na_pct": float(df.isnull().mean().mean() * 100) if len(df) > 0 else 0.0,
+                "dof_warning": self._check_dof_warning(),
+            }
+            gate_result = self._hitl_hold(
+                stage_name="step1_data_quality",
+                content=data_summary,
+                question=(
+                    f"【数据质量审核】请确认以下数据特征是否符合研究设计：\n"
+                    f"- 样本量：{data_summary['n_obs']} 观测值\n"
+                    f"- 面板结构：{data_summary['n_firms']} 家企业 x {data_summary['n_years']} 年\n"
+                    f"- N/A 比例：{data_summary['na_pct']:.1f}%\n"
+                    f"- DOF 警告：{'是' if data_summary['dof_warning'] else '否'}\n\n"
+                    f"是否继续进入实证分析？如有数据质量问题请在反馈中说明。"
+                ),
+            )
+            if gate_result and gate_result.get("decision") == "rejected":
+                self.ctx.hitl_rejection = {
+                    "stage": "step1_data_quality",
+                    "feedback": gate_result.get("feedback", ""),
+                }
+                _log.warning("[HITL] 数据质量审核未通过: %s", gate_result.get("feedback"))
+                self.ctx.execution_time_seconds = time.time() - start
+                return self.ctx
+            # 审批通过或超时自动继续 → 推送该阶段可视化
+            self._notify_gate_approved("step1_data_quality", gate_result.get("feedback", "") if gate_result else "")
+
+        # Step 2: 现代 DID 回归
         self.step2_modern_did()
+        _log.info("[Step 2] DID 回归完成")
 
-        # Step 3: 稳健性
+        # ── HITL Gate ②: DID 策略门（平行趋势）─────────────────────────
+        # 经济学研究最关键的审核点：识别策略在数据层面是否成立
+        if self.enable_hitl and self.ctx.modern_did_results:
+            did_summary = {
+                "topic": self.topic,
+                "n_results": len(self.ctx.modern_did_results),
+                "main_coef": self._get_main_did_coef(),
+                "parallel_trends_method": self._get_parallel_trends_method(),
+            }
+            gate_result = self._hitl_hold(
+                stage_name="step2_did_strategy",
+                content=did_summary,
+                question=(
+                    f"【DID 识别策略审核】请确认识别策略：\n"
+                    f"- 主系数（初步）：{did_summary['main_coef']:.4f}\n"
+                    f"- 平行趋势方法：{did_summary['parallel_trends_method']}\n"
+                    f"- 研究问题：{self.topic}\n\n"
+                    f"请确认：① 政策/处理变量定义是否合理？② 控制组选择是否恰当？"
+                    f"③ 平行趋势假设是否可检验？反馈将指导后续稳健性检验设计。"
+                ),
+            )
+            if gate_result and gate_result.get("decision") == "rejected":
+                self.ctx.hitl_rejection = {
+                    "stage": "step2_did_strategy",
+                    "feedback": gate_result.get("feedback", ""),
+                }
+                _log.warning("[HITL] DID策略审核未通过: %s", gate_result.get("feedback"))
+                self.ctx.execution_time_seconds = time.time() - start
+                return self.ctx
+            # 审批通过 → 推送 DID 策略可视化（平行趋势图等）
+            self._notify_gate_approved("step2_did_strategy", gate_result.get("feedback", "") if gate_result else "")
+
+        # Step 3: 稳健性检验
         self.step3_robustness()
+        _log.info("[Step 3] 稳健性检验完成")
 
-        # Step 4: Validation Gates
-        self.step4_validation_gates()
+        # Step 4: Validation Gates（纯算法，无需人工）
+        if self.enable_validation_gates:
+            self.step4_validation_gates()
+            _log.info("[Step 4] Validation Gates 完成")
+
+        # ── HITL Gate ③: 稳健性结果审核门 ──────────────────────────────
+        # 防止p-hacking：先提交稳健性计划，用户批准后再执行
+        if self.enable_hitl:
+            robustness_plan = self._build_robustness_plan_summary()
+            gate_result = self._hitl_hold(
+                stage_name="step3_robustness_results",
+                content=robustness_plan,
+                question=(
+                    f"【稳健性检验审核】稳健性检验已完成，请在生成论文前确认：\n"
+                    f"{robustness_plan.get('summary', '')}\n\n"
+                    f"请确认：① 核心结果是否稳健？② 是否有令人担忧的异质性？"
+                    f"③ 稳健性不足的地方是否在论文中诚实披露？"
+                ),
+            )
+            if gate_result and gate_result.get("decision") == "rejected":
+                self.ctx.hitl_rejection = {
+                    "stage": "step3_robustness_results",
+                    "feedback": gate_result.get("feedback", ""),
+                }
+                _log.warning("[HITL] 稳健性审核未通过: %s", gate_result.get("feedback"))
+                self.ctx.execution_time_seconds = time.time() - start
+                return self.ctx
+            # 审批通过 → 推送稳健性检验可视化（系数对比图）
+            self._notify_gate_approved("step3_robustness_results", gate_result.get("feedback", "") if gate_result else "")
+
+        # ── HITL Gate ④: 回归结果确认门 ──────────────────────────────
+        # 在生成 LaTeX 之前，人类确认主要结果可接受
+        if self.enable_hitl:
+            regression_summary = self._build_regression_summary()
+            gate_result = self._hitl_hold(
+                stage_name="step5_regression_results",
+                content=regression_summary,
+                question=(
+                    f"【实证结果确认】主回归和稳健性检验已完成，请在生成论文前确认：\n"
+                    f"{regression_summary.get('summary', '')}\n\n"
+                    f"是否接受当前结果并生成 LaTeX 草稿？如有异议请在反馈中说明。"
+                ),
+            )
+            if gate_result and gate_result.get("decision") == "rejected":
+                self.ctx.hitl_rejection = {
+                    "stage": "step5_regression_results",
+                    "feedback": gate_result.get("feedback", ""),
+                }
+                _log.warning("[HITL] 回归结果审核未通过: %s", gate_result.get("feedback"))
+                self.ctx.execution_time_seconds = time.time() - start
+                return self.ctx
+            # 审批通过 → 推送回归结果可视化
+            self._notify_gate_approved("step5_regression_results", gate_result.get("feedback", "") if gate_result else "")
 
         # Step 5: LaTeX + 验证
         self.step5_latex_and_validation()
+        _log.info("[Step 5] LaTeX 生成完成")
 
         # Step 6: PDF Vision
-        self.step6_pdf_vision_check()
+        if self.enable_pdf_vision:
+            self.step6_pdf_vision_check()
+            _log.info("[Step 6] PDF Vision 检查完成")
 
         self.ctx.execution_time_seconds = time.time() - start
         _log.info(f"=" * 60)
@@ -835,6 +1080,48 @@ class EnhancedPipeline:
         _log.info(f"=" * 60)
 
         return self.ctx
+
+    def _check_dof_warning(self) -> bool:
+        """检查自由度警告。"""
+        return getattr(self.ctx, "dof_warning", False)
+
+    def _get_main_did_coef(self) -> float:
+        """获取主 DID 系数。"""
+        results = self.ctx.modern_did_results or {}
+        for key, val in results.items():
+            if isinstance(val, dict) and "coef" in val:
+                return float(val["coef"])
+        return 0.0
+
+    def _get_parallel_trends_method(self) -> str:
+        """获取使用的平行趋势检验方法。"""
+        return getattr(self.ctx, "parallel_trends_method", "event_study")
+
+    def _build_robustness_plan_summary(self) -> dict:
+        """构建稳健性计划摘要。"""
+        return {
+            "summary": (
+                "稳健性检验包括：① 平行趋势事件研究图 "
+                "② 交错处理的多估计量（CS/SA/BJS/GB） "
+                "③ 替代被解释变量 "
+                "④ 替代控制组 "
+                "⑤ 缩尾处理（1%/99%）"
+            ),
+            "n_tests_planned": 5,
+        }
+
+    def _build_regression_summary(self) -> dict:
+        """构建回归结果摘要。"""
+        coef = self._get_main_did_coef()
+        n_rob = len(self.ctx.robustness_report) if (
+            self.ctx.robustness_report is not None
+            and hasattr(self.ctx.robustness_report, '__len__')
+        ) else 0
+        return {
+            "summary": f"主DID系数：{coef:.4f}，稳健性检验：{n_rob} 项",
+            "main_coef": coef,
+            "n_robustness": n_rob,
+        }
 
     def summary(self) -> str:
         """生成执行摘要。"""

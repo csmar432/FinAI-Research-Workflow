@@ -13,6 +13,13 @@ Environment variables:
 
 from __future__ import annotations
 
+__all__ = [
+    "VLMProvider",
+    "OpenAIVLMProvider",
+    "AnthropicVLMProvider",
+    "_resolve_vlm_provider",
+]
+
 import base64
 import json
 import os

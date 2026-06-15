@@ -15,6 +15,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取OECD TFP(全要素生产率)数据。"
   }
 }

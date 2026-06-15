@@ -1,14 +1,32 @@
 {
   "name": "get_cc_historical",
   "description": "获取加密货币历史价格",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "symbol": { "type": "string", "description": "币种符号，例如 'BTC'" },
-      "start_date": { "type": "string", "description": "开始日期，格式 'YYYY-MM-DD'" },
-      "end_date": { "type": "string", "description": "结束日期，格式 'YYYY-MM-DD'" },
-      "interval": { "type": "string", "description": "周期：'day','hour'", "default": "day" }
+      "symbol": {
+        "type": "string",
+        "description": "加密货币或代币代码（如 BTC/ETH）"
+      },
+      "start_date": {
+        "type": "string",
+        "description": "起始日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
+      },
+      "end_date": {
+        "type": "string",
+        "description": "结束日期（格式：YYYYMMDD 或 YYYY-MM-DD）"
+      },
+      "interval": {
+        "type": "string",
+        "default": "day",
+        "description": "数据间隔（如 1d/1h/5m/1m）"
+      }
     },
-    "required": ["symbol", "start_date", "end_date"]
+    "required": [
+      "symbol",
+      "start_date",
+      "end_date"
+    ],
+    "description": "获取加密货币历史价格"
   }
 }

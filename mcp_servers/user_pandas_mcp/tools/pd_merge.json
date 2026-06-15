@@ -1,13 +1,38 @@
 {
   "name": "pd_merge",
-  "description": "合并两个数据框（merge/concat/join）。\\n\\n",
+  "description": "合并两个数据框（merge/concat/join）。\\n\\nArgs:\\n  left_name: 左侧数据框名称\\n  right_name: 右侧数据框名称\\n  how: 合并方式\\n  on: 合并键列名\\n  save_as: 保存结果的数据框名称\\n\\nReturns: 合并后的数据框摘要",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "left_name": {
+        "type": "string"
+      },
+      "right_name": {
+        "type": "string"
+      },
+      "how": {
+        "type": "string",
+        "enum": [
+          "inner",
+          "left",
+          "right",
+          "outer"
+        ],
+        "default": "inner"
+      },
+      "on": {
+        "type": "string",
+        "description": "合并键列名"
+      },
+      "save_as": {
         "type": "string"
       }
     },
-    "required": []
+    "required": [
+      "left_name",
+      "right_name",
+      "on"
+    ],
+    "description": "合并两个数据框（merge/concat/join）。"
   }
 }

@@ -739,23 +739,26 @@ class PaperReader:
         self.storage_dir = storage_dir
 
     def download(self, arxiv_id: str) -> dict:
-        """下载论文"""
-        return download_from_arxiv(arxiv_id, storage_dir=self.storage_dir)
+        """下载论文（存储到 self.storage_dir）"""
+        arxiv_clean = arxiv_id_from_url(arxiv_id)
+        pdf_path = Path(self.storage_dir) / f"{arxiv_clean}.pdf"
+        result = download_from_arxiv(arxiv_clean)
+        if isinstance(result, dict) and "error" not in result:
+            result["local_path"] = str(pdf_path)
+        return result
 
-    def read(self, arxiv_id: str, max_lines: int = 3000) -> str:
-        """读取论文正文"""
-        return load_paper_text(arxiv_id, max_lines=max_lines)
+    def read(self, arxiv_id: str, max_chars: int = 50000) -> str:
+        """读取论文正文（提取前 max_chars 字符）"""
+        return load_paper_text(arxiv_id, max_chars=max_chars)
 
     def summarize(self, arxiv_id: str) -> str:
         """AI 摘要"""
-        text = load_paper_text(arxiv_id)
-        return summarize_with_ai(text)
+        return summarize_with_ai(arxiv_id)
 
     def ask(self, arxiv_id: str, question: str) -> str:
         """针对论文提问"""
-        text = load_paper_text(arxiv_id)
-        return ask_paper_with_ai(text, question)
+        return ask_paper_with_ai(arxiv_id, question)
 
     def compare(self, arxiv_id1: str, arxiv_id2: str, question: str) -> str:
         """对比两篇论文"""
-        return compare_papers_with_ai(arxiv_id1, arxiv_id2, question)
+        return compare_papers_with_ai([arxiv_id1, arxiv_id2], question)

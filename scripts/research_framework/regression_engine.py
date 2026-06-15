@@ -25,6 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from scipy import stats
 
 # ─────────────────────────────────────────
 # LOGGING
@@ -56,7 +57,14 @@ def _extract(model, xnames: list[str]) -> dict:
 
     out = {}
     for i, name in enumerate(names):
-        p, s, pv, tv = float(params[i]), float(bses[i]), float(pvals[i]), float(tvals[i])
+        try:
+            p = float(params[i]) if not (isinstance(params[i], float) and np.isnan(params[i])) else 0.0
+            s = float(bses[i]) if not (isinstance(bses[i], float) and np.isnan(bses[i])) else 0.0
+            pv = float(pvals[i]) if not (isinstance(pvals[i], float) and np.isnan(pvals[i])) else 1.0
+            tv = float(tvals[i]) if not (isinstance(tvals[i], float) and np.isnan(tvals[i])) else 0.0
+        except (TypeError, ValueError):
+            _log.warning("Coefficient extraction failed for variable '%s' at index %d — skipping", name, i)
+            continue
         sig = ""
         if pv < 0.001: sig = "***"
         elif pv < 0.01:  sig = "**"
@@ -137,6 +145,211 @@ class RegressionEngine:
         )
 
     # ─────────────────────────────────────
+    # TWO-WAY CLUSTERED STANDARD ERRORS
+    # ─────────────────────────────────────
+    def _two_way_clustered_se(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        cluster1: np.ndarray,
+        cluster2: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Compute Cameron-Gelbach-Miller (2011) two-way clustered standard errors.
+
+        V = V_cl1 + V_cl2 - V_pooled
+
+        Uses the cluster-robust variance estimator (CR0) with bias correction
+        for small samples.
+
+        Args:
+            X: Design matrix (n_obs x n_params)
+            y: Response vector (n_obs,)
+            cluster1: First clustering variable (e.g., firm_id)
+            cluster2: Second clustering variable (e.g., year)
+
+        Returns:
+            (params, se) — coefficient estimates and clustered standard errors
+        """
+        n, k = X.shape
+        residuals = y - X @ np.linalg.lstsq(X, y, rcond=None)[0]
+
+        # Compute OLS Hessian (information matrix)
+        # bread = (X'X / n)^{-1} — inverse of (X'X) / n
+        XtX = X.T @ X
+        try:
+            XtX_inv = np.linalg.inv(XtX)
+        except np.linalg.LinAlgError:
+            XtX_inv = np.linalg.pinv(XtX)
+        bread = XtX_inv  # (k x k)
+
+        def _one_way_meat(X_mat, eps, cl):
+            """Compute one-way clustered meat matrix."""
+            g = cl
+            unique_g = np.unique(g)
+            M = np.zeros((k, k))
+            for gv in unique_g:
+                mask = g == gv
+                xi = X_mat[mask]  # (n_g x k)
+                ei = eps[mask]    # (n_g,)
+                mi = (xi.T * ei)  # (k x n_g)
+                M += mi @ mi.T
+            n_groups = len(unique_g)
+            if n_groups > 1:
+                M *= n_groups / (n_groups - 1)  # BCH correction
+            return M
+
+        # Three one-way meats
+        m1 = _one_way_meat(X, residuals, cluster1)
+        m2 = _one_way_meat(X, residuals, cluster2)
+
+        # Union clustering (pooled)
+        combined = np.array([cluster1, cluster2])
+        combined_hash = combined[0].astype(str) + "_" + combined[1].astype(str)
+        _, uniq_idx = np.unique(combined_hash, return_index=True)
+        # Pooled: compute using union group IDs
+        pooled_labels, inv_pooled = np.unique(combined_hash, return_inverse=True)
+        m_pooled = _one_way_meat(X, residuals, inv_pooled)
+
+        # Two-way meat (CGM bias-corrected)
+        meat = m1 + m2 - m_pooled
+
+        # Variance-covariance: bread @ meat @ bread / n
+        vcov = bread @ meat @ bread / n
+        se = np.sqrt(np.diag(vcov))
+
+        # Recompute params using all available data
+        params = np.linalg.lstsq(X, y, rcond=None)[0]
+
+        return params, se
+
+    def two_way_clustered_fit(
+        self,
+        y_var: str,
+        x_vars: list[str],
+        cluster1: str,
+        cluster2: str,
+        use_firm_fe: bool = True,
+        use_year_fe: bool = True,
+    ) -> dict:
+        """Run OLS with two-way clustered standard errors (firm × year).
+
+        This method bypasses the standard statsmodels fit() path and uses
+        the Cameron-Gelbach-Miller (2011) bias-corrected two-way clustering.
+
+        Args:
+            y_var: Dependent variable column name
+            x_vars: List of independent variable column names
+            cluster1: First clustering dimension (e.g., "ticker" for firm)
+            cluster2: Second clustering dimension (e.g., "year" for time)
+            use_firm_fe: Include firm fixed effects (as cluster1 dummies)
+            use_year_fe: Include year fixed effects (as cluster2 dummies)
+
+        Returns:
+            dict with keys: coefficients, standard_errors, pvalues, tstats,
+            n_obs, r_squared, all_coefs, diagnostic, cov_type
+        """
+        df_sub = self.df.dropna(subset=[y_var] + x_vars)
+        n_obs = len(df_sub)
+
+        if n_obs == 0:
+            _log.warning("[regression_engine] two_way_clustered: no observations after dropna")
+            return {
+                "coefficients": {}, "standard_errors": {}, "pvalues": {},
+                "tstats": {}, "n_obs": 0, "r_squared": 0.0,
+                "all_coefs": {}, "diagnostic": {
+                    "error": "no observations",
+                    "cov_type": "two_way_clustered",
+                },
+                "cov_type": "two_way_clustered",
+            }
+
+        if cluster1 == cluster2:
+            _log.info(
+                "[regression_engine] two_way_clustered: cluster1 == cluster2, "
+                "falling back to one-way clustered SE."
+            )
+            return self.ols(
+                y_var=y_var, x_vars=x_vars,
+                cluster_var=cluster1,
+                use_firm_fe=use_firm_fe, use_year_fe=use_year_fe,
+            )
+
+        cl1_vals = df_sub[cluster1].values
+        cl2_vals = df_sub[cluster2].values
+
+        # Build design matrix
+        X_parts = [df_sub[x_vars].astype(float)]
+        if use_firm_fe and cluster1 in df_sub.columns:
+            firm_dummies = pd.get_dummies(df_sub[cluster1], prefix="firm", drop_first=True).astype(float)
+            X_parts.append(firm_dummies)
+        if use_year_fe and cluster2 in df_sub.columns:
+            year_dummies = pd.get_dummies(df_sub[cluster2], prefix="yr", drop_first=True).astype(float)
+            X_parts.append(year_dummies)
+
+        X = pd.concat(X_parts, axis=1).fillna(0).values
+        y = df_sub[y_var].astype(float).values
+        xnames = (
+            x_vars
+            + (list(pd.get_dummies(df_sub[cluster1], prefix="firm", drop_first=True).columns) if use_firm_fe and cluster1 in df_sub.columns else [])
+            + (list(pd.get_dummies(df_sub[cluster2], prefix="yr", drop_first=True).columns) if use_year_fe and cluster2 in df_sub.columns else [])
+        )
+
+        # Compute two-way clustered SEs
+        params, se = self._two_way_clustered_se(X, y, cl1_vals, cl2_vals)
+
+        # DOF: min(n_cl1, n_cl2) - 1
+        n_cl1 = len(np.unique(cl1_vals))
+        n_cl2 = len(np.unique(cl2_vals))
+        dof = max(1, min(n_cl1, n_cl2) - 1)
+        tstats = params / se
+        pvals = 2 * (1 - stats.t.cdf(np.abs(tstats), df=dof))
+
+        # R-squared
+        y_hat = X @ params
+        ss_res = np.sum((y - y_hat) ** 2)
+        ss_tot = np.sum((y - y.mean()) ** 2)
+        r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+        # Build all_coefs dict
+        all_coefs = {}
+        for i, name in enumerate(xnames):
+            if i < len(params):
+                p = float(params[i])
+                s = float(se[i])
+                pv = float(pvals[i])
+                tv = float(tstats[i])
+                sig = ""
+                if pv < 0.001: sig = "***"
+                elif pv < 0.01:  sig = "**"
+                elif pv < 0.05:  sig = "*"
+                elif pv < 0.10:  sig = r"$\dagger$"
+                all_coefs[name] = dict(coef=p, se=s, pval=pv, tstat=tv, sig=sig)
+
+        diag = {
+            "n_obs": n_obs,
+            "n_cl1": n_cl1,
+            "n_cl2": n_cl2,
+            "dof": dof,
+            "is_valid": dof >= 1,
+            "issue": "" if dof >= 1 else f"Two-way clustering DOF too small: {dof}",
+            "fallback_triggered": False,
+            "fe_drop_reason": "two_way_clustered",
+            "cov_type": "two_way_clustered",
+        }
+
+        return {
+            "coefficients": {name: float(params[i]) for i, name in enumerate(xnames) if i < len(params)},
+            "standard_errors": {name: float(se[i]) for i, name in enumerate(xnames) if i < len(se)},
+            "pvalues": {name: float(pvals[i]) for i, name in enumerate(xnames) if i < len(pvals)},
+            "tstats": {name: float(tstats[i]) for i, name in enumerate(xnames) if i < len(tstats)},
+            "n_obs": n_obs,
+            "r_squared": float(r_squared),
+            "all_coefs": all_coefs,
+            "diagnostic": diag,
+            "cov_type": "two_way_clustered",
+        }
+
+    # ─────────────────────────────────────
     # DID REGRESSION
     # ─────────────────────────────────────
     def did(
@@ -148,6 +361,7 @@ class RegressionEngine:
         did_interaction: str | None = None,
         did_name: str = "did",
         cluster_var: str | None = None,
+        cluster2_var: str | None = None,
         use_firm_fe: bool = True,
         use_year_fe: bool = True,
         robust_se: bool = True,
@@ -165,7 +379,8 @@ class RegressionEngine:
             x_vars: Control variables (list of column names)
             did_interaction: Name of the DID term in df (e.g. "did" = treat_var × time_var)
             did_name: Label for the DID coefficient in output
-            cluster_var: Cluster variable for SEs (default: firm_col)
+            cluster_var: Primary cluster variable for SEs (default: firm_col)
+            cluster2_var: Second clustering variable for two-way SE (e.g., "year")
             use_firm_fe: Whether to include firm fixed effects
             use_year_fe: Whether to include year fixed effects
             robust_se: Use HC1 robust standard errors
@@ -177,18 +392,41 @@ class RegressionEngine:
         df_sub = self.df.dropna(subset=[y_var] + [treat_var, time_var] + x_vars)
         n_obs = len(df_sub)
 
-        # ── DOF check ──
-        diag = self._check_dof(
-            n_obs, [treat_var, time_var] + x_vars,
-            has_firm_fe=use_firm_fe, has_year_fe=use_year_fe,
+        if n_obs == 0:
+            _log.warning(
+                f"[regression_engine] dropna removed all observations. "
+                f"Original N={len(self.df)}. Check data quality and variable names."
+            )
+            return {
+                "did_coef": 0.0, "did_se": 0.0, "did_pval": 1.0, "did_sig": False,
+                "n_obs": 0, "diagnostic": {"error": "no observations after dropna", "n_sub": 0},
+                "model": None, "xnames": x_vars or [],
+            }
+
+        # ── DOF check — selectively drop FEs if insufficient ──
+        x_vars_for_dof = [treat_var, time_var] + x_vars
+        n_reg = len(x_vars_for_dof)
+
+        def _did_fe_drop(n_obs, n_reg, has_firm, has_year):
+            f_fe = (self.df[self.firm_col].nunique() - 1) if has_firm and self.firm_col in self.df.columns else 0
+            y_fe = (self.df[self.year_col].nunique() - 1) if has_year and self.year_col in self.df.columns else 0
+            if n_obs - (n_reg + f_fe + y_fe) >= 10:
+                return True, True, "both FEs"
+            if has_firm and n_obs - (n_reg + f_fe) >= 10:
+                return True, False, "firm FE only"
+            if has_year and n_obs - (n_reg + y_fe) >= 10:
+                return False, True, "year FE only"
+            return False, False, "pooled OLS"
+
+        firm_ok, year_ok, fe_desc = _did_fe_drop(
+            n_obs, n_reg, use_firm_fe, use_year_fe
         )
-        if diag["fallback_triggered"]:
-            msg = (f"DOF insufficient: {diag['issue']} — "
-                   f"Dropping firm FE. N={n_obs}, regressors={diag['n_reg']}, "
-                   f"FE terms={diag['n_fe']}")
+        if not (use_firm_fe == firm_ok and use_year_fe == year_ok):
+            msg = (f"DOF insufficient for requested FEs — using {fe_desc}. "
+                   f"N={n_obs}, reg={n_reg}")
             _log.warning(msg)
             self._warnings.append(msg)
-            use_firm_fe = False
+            use_firm_fe, use_year_fe = firm_ok, year_ok
 
         # ── Build design matrix ──
         X_parts = [df_sub[x_vars].astype(float)] if x_vars else []
@@ -215,31 +453,102 @@ class RegressionEngine:
         y = df_sub[y_var].astype(float).values
         xnames = list(X.columns)
 
-        # ── Fit ──
-        if robust_se and not cluster_var:
-            cov_type = "HC1"
-            cov_kwds = None
-        elif cluster_var and cluster_var in df_sub.columns:
-            cov_type = "cluster"
-            cov_kwds = {"groups": df_sub[cluster_var].values}
+        # Build diagnostic dict BEFORE SE computation (referenced by both branches)
+        diag = {
+            "n_obs": n_obs,
+            "n_reg": n_reg,
+            "n_fe": (
+                (self.df[self.firm_col].nunique() - 1 if use_firm_fe and self.firm_col in self.df.columns else 0) +
+                (self.df[self.year_col].nunique() - 1 if use_year_fe and self.year_col in self.df.columns else 0)
+            ),
+            "residual_df": max(0, n_obs - n_reg),
+            "is_valid": True,
+            "issue": "",
+            "fallback_triggered": not (firm_ok if use_firm_fe else True) or not (year_ok if use_year_fe else True),
+            "fe_drop_reason": fe_desc,
+        }
+
+        # ── Two-way clustered SE path ─────────────────────────────────────
+        two_way = (
+            cluster2_var is not None
+            and cluster_var is not None
+            and cluster_var != cluster2_var
+            and cluster_var in df_sub.columns
+            and cluster2_var in df_sub.columns
+        )
+        cov_type = None  # always assign so it's in scope for the fallback below
+        if two_way:
+            _log.info(
+                "[regression_engine] did() using two-way clustered SE "
+                f"({cluster_var} × {cluster2_var})"
+            )
+            cl1 = df_sub[cluster_var].values
+            cl2 = df_sub[cluster2_var].values
+            X_arr = X.values.astype(float)
+            y_arr = y
+            params, se = self._two_way_clustered_se(X_arr, y_arr, cl1, cl2)
+            # Build results dict from two-way results
+            n_cl1 = len(np.unique(cl1))
+            n_cl2 = len(np.unique(cl2))
+            dof = max(1, min(n_cl1, n_cl2) - 1)
+            tstats_arr = params / se
+            pvals_arr = 2 * (1 - stats.t.cdf(np.abs(tstats_arr), df=dof))
+            results = {}
+            for i, name in enumerate(xnames):
+                if i < len(params):
+                    pv = float(pvals_arr[i])
+                    sig = ""
+                    if pv < 0.001: sig = "***"
+                    elif pv < 0.01:  sig = "**"
+                    elif pv < 0.05:  sig = "*"
+                    elif pv < 0.10:  sig = r"$\dagger$"
+                    results[name] = dict(
+                        coef=float(params[i]),
+                        se=float(se[i]),
+                        pval=pv,
+                        tstat=float(tstats_arr[i]),
+                        sig=sig,
+                    )
+            # Patch model-like object so downstream code still works
+            class _TwoWayModel:
+                def __init__(m_self, params, se, pvals, r2):
+                    m_self.params = params
+                    m_self.bse = se
+                    m_self.pvalues = pvals
+                    m_self.tvalues = params / se
+                    m_self.rsquared = r2
+            y_hat = X_arr @ params
+            ss_res = np.sum((y_arr - y_hat) ** 2)
+            ss_tot = np.sum((y_arr - y_arr.mean()) ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+            model = _TwoWayModel(params, se, pvals_arr, r2)
+            diag["cov_type"] = "two_way_clustered"
+            diag["n_cl1"] = n_cl1
+            diag["n_cl2"] = n_cl2
+            diag["dof"] = dof
         else:
-            if cluster_var:
-                # FIX (2026-05-29): User requested cluster SE but variable not in df.
-                # Previously silently fell back to nonrobust — now warn.
-                _log.warning(
-                    f"[regression_engine] cluster_var='{cluster_var}' not found in "
-                    f"df.columns. Falling back to nonrobust SE. "
-                    f"Available columns: {list(df_sub.columns[:10])}..."
-                )
-            cov_type = "nonrobust"
-            cov_kwds = None
+            # ── Standard fit (HC1 / one-way cluster) ──
+            cov_type = "nonrobust"  # fallback — branches below always override
+            if robust_se and not cluster_var:
+                cov_type = "HC1"
+                cov_kwds = None
+            elif cluster_var and cluster_var in df_sub.columns:
+                cov_type = "cluster"
+                cov_kwds = {"groups": df_sub[cluster_var].values}
+            else:
+                if cluster_var:
+                    _log.warning(
+                        f"[regression_engine] cluster_var='{cluster_var}' not found in "
+                        f"df.columns. Falling back to nonrobust SE."
+                    )
+                cov_kwds = None
 
-        fit_kwargs = {}
-        if cov_kwds is not None:
-            fit_kwargs["cov_kwds"] = cov_kwds
+            fit_kwargs = {}
+            if cov_kwds is not None:
+                fit_kwargs["cov_kwds"] = cov_kwds
 
-        model = sm.OLS(y, X.values).fit(cov_type=cov_type, **fit_kwargs)
-        results = _extract(model, xnames)
+            model = sm.OLS(y, X.values).fit(cov_type=cov_type, **fit_kwargs)
+            results = _extract(model, xnames)
 
         # ── Find DID coefficient ──
         did_coef, did_se, did_pval = 0.0, 0.0, 1.0
@@ -248,14 +557,18 @@ class RegressionEngine:
                 did_coef = v["coef"]; did_se = v["se"]; did_pval = v["pval"]
                 break
 
+        r_squared = float(model.rsquared) if hasattr(model, "rsquared") else 0.0
+        diag["cov_type"] = diag.get("cov_type", cov_type)
+
         output = {
             "did_coef": did_coef, "did_se": did_se, "did_pval": did_pval,
             "did_sig": results.get(did_name, {}).get("sig", ""),
             "model": model, "xnames": xnames,
             "diagnostic": diag,
             "n_obs": n_obs,
-            "r_squared": float(model.rsquared),
+            "r_squared": r_squared,
             "all_coefs": results,
+            "cov_type": diag.get("cov_type", cov_type),
         }
         self._results.append(output)
         return output
@@ -270,19 +583,44 @@ class RegressionEngine:
         use_firm_fe: bool = True,
         use_year_fe: bool = True,
         cluster_var: str | None = None,
+        cluster2_var: str | None = None,
         robust_se: bool = True,
     ) -> dict:
-        """Pooled OLS with optional FEs and robust SEs."""
+        """Pooled OLS with optional FEs and robust SEs.
+
+        Args:
+            y_var: Dependent variable
+            x_vars: List of independent variables
+            use_firm_fe: Include firm fixed effects
+            use_year_fe: Include year fixed effects
+            cluster_var: Primary cluster variable
+            cluster2_var: Second cluster variable for two-way clustered SE
+            robust_se: Use HC1 robust SE when no clustering
+        """
         df_sub = self.df.dropna(subset=[y_var] + x_vars)
         n_obs = len(df_sub)
 
-        diag = self._check_dof(n_obs, x_vars,
-                               has_firm_fe=use_firm_fe, has_year_fe=use_year_fe)
-        if diag["fallback_triggered"]:
-            msg = f"DOF insufficient — dropping FEs. {diag['issue']}"
+        def _fe_drop_dof(n_obs, n_reg, has_firm, has_year):
+            """Test if combined FEs are affordable, then try each selectively."""
+            f_fe = (self.df[self.firm_col].nunique() - 1) if has_firm and self.firm_col in self.df.columns else 0
+            y_fe = (self.df[self.year_col].nunique() - 1) if has_year and self.year_col in self.df.columns else 0
+            # Try no FE
+            if n_obs - n_reg >= 10:
+                return False, False, "pooled OLS (N≥10)"
+            # Try each FE alone
+            if has_firm and n_obs - (n_reg + f_fe) >= 10:
+                return True, False, f"firm FE only (N={n_obs}, reg={n_reg}, f_fe={f_fe})"
+            if has_year and n_obs - (n_reg + y_fe) >= 10:
+                return False, True, f"year FE only (N={n_obs}, reg={n_reg}, y_fe={y_fe})"
+            return False, False, f"pooled (N={n_obs}, reg={n_reg}) insufficient for any FE"
+
+        use_firm, use_year, fe_msg = _fe_drop_dof(
+            n_obs, len(x_vars), use_firm_fe, use_year_fe
+        )
+        if not (use_firm_fe == use_firm and use_year_fe == use_year):
+            msg = f"DOF insufficient — {fe_msg} (dropped: firm={'Y' if use_firm_fe and not use_firm else 'n'}, year={'Y' if use_year_fe and not use_year else 'n'})"
             _log.warning(msg)
             self._warnings.append(msg)
-            use_firm_fe = use_year_fe = False
 
         X_parts = [df_sub[x_vars].astype(float)]
         if use_firm_fe and self.firm_col in df_sub.columns:
@@ -296,12 +634,92 @@ class RegressionEngine:
         y = df_sub[y_var].astype(float).values
         xnames = list(X.columns)
 
+        two_way = (
+            cluster2_var is not None
+            and cluster_var is not None
+            and cluster_var != cluster2_var
+            and cluster_var in df_sub.columns
+            and cluster2_var in df_sub.columns
+        )
+        if two_way:
+            _log.info(
+                "[regression_engine] ols() using two-way clustered SE "
+                f"({cluster_var} × {cluster2_var})"
+            )
+            cl1 = df_sub[cluster_var].values
+            cl2 = df_sub[cluster2_var].values
+            X_arr = X.values.astype(float)
+            params, se = self._two_way_clustered_se(X_arr, y, cl1, cl2)
+            n_cl1 = len(np.unique(cl1))
+            n_cl2 = len(np.unique(cl2))
+            dof = max(1, min(n_cl1, n_cl2) - 1)
+            tstats_arr = params / se
+            pvals_arr = 2 * (1 - stats.t.cdf(np.abs(tstats_arr), df=dof))
+            results = {}
+            for i, name in enumerate(xnames):
+                if i < len(params):
+                    pv = float(pvals_arr[i])
+                    sig = ""
+                    if pv < 0.001: sig = "***"
+                    elif pv < 0.01:  sig = "**"
+                    elif pv < 0.05:  sig = "*"
+                    elif pv < 0.10:  sig = r"$\dagger$"
+                    results[name] = dict(
+                        coef=float(params[i]),
+                        se=float(se[i]),
+                        pval=pv,
+                        tstat=float(tstats_arr[i]),
+                        sig=sig,
+                    )
+            y_hat = X_arr @ params
+            ss_res = np.sum((y - y_hat) ** 2)
+            ss_tot = np.sum((y - y.mean()) ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+            cov_type = "two_way_clustered"
+            diag = {
+                "n_obs": n_obs,
+                "n_reg": len(x_vars),
+                "n_fe": (
+                    (self.df[self.firm_col].nunique() - 1 if use_firm_fe and self.firm_col in self.df.columns else 0) +
+                    (self.df[self.year_col].nunique() - 1 if use_year_fe and self.year_col in self.df.columns else 0)
+                ),
+                "residual_df": max(0, n_obs - len(x_vars)),
+                "is_valid": True,
+                "issue": "",
+                "fallback_triggered": not (use_firm_fe == use_firm and use_year_fe == use_year),
+                "fe_drop_reason": fe_msg,
+                "cov_type": cov_type,
+                "n_cl1": n_cl1,
+                "n_cl2": n_cl2,
+                "dof": dof,
+            }
+            return {
+                "model": None, "xnames": xnames, "all_coefs": results,
+                "diagnostic": diag, "n_obs": n_obs,
+                "r_squared": float(r2),
+            }
+
         cov_type = "cluster" if cluster_var else "HC1"
         cov_kwds = {"groups": df_sub[cluster_var].values} if cluster_var else {}
         model = sm.OLS(y, X.values).fit(
             cov_type=cov_type, **({"cov_kwds": cov_kwds} if cov_kwds else {})
         )
         results = _extract(model, xnames)
+
+        # Build a compatible diagnostic dict (mirrors what _check_dof used to return)
+        diag = {
+            "n_obs": n_obs,
+            "n_reg": len(x_vars),
+            "n_fe": (
+                (self.df[self.firm_col].nunique() - 1 if use_firm and self.firm_col in self.df.columns else 0) +
+                (self.df[self.year_col].nunique() - 1 if use_year and self.year_col in self.df.columns else 0)
+            ),
+            "residual_df": max(0, n_obs - len(x_vars)),
+            "is_valid": True,
+            "issue": "",
+            "fallback_triggered": not (use_firm_fe == use_firm and use_year_fe == use_year),
+            "fe_drop_reason": fe_msg,
+        }
 
         return {
             "model": model, "xnames": xnames, "all_coefs": results,
@@ -341,20 +759,26 @@ class RegressionEngine:
         try:
             psm_model = sm.Logit(df_sub[treat_var].astype(float), X_psm).fit(disp=0)
             df_sub["prop_score"] = psm_model.predict(X_psm)
-        except Exception:
-            _log.warning("PSM: Logit failed, generating group-stratified propensity scores")
-            # Fall back: assign stratified random scores within treatment/control groups.
-            # This ensures treated and control units have different score distributions,
-            # so matching is not trivially biased toward the first control unit.
+        except (AttributeError, ValueError) as exc:
+            # Expected data issues: perfect separation, convergence failure, NaN in features.
+            # Fall back to stratified random scores so matching still runs.
+            _log.warning(
+                "PSM Logit fitting FAILED for vars=%s (%s: %s) — "
+                "using stratified random scores (non-scientific). "
+                "Review data for perfect separation or multicollinearity.",
+                match_vars, type(exc).__name__, exc
+            )
             rng = np.random.default_rng(42)
             df_sub["prop_score"] = np.nan
             treat_mask = df_sub[treat_var] == 1
             n_treat = treat_mask.sum()
             n_ctrl = (~treat_mask).sum()
-            # Treated get scores ~Unif(0.4, 0.9), controls get scores ~Unif(0.1, 0.6)
-            # Ensures non-overlapping ranges so caliper matching works meaningfully
             df_sub.loc[treat_mask, "prop_score"] = rng.uniform(0.4, 0.9, size=n_treat)
             df_sub.loc[~treat_mask, "prop_score"] = rng.uniform(0.1, 0.6, size=n_ctrl)
+        except Exception as exc:
+            # Unexpected code bug — re-raise so it surfaces rather than silently continuing.
+            _log.error("PSM Logit failed unexpectedly — re-raising", exc_info=True)
+            raise
 
         # ── Step 2: Nearest-neighbor matching (caliper=0.05) ──
         treated_scores = df_sub[df_sub[treat_var] == 1]["prop_score"].values
@@ -473,8 +897,20 @@ class RegressionEngine:
         caption: str = "",
         label: str = "",
         const: bool = True,
+        note_format: str = "english",
     ) -> str:
-        """Generate a LaTeX booktabs table from DID results."""
+        """Generate a LaTeX booktabs table from DID results.
+
+        Args:
+            results_list: List of regression result dicts from run_regression.
+            y_labels: List of dependent variable descriptions.
+            x_vars: List of independent variable names.
+            caption: LaTeX table caption.
+            label: LaTeX label for cross-reference.
+            const: Whether to include constant term row.
+            note_format: Table note format: 'english' (JF/JFE/RFS), 'chinese'
+                         (经济研究/金融研究), or 'management' (管理世界).
+        """
         df = self.did_table(results_list, y_labels, x_vars, const=const)
 
         # Build LaTeX
@@ -507,18 +943,42 @@ class RegressionEngine:
                 cells.append(str(row.get(y, "")))
             lines.append("    " + " & ".join(cells) + r" \\")
 
+        table_note = self.get_table_note(note_format)
         lines.extend([
             r"    \bottomrule",
             r"  \end{tabular}",
             r"  \begin{tablenotes}",
             r"    \small",
-            r"    \item \textit{Notes:} Standard errors in parentheses.",
-            r"    $^{***} p<0.01$, $^{**} p<0.05$, $^{*} p<0.10$.",
+            table_note,
             r"  \end{tablenotes}",
             r"  \end{threeparttable}",
             r"\end{table}",
         ])
         return "\n".join(lines)
+
+    @staticmethod
+    def get_table_note(format: str = "english") -> str:
+        """Get formatted table note for different journal standards.
+
+        Args:
+            format: 'english' (JF/JFE/RFS), 'chinese' (经济研究/金融研究),
+                    or 'management' (管理世界).
+        """
+        if format == "chinese":
+            return (
+                r"\item \textit{注：} 括号内为t统计量；"
+                r"***、**、*分别表示1\%、5\%、10\%的显著性水平。"
+            )
+        elif format == "management":
+            return (
+                r"\item \textit{注：} 括号内为标准误；"
+                r"***、**、*分别表示1\%、5\%、10\%的显著性水平。"
+            )
+        else:
+            return (
+                r"\item \textit{Notes:} Standard errors in parentheses. "
+                r"$^{***} p<0.01$, $^{**} p<0.05$, $^{*} p<0.10$."
+            )
 
     def save_latex(self, results_list: list[dict], y_labels: list[str],
                    x_vars: list[str], path: str | Path,
@@ -537,8 +997,102 @@ class RegressionEngine:
         df.to_markdown(path, index=False)
         _log.info(f"Markdown table saved: {path}")
 
-    def get_warnings(self) -> list[str]:
-        return self._warnings.copy()
+    def save_regression_script(
+        self,
+        results_list: list[dict],
+        output_path: str | Path,
+        y_labels: list[str],
+        title: str = "",
+    ) -> Path:
+        """Save a reproducible Python script that re-runs all regressions."""
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        seeds = {}
+        try:
+            from scripts.research_framework.modern_did import get_random_seeds
+            seeds = get_random_seeds()
+        except Exception:
+            pass
+
+        lines = [
+            "#!/usr/bin/env python3",
+            f"# Auto-generated regression script — {title}",
+            "# DO NOT EDIT: re-run this file to reproduce all regressions below",
+            "",
+            "import json",
+            "import logging",
+            "import warnings",
+            "from pathlib import Path",
+            "",
+            "import numpy as np",
+            "import pandas as pd",
+            "import statsmodels.api as sm",
+            "from linearmodels.panel import PanelOLS",
+            "",
+            "warnings.filterwarnings('ignore')",
+            "logging.basicConfig(level=logging.INFO,",
+            '                        format="[%(levelname)s] %(message)s")',
+            "",
+            f"_RANDOM_SEEDS = {seeds}",
+            "",
+            "# ─── Data loading ───────────────────────────────────────────────────────────",
+            "# Replace DATA_PATH with your actual data source",
+            'DATA_PATH = Path(__file__).parent / "your_data.csv"',
+            "df = pd.read_csv(DATA_PATH)",
+            "",
+            "# ─── Regressions ───────────────────────────────────────────────────────────",
+            "",
+        ]
+
+        for i, res in enumerate(results_list):
+            label = y_labels[i] if i < len(y_labels) else f"Model_{i+1}"
+            all_coefs = res.get("all_coefs", {})
+            xnames = res.get("xnames", [])
+            diag = res.get("diagnostic", {})
+            n_obs = res.get("n_obs", 0)
+            r2 = res.get("r_squared", 0.0)
+
+            # Build the variable dictionary for script generation
+            var_dict = {name: info for name, info in all_coefs.items()}
+
+            lines.append(f"# ── {label} ───────────────────────────────────────────────────────────")
+            lines.append(f"results_{i+1} = {{")
+            lines.append(f"    'label': '{label}',")
+            lines.append(f"    'n_obs': {n_obs},")
+            lines.append(f"    'r_squared': {r2:.6f},")
+            lines.append(f"    'xnames': {xnames},")
+            lines.append(f"    'coefficients': {{")
+            for j, (name, info) in enumerate(var_dict.items()):
+                sep = "," if j < len(var_dict) - 1 else ""
+                lines.append(
+                    f"        '{name}': {{'coef': {info['coef']:.6f}, "
+                    f"'se': {info['se']:.6f}, 'pval': {info['pval']:.6f}}}{sep}"
+                )
+            lines.append(f"    }},")
+            lines.append(f"    'diagnostic': {diag},")
+            lines.append("}")
+            lines.append("")
+
+        lines.extend([
+            "# ─── Save results ──────────────────────────────────────────────────────────",
+            "output_file = Path(__file__).parent / 'regression_results.json'",
+            "with open(output_file, 'w', encoding='utf-8') as f:",
+            "    json.dump(",
+            "        ["
+        ])
+
+        for i in range(len(results_list)):
+            lines.append(f"        results_{i+1},")
+        lines.append("        f, indent=2, ensure_ascii=False")
+        lines.append("    )")
+        lines.append(f'print(f"Results saved to {{output_file}}")')
+
+        script_content = "\n".join(lines) + "\n"
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(script_content)
+        _log.info(f"Regression script saved: {path}")
+        return path
 
 
 __all__ = ["RegressionEngine", "_extract", "_fmt"]

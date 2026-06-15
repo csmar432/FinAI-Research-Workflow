@@ -17,6 +17,13 @@ Key enhancements (M8 fixes):
 
 from __future__ import annotations
 
+__all__ = [
+    "StreamEventType",
+    "StreamEvent",
+    "StreamingConfig",
+    "create_sse_response",
+]
+
 import asyncio
 import json
 import time

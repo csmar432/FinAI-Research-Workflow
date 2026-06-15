@@ -16,6 +16,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取IMF国际金融统计(IFS)数据。"
   }
 }

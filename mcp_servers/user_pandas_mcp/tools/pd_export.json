@@ -1,13 +1,33 @@
 {
   "name": "pd_export",
-  "description": "导出数据框到CSV/JSON/Excel。\\n\\n",
+  "description": "导出数据框到CSV/JSON/Excel。\\n\\nArgs:\\n  name: 数据框名称\\n  path: 输出文件路径\\n  format: 格式（csv/json/excel）\\n  max_rows: 最大行数\\n\\nReturns: 导出结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
+      "name": {
         "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "format": {
+        "type": "string",
+        "enum": [
+          "csv",
+          "json",
+          "excel",
+          "clipboard"
+        ],
+        "default": "csv"
+      },
+      "max_rows": {
+        "type": "integer"
       }
     },
-    "required": []
+    "required": [
+      "name",
+      "path"
+    ],
+    "description": "导出数据框到CSV/JSON/Excel。"
   }
 }

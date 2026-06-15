@@ -500,7 +500,11 @@ def _invoke(tool_name: str, kwargs: dict) -> dict:
             result = asyncio.run(result)
         if isinstance(result, list) and len(result) > 0:
             text = result[0].text
-            data = json.loads(text)
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError as e:
+                log.warning(f"JSON decode error in _invoke for {tool_name}: {e}")
+                return {"result": text}
             # Handler wraps in _ok() → {"result": {...}, "success": true}
             # Unwrap one level so caller sees the actual payload
             if isinstance(data, dict) and "result" in data and "success" in data:

@@ -1,0 +1,85 @@
+name: LaTeX Compile Check
+
+# 论文项目专用: 改动 .tex/.bib 时自动尝试编译, 防止 LaTeX 语法错
+# ⚠️ texlive-full 镜像约 2GB, 单次 CI 约 8-12 分钟, 慎用
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "output/**/*.tex"
+      - "output/**/*.bib"
+      - "scripts/check_latex.sh"
+      - ".github/workflows/latex-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "output/**/*.tex"
+      - "output/**/*.bib"
+  workflow_dispatch:
+
+concurrency:
+  group: latex-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  latex-compile:
+    name: LaTeX Compile Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 使用预装 texlive 的镜像, 比 apt-get install texlive-full 快 5 倍
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-fonts-extra \
+            texlive-bibtex-extra \
+            texlive-science \
+            biber \
+            latexmk
+
+      - name: Install Python (for bib check)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Find .tex files
+        id: find_tex
+        run: |
+          echo "TEX_FILES<<EOF" >> $GITHUB_OUTPUT
+          find output/ -name "*.tex" -type f 2>/dev/null | head -20 >> $GITHUB_OUTPUT || true
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          COUNT=$(find output/ -name "*.tex" -type f 2>/dev/null | wc -l)
+          echo "Found $COUNT LaTeX files"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::warning::No .tex files found in output/, skipping"
+            echo "HAS_TEX=false" >> $GITHUB_OUTPUT
+          else
+            echo "HAS_TEX=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run LaTeX compile check
+        if: steps.find_tex.outputs.HAS_TEX == 'true'
+        run: bash scripts/check_latex.sh
+
+      - name: Upload compiled PDFs
+        if: always() && steps.find_tex.outputs.HAS_TEX == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: latex-compile-pdfs
+          path: |
+            output/**/*.pdf
+            output/**/*.log
+          if-no-files-found: ignore
+          retention-days: 7

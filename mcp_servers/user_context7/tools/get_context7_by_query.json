@@ -1,19 +1,22 @@
 {
   "name": "get_context7_by_query",
-  "description": "通过关键词查询获取相关论文全文",
-  "parameters": {
+  "description": "通过关键词在 Context7 索引中搜索相关论文全文。Context7 覆盖 ArXiv 和多个开放获取仓库。无需 API Key。用于跨论文的深度对比研究和综合文献理解。",
+  "inputSchema": {
     "type": "object",
     "properties": {
       "query": {
         "type": "string",
-        "description": "搜索查询，例如 'machine learning finance prediction'"
+        "description": "搜索查询词"
       },
       "max_results": {
         "type": "integer",
-        "description": "最大返回数量",
-        "default": 5
+        "description": "最大返回结果数",
+        "default": 10
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ],
+    "description": "Search parameters for 学术论文全文获取（基于 Context7 API）。支持通过 ArXiv ID、DOI 或关键词检索获取论文PDF全文内容，用于文献综述深度阅读和引用验证。 query"
   }
 }

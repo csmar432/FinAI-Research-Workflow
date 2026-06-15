@@ -16,6 +16,7 @@
     },
     "required": [
       "fund_code"
-    ]
+    ],
+    "description": "获取基金业绩数据（东方财富风格）。"
   }
 }

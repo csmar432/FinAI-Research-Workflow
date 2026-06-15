@@ -25,10 +25,18 @@ Reference:
 
 from __future__ import annotations
 
+__all__ = [
+    "PipelineStage",
+    "PipelineStep",
+    "PipelineResult",
+    "AgentOrchestrator",
+]
+
 import concurrent.futures
 import json
 import logging
 import time
+from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -44,6 +52,7 @@ from scripts.core.agents.base import (
     HaltDecision,
 )
 from scripts.core.hitl_gate import HITLGate
+from scripts.core.agent_state import hitl_manager
 from scripts.core.llm_gateway import LLMGateway
 
 logger = logging.getLogger(__name__)
@@ -160,8 +169,20 @@ class AgentOrchestrator:
         # HITL gate — single source of truth for approval state
         self._hitl_gate = HITLGate()
 
+        # Wire into the shared HITLManager so that HITL events
+        # (create_request/approve/reject) are tracked globally
+        self._shared_hitl = hitl_manager
+
         # Cancellation token registry: agent_name -> CancellationToken
         self._active_tokens: dict[str, CancellationToken] = {}
+
+        # Rejection feedback injection: stage → feedback string
+        # When reject_step() is called, feedback is stored here.
+        # The next run_pipeline() reads from here and injects into agent context.
+        self._rejection_feedback: dict[str, str] = {}
+
+        # AI Parliament instance (injected via set_parliament or wire from AgentPipeline)
+        self._parliament: Any = None
 
 
     def cancel_agent(self, agent_name: str,
@@ -380,10 +401,18 @@ class AgentOrchestrator:
         """
         message["_bus_timestamp"] = time.time()
         self._message_bus.append(message)
-        # Prevent unbounded memory growth — evict messages older than 1 hour
+        # Evict messages older than 1 hour — keep bus bounded
         if len(self._message_bus) > 1000:
             cutoff = time.time() - 3600
+            evicted = len(self._message_bus) - sum(
+                1 for m in self._message_bus if m["_bus_timestamp"] >= cutoff
+            )
             self._message_bus[:] = [m for m in self._message_bus if m["_bus_timestamp"] >= cutoff]
+            logger.warning(
+                "[MessageBus] Evicted %d stale messages (bus was at %d). "
+                "Consider reducing bus size or increasing eviction frequency.",
+                evicted, len(self._message_bus) + evicted,
+            )
 
     def get_messages(self, agent_name: str | None = None) -> list[dict]:
         """
@@ -395,6 +424,52 @@ class AgentOrchestrator:
                 if m.get("recipient") == agent_name or m.get("recipient") == "*"
             ]
         return list(self._message_bus)
+
+    def get_snapshot(self, limit: int = 100, since: float | None = None) -> list[dict]:
+        """
+        Get a snapshot of recent bus messages.
+
+        Parameters
+        ----------
+        limit : int
+            Maximum messages to return (newest first).
+        since : float | None
+            Unix timestamp filter — only return messages after this time.
+        """
+        messages = self._message_bus
+        if since is not None:
+            messages = [m for m in messages if m["_bus_timestamp"] >= since]
+        return list(reversed(messages[-limit:]))
+
+    def export_to_json(self, path: str | Path) -> None:
+        """
+        Export the full message bus to a JSON file.
+
+        Useful for debugging, audit trails, and replaying conversations.
+        """
+        import json
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"messages": self._message_bus, "count": len(self._message_bus)}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    def get_bus_stats(self) -> dict:
+        """Return bus health statistics."""
+        count = len(self._message_bus)
+        now = time.time()
+        by_type: dict = defaultdict(int)
+        for m in self._message_bus:
+            by_type[m.get("type", "unknown")] += 1
+        return {
+            "total_messages": count,
+            "capacity_pct": min(round(count / 1000 * 100, 1), 999.9),
+            "near_capacity": count > 800,
+            "messages_by_type": dict(by_type),
+            "oldest_message_age_seconds": round(now - self._message_bus[0]["_bus_timestamp"], 1) if self._message_bus else None,
+            "newest_message_age_seconds": round(now - self._message_bus[-1]["_bus_timestamp"], 1) if self._message_bus else None,
+        }
 
     def clear_bus(self) -> None:
         """Clear all messages from the bus."""
@@ -431,10 +506,15 @@ class AgentOrchestrator:
         PipelineResult
             Full pipeline result with all stage outputs and trace.
         """
+        # Inject rejection feedback for any stage that was previously rejected
+        # This ensures the agent improves based on human feedback before retrying
+        enriched_input = input_data.copy()
+        for stage_value, feedback in self._rejection_feedback.items():
+            enriched_input[f"rejection_feedback_{stage_value}"] = feedback
         return self._run_pipeline_impl(
             pipeline_name=pipeline_name,
             steps=steps,
-            input_data=input_data,
+            input_data=enriched_input,
             parallel=parallel,
             max_workers=max_workers,
         )
@@ -578,35 +658,52 @@ class AgentOrchestrator:
 
     def _gate_id_for_stage(self, stage: PipelineStage) -> str | None:
         """Find the gate_id for a pending HITL gate at the given stage."""
-        for gid, record in self._hitl_gate._pending.items():
-            if record.stage == stage.value:
-                return gid
+        # Use public API to avoid accessing _pending dict directly (thread-safe)
+        for rec in self._hitl_gate.get_pending():
+            if rec.stage == stage.value:
+                return rec.gate_id
         return None
 
     def approve_step(self, stage: PipelineStage, feedback: str = "") -> dict:
         """
         Approve a HITL-paused pipeline step and resume execution.
 
-        Delegates to the attached HITLGate as the single source of truth.
-        The pipeline must be resumed by the caller using resume_pipeline().
+        Delegates to the attached HITLGate as the single source of truth,
+        and also dispatches to the shared HITLManager for global tracking.
         """
         gate_id = self._gate_id_for_stage(stage)
         if gate_id:
             record = self._hitl_gate.approve(gate_id, feedback=feedback)
-            return {"approved": True, "feedback": feedback, "record": record}
+            # Also record in global HITLManager
+            self._shared_hitl.create_request(
+                agent_id=stage.value,
+                task_id=gate_id,
+                decision_point=f"approve_{stage.value}",
+                context={"record": record, "feedback": feedback}
+            )
+            return {"approved": True, "feedback": feedback, "record": record, "gate_id": gate_id}
         return {}
 
     def reject_step(self, stage: PipelineStage, feedback: str) -> dict:
         """
         Reject a HITL-paused step and trigger rollback.
 
-        Delegates to the attached HITLGate. Returns instructions for which
-        agent to re-run.
+        Delegates to the attached HITLGate. Stores rejection feedback so the next
+        pipeline run can inject it into the agent's context for improvement.
         """
         gate_id = self._gate_id_for_stage(stage)
         if gate_id:
             record = self._hitl_gate.reject(gate_id, feedback=feedback)
-            return {"approved": False, "feedback": feedback, "record": record}
+            # Also record in global HITLManager
+            self._shared_hitl.create_request(
+                agent_id=stage.value,
+                task_id=gate_id,
+                decision_point=f"reject_{stage.value}",
+                context={"record": record, "feedback": feedback}
+            )
+            # Inject feedback so the next run_pipeline() can improve automatically
+            self._rejection_feedback[stage.value] = feedback
+            return {"approved": False, "feedback": feedback, "record": record, "gate_id": gate_id}
         return {}
 
     # ── Pipeline Execution Impl ───────────────────────────────────────────────
@@ -631,6 +728,16 @@ class AgentOrchestrator:
         _resume_context : dict | None
             Pre-built context to continue from (replaces rebuilding from input_data).
         """
+        # Check if parliament integration is available
+        _has_parliament = False
+        _parliament = None
+        try:
+            if (hasattr(self, "_parliament") and self._parliament is not None):
+                _has_parliament = True
+                _parliament = self._parliament
+        except Exception:
+            pass
+
         start_time = time.time()
         if _resume_context is not None:
             context = dict(_resume_context)
@@ -685,19 +792,43 @@ class AgentOrchestrator:
                 continue
 
             # Build agent_context BEFORE the HITL gate so it is in scope
+            # Inject any prior rejection feedback so the agent can improve
             agent_context = {
                 **context,
                 "messages": self.get_messages(step.agent_name),
             }
+            # Inject rejection feedback from previous rejection
+            if step.stage.value in self._rejection_feedback:
+                prior_feedback = self._rejection_feedback.pop(step.stage.value)
+                agent_context["prior_rejection_feedback"] = prior_feedback
+                agent_context["messages"].append({
+                    "role": "system",
+                    "content": f"[审核反馈] 上一轮审核未通过，请根据以下反馈改进：{prior_feedback}",
+                })
 
             # ── HITL Gate ─────────────────────────────────────────────────
             if step.hitl_gate:
+                # Build enriched gate content with parliament verdict
+                gate_content = {
+                    "context": agent_context,
+                    "result_preview": str(context)[:500],
+                    "stage_result": result.output,
+                }
+                if hasattr(self, "_pending_parliament_verdict"):
+                    gate_content["parliament_verdict"] = self._pending_parliament_verdict
                 gate_id = self._hitl_gate.hold(
                     stage=step.stage.value,
-                    content={"context": agent_context, "result_preview": str(context)[:500]},
+                    content=gate_content,
                     question=f"请审核 {step.stage.value} 阶段的输出并决定是否继续。",
                 )
                 hitl_paused_at = step.stage
+                # Also register globally so SSE/web UI can see it
+                self._shared_hitl.create_request(
+                    agent_id=step.agent_name,
+                    task_id=gate_id,
+                    decision_point=step.stage.value,
+                    context={"context": agent_context, "result_preview": str(context)[:500]},
+                )
                 self._trace.append({
                     "type": "hitl_pause",
                     "stage": step.stage.value,
@@ -752,6 +883,33 @@ class AgentOrchestrator:
                 "result": result.output,
                 "status": result.status,
             })
+
+            # ── Parliament Review (before HITL gate) ─────────────────────────
+            # Run AI parliament review AFTER stage execution but BEFORE the
+            # HITL approval gate is created, so the verdict is available to
+            # the human reviewer.
+            if _has_parliament and step.hitl_gate:
+                try:
+                    import asyncio as _asyncio
+                    verdict = _asyncio.run(
+                        _parliament._parliament_review({
+                            "text": str(result.output)[:2000],
+                            "stage": step.stage.value,
+                        })
+                    )
+                    self._pending_parliament_verdict = verdict
+                    logger.info(
+                        "Parliament verdict for %s: score=%s, disputed=%s",
+                        step.stage.value,
+                        verdict.get("score", "N/A"),
+                        verdict.get("disputed", False),
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Parliament review skipped for %s: %s",
+                        step.stage.value, exc,
+                    )
+                    self._pending_parliament_verdict = {}
 
             # ── Evolution Hook ──────────────────────────────────────────────
             if self._evolution_engine and result.status in ("approved", "max_iterations"):
@@ -813,6 +971,11 @@ class AgentOrchestrator:
                 engine.register_agent(agent_name, agent)
             logger.info(f"Registered {len(self._agents)} agents with evolution engine")
 
+    def set_parliament(self, parliament: Any) -> None:
+        """Attach an AIParliamentHITLIntegration instance for machine review before HITL gates."""
+        self._parliament = parliament
+        logger.info("AIParliament attached for HITL pre-review")
+
     # ── Tracing ─────────────────────────────────────────────────────────
 
     def get_trace(self) -> list[dict]:
@@ -831,6 +994,122 @@ class AgentOrchestrator:
     def clear_trace(self) -> None:
         """Clear the execution trace."""
         self._trace.clear()
+
+    def run_with_checkpoint(
+        self,
+        task: str,
+        steps: list[PipelineStep],
+        input_data: dict[str, Any],
+        checkpoint_id: str | None = None,
+        checkpoint_every: int = 1,
+    ) -> PipelineResult:
+        """
+        Run a pipeline with checkpointing enabled.
+
+        Saves a checkpoint after each completed stage (controlled by ``checkpoint_every``).
+        On crash, call again with the same ``task`` name and it resumes from the latest
+        checkpoint automatically.
+
+        Parameters
+        ----------
+        task : str
+            Unique identifier for this pipeline run (used as pipeline_id).
+        steps : list[PipelineStep]
+            Ordered list of pipeline stages.
+        input_data : dict
+            Initial context passed to the first stage.
+        checkpoint_id : str | None
+            Specific checkpoint to resume from. If None, resumes from the latest
+            checkpoint for ``task``.
+        checkpoint_every : int
+            Save a checkpoint every ``checkpoint_every`` stages (default 1 = every stage).
+
+        Returns
+        -------
+        PipelineResult
+            Full pipeline result.
+        """
+        try:
+            from scripts.core.checkpoint import CheckpointManager, PipelineCheckpoint
+        except ImportError:
+            # Fallback: plain run without checkpointing
+            return self.run_pipeline(
+                pipeline_name=task,
+                steps=steps,
+                input_data=input_data,
+            )
+
+        manager = CheckpointManager()
+        pipeline_id = task.replace(" ", "_")
+
+        context: dict[str, Any] = dict(input_data)
+        stage_results: dict[str, Any] = {}
+
+        # Resume from checkpoint if available
+        if checkpoint_id:
+            cp = manager.load(pipeline_id, checkpoint_id)
+        else:
+            cp = manager.load_latest(pipeline_id)
+
+        if cp is not None:
+            context = manager.restore_context(cp)
+            # Reconstruct completed stage results from checkpoint context
+            for stage_key in cp.completed_stages:
+                result_key = f"{stage_key}_result"
+                if result_key in context:
+                    stage_results[stage_key] = context[result_key]
+            print(f"[run_with_checkpoint] Resuming '{pipeline_id}' from stage index {cp.completed_stage_index + 1}")
+
+        # Determine starting index
+        latest = manager.load_latest(pipeline_id)
+        offset = (latest.completed_stage_index + 1) if latest else 0
+
+        for i, step in enumerate(steps):
+            current_idx = offset + i
+
+            result = self.run_pipeline(
+                pipeline_name=pipeline_id,
+                steps=[step],
+                input_data=context,
+            )
+
+            # Accumulate state
+            context[f"{step.stage.value}_result"] = result.final_context.get(
+                f"{step.stage.value}_result", {}
+            )
+            stage_results[step.stage.value] = result.final_context.get(
+                f"{step.stage.value}_result", {}
+            )
+
+            # Save checkpoint
+            if checkpoint_every > 0 and (current_idx + 1) % checkpoint_every == 0:
+                hitl_state = None
+                if self._hitl_gate:
+                    try:
+                        pending = [
+                            {"gate_id": r.gate_id, "stage": r.stage, "state": r.state.value,
+                             "content": r.content, "question": r.question}
+                            for r in self._hitl_gate.get_pending()
+                        ]
+                        hitl_state = {"pending": pending, "history": [], "stats": self._hitl_gate.stats()}
+                    except Exception:
+                        pass
+
+                manager.save(
+                    pipeline_id=pipeline_id,
+                    pipeline_name=task,
+                    completed_stage=step.stage.value,
+                    context=context,
+                    stage_results=dict(stage_results),
+                    hitl_state=hitl_state,
+                    metadata={"total_steps": len(steps), "current_step": i + 1},
+                )
+
+            # Stop on HITL pause
+            if result.hitl_paused_at is not None:
+                return result
+
+        return result
 
     def __repr__(self) -> str:
         return f"AgentOrchestrator(agents={len(self._agents)}, trace={len(self._trace)})"

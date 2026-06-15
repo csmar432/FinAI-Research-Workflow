@@ -19,6 +19,7 @@
     },
     "required": [
       "country_code"
-    ]
+    ],
+    "description": "获取IMF世界经济展望(WEO)数据。"
   }
 }

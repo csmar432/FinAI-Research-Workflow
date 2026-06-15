@@ -11,7 +11,8 @@
           "SSE",
           "SZSE",
           "BSE"
-        ]
+        ],
+        "description": "交易所代码（SZ=深圳，SH=上海，BJ=北京）"
       },
       "list_status": {
         "type": "string",
@@ -20,8 +21,10 @@
           "D",
           "P"
         ],
-        "default": "L"
+        "default": "L",
+        "description": "上市状态（active=上市，inactive=退市，unlisted=未上市）"
       }
-    }
+    },
+    "description": "获取A股股票基础信息列表，包括代码、名称、上市日期、行业等。使用 Tushare Pro API。"
   }
 }

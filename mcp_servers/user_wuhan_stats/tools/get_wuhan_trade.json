@@ -1,8 +1,9 @@
 {
   "name": "get_wuhan_trade",
-  "description": "武汉进出口贸易数据",
+  "description": "查询武汉市进出口贸易数据，包括进出口总额/主要贸易伙伴/商品类别/贸易方式，支持年度和月度序列。",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "查询武汉市进出口贸易数据，包括进出口总额/主要贸易伙伴/商品类别/贸易方式，支持年度和月度序列。"
   }
 }

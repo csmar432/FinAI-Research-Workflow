@@ -12,6 +12,7 @@
         "type": "string",
         "description": "分析师姓名（可选）"
       }
-    }
+    },
+    "description": "获取CSMAR分析师数据。"
   }
 }

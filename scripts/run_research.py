@@ -55,7 +55,11 @@ def _http_post(url: str, data: dict, timeout: float = 5.0) -> dict | None:
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            try:
+                return json.loads(resp.read().decode("utf-8"))
+            except json.JSONDecodeError as e:
+                log.debug("HTTP POST JSON decode error: %s", e)
+                return None
     except Exception as e:
         log.debug("HTTP POST failed: %s", e)
         return None

@@ -1,55 +1,60 @@
 # 论文-研报工作流 · FinResearch Agent
 
-> 经济金融领域 AI 研究助手。参考 Night Owl Research Agent (NORA) 设计，深度集成 A股数据 + 中文期刊 + MCP 工具生态。
+> 经济金融领域 AI 研究助手。从研究想法到可投稿论文，集成 MCP 数据获取、因果推断、LaTeX 排版和对抗性 review 循环。
+
+> **适用工具**: Claude Code · GitHub Copilot · Cursor（通用 AI 编码工具均可）
 
 ---
 
-## 🎯 一句话说清楚我能做什么
+## 一句话
 
-**"告诉我要研究什么主题，我帮你：从文献综述 → 想法生成 → 实证设计 → 论文草稿 → LaTeX 编译，全自动。"**
+**"告诉我研究主题，我帮你：从文献综述 → 想法生成 → 实证设计 → 论文草稿 → LaTeX 编译，全自动。"**
 
 ---
 
-## 🚀 第一次用？直接说主题
+## 快速开始
 
-不需要记任何命令。**直接说你的研究方向**，我来判断怎么启动：
+不需要记命令。直接说研究方向：
 
 ```
-"我想研究关税政策对A股出口型企业创新的影响"
-"帮我分析一下绿色债券的定价效率"
-"我想写一篇关于数字金融的论文"
+"我想研究关税政策对A股出口型企业创新的影响，设计一篇发表在经济研究的实证论文"
+"帮我做数字金融领域的文献综述"
+"有什么新的研究想法关于企业ESG表现和融资成本"
+```
+
+或用脚本直接运行：
+
+```bash
+python scripts/research_framework/pipeline.py --topic "碳排放权交易对企业绿色创新的影响"
+python scripts/research_framework/pipeline.py --topic "..."
+pytest tests/ -v
 ```
 
 ---
 
-## 📋 常用操作（不用记，收藏即可）
+## 自动启动流程（每次对话必须执行）
 
-| 你想做什么 | 直接说 | 说明 |
-|-----------|--------|------|
-| 完整论文流程 | `从头研究 [主题]` | 文献→想法→大纲→写作→PDF |
-| 文献综述 | `帮我综述 [主题]` | MCP 搜索 + 引文图谱 |
-| 研究想法 | `有什么新想法 [主题]` | 8-12 个候选想法，数据验证 |
-| 实证设计 | `设计实验 [想法]` | DID/IV/RD/面板 |
-| 论文写作 | `写论文 [主题]` | LaTeX，可选中文顶刊格式 |
-| 图表生成 | `生成图表 [需求]` | matplotlib，≥300 DPI + 12种专业图表 |
-| 专业图表 | `生成 [桑基/漏斗/森林图...]` | AdvancedChartFactory，provenance追踪 |
-| 对抗性 review | `review 我的论文` | 学术规范 + 实证严谨性 |
-| 自动唤醒 | `python scripts/on_enter.py` | 进入目录自动运行 |
-| 后台监控 | `python scripts/event_monitor.py --macro-scheduler --auto-trigger` | NFP/CPI/FOMC 自动触发 |
+```
+用户打开对话
+        ↓
+① 问候 + 能力介绍（固定文案，不跳过）
+        ↓
+② 后台运行 python scripts/health_check.py --json
+        ↓
+  ┌─ API Key 缺失 → 简短提示（不阻塞）
+  ├─ LLM 不可用 → 询问是否继续
+  └─ 系统就绪 → 等待研究方向
+        ↓
+③ 询问研究方向 → 用户描述 → 开始研究
+```
 
----
-
-## 🔑 核心原则
-
-1. **MCP 优先** — 所有数据通过 MCP 工具获取（tushare / financial / eodhd 等），不用凭空编造
-2. **数据是硬约束** — 没有数据支撑的想法不推荐
-3. **Checkpoint** — 每个阶段完成后暂停，**你确认后再继续**
-4. **生成-评审分离** — 写作和 review 由不同模块处理
-5. **中文顶刊标准** — 经济研究 / 金融研究 / 管理世界（含稳健性检验要求）
+**第一步问候是强制要求**，不要跳过。直接开始工作会显得突兀。
 
 ---
 
-## 📊 数据工具速查
+## 核心能力
+
+### 数据获取（MCP，43个服务器）
 
 | 你要什么 | 用这个 MCP |
 |---------|-----------|
@@ -57,63 +62,248 @@
 | 中国宏观（GDP/CPI/M2）| `user-financial` |
 | 美联储/FOMC | `user-fed-data` |
 | 世界银行宏观 | `user-wb-data` |
-| 国债收益率/经济日历 | `user-eodhd` |
-| 研报/新闻 | `user-eastmoney-reports` |
+| IMF数据 | `user-imf-data` |
+| OECD数据 | `user-oecd-data` |
+| 美国经济分析局GDP | `user-bea-data` |
+| 国债收益率/经济日历 | `user-eodhd`（需Key）或 `user-fed-data` |
+| 美股/ETF/期权/财务 | `user-yfinance` |
+| 研报/新闻/板块/分析师 | `user-eastmoney-reports` |
+| 公募基金 | `user-eastmoney-fund` |
+| 债券数据 | `user-eastmoney-bond` |
+| 期权数据 | `user-eastmoney-option` |
 | 外汇/航运/大宗商品 | `user-enhanced-finance` |
-| 学术论文/Working Papers | `user-nber-wp`（NBER）+ 网络搜索 |
-| 中文文献 | `user-brave-search`（经济研究/金融研究）|
+| 加密货币 | `user-cryptocompare` |
+| SEC 10-K/10-Q/8-K | `user-sec-edgar` |
+| 学术论文（全文）| `user-openalex`、`user-arxiv`、`user-context7`、`user-semantic-scholar` |
+| NBER工作论文 | `user-nber-wp` |
+| 中文文献（CSSCI/CNKI）| `user-chinese-literature`、`user-wanfang`、`user-csmar` |
+| 中国专利数据 | `user-sipo` |
+| 中国海关数据 | `user-chinese-customs` |
+| Wind数据 | `user-wind`（需账号）|
+| CSMAR国泰安 | `user-csmar`（需Key）|
+| CEIC宏观 | `user-macro-ceic` |
+| 省级/市级统计 | `user-province-stats`、`user-hubei-stats`、`user-wuhan-stats` |
+| 新闻搜索 | `user-newsapi`（需Key）、`user-brave-search`（需Key）|
+| 云端代码执行 | `user-e2b-mcp`（需Key）|
+| 浏览器自动化 | `user-playwright-mcp` |
+| 数据处理 | `user-pandas-mcp` |
+| LaTeX排版检查 | `user-latex-mcp` |
+| 文件系统操作 | `user-filesystem-mcp` |
 
-> **大部分工具无需 API Key，直接调用即可。**
+> 大部分 MCP 无需 API Key，直接调用即可。详情见 [MCP工具配置指南](.cursor/rules/mcp_tools.mdc)。
+
+### 计量方法（49种，JF/JFE/RFS 标准）
+
+- **DID**: Callaway-SantAnna (QJE 2021), Sun-Abraham (REStud 2021), Borusyak (REStud 2024), Goodman-Bacon (QJE 2021), dCdH
+- **合成控制**: Abel (JASA 2016), Arkhangelsky (Science 2021)
+- **RDD**: 精确/模糊/局部线性
+- **IV/2SLS**: 面板 IV、Jackknife IV
+- **Panel GMM**: Arellano-Bond、Blundell-Bond
+- **其他**: 空间回归（SAR/SEM/SDM/SDM）、三重差分、面板分位数、交互固定效应、局部投影、Event Study
+- **敏感性分析**: Leamer、Heterogeneity、Wild Bootstrap
+
+### 论文写作
+
+- LaTeX 输出（41种期刊格式，英文/中文30种+日文3种+德文4种）
+- JF / JFE / RFS / JAE / JPE / Econometrica 等英文顶刊
+- 经济研究 / 金融研究 / 管理世界 / 会计研究 等中文顶刊
+- 多轮对抗性 review 循环
+
+### 图表生成
+
+- matplotlib / seaborn / plotly
+- 20种专业金融图表预设
+- 输出格式：PDF / SVG / PNG（≥300 DPI）
+- 数据溯源追踪（provenance）
 
 ---
 
-## 🗂️ 输出结构
-
-所有输出在 `output/` 目录：
+## 项目结构
 
 ```
-output/
-├── fin-literature/      # 文献综述（LIT_REVIEW.md, CITATION_GRAPH.json）
-├── fin-ideas/           # 研究想法（IDEA_REPORT.md）
-├── fin-novelty/        # 新颖性验证（NOVELTY_REPORT.md）
-├── fin-refinement/     # 研究设计（REFINED_DESIGN.md, ROBUSTNESS_PLAN.md）
-├── fin-experiments/    # 实证结果（scripts/, results/)
-├── fin-review/         # 对抗性review（REVIEW_REPORT.md）
-└── fin-manuscript/     # 论文草稿（draft_vN/，含 main.tex + main.pdf）
+scripts/
+├── agent_pipeline.py              # 主入口：端到端流水线
+├── research_framework/           # 研究执行层（41个模块）
+│   ├── pipeline.py            # 标准流水线
+│   ├── modern_did.py          # 现代 DID（CS/SunAb/Borusyak/GB/dCdH）
+│   ├── synthetic_control.py  # 合成控制法（Abadie et al. 2010）
+│   ├── synthetic_did.py       # 合成DID（Arkhangelsky et al. 2021）
+│   ├── local_projections_did.py  # 局部投影DID（Jordà 2005）
+│   ├── triple_diff_did.py    # 三重差分DID
+│   ├── panel_quantile_regression.py  # 面板分位数回归
+│   ├── interactive_fixed_effects.py  # 交互固定效应（Bai 2009）
+│   ├── spatial_regression.py  # 空间回归（SDM/SAR/SEM）
+│   ├── iv_panel.py           # IV/Panel/GMM
+│   ├── rdd.py                # 断点回归（RDD）
+│   ├── regression_engine.py   # DID/OLS/PSM/GMM
+│   ├── fin_charts.py         # 20种专业金融图表
+│   ├── data_fetcher.py       # MCP数据获取（7层fallback）
+│   ├── report_generator.py    # LaTeX/Word双格式
+│   └── robustness_runner.py   # 18类稳健性检验
+├── core/                         # Agent编排层（83个非测试模块）
+│   ├── provenance.py            # 数据溯源追踪
+│   ├── checkpoint.py             # 断点续传
+│   ├── event_monitor.py          # 宏观事件监控（NFP/CPI/FOMC）
+│   └── mcp_tool_market.py        # MCP工具市场
+└── research_directions/          # 研究方向（12个）
+    ├── digital_finance.py          # 数字金融
+    ├── green_finance.py            # 绿色金融
+    ├── carbon_economics.py         # 碳经济学
+    ├── corporate_finance.py        # 公司金融
+    ├── macro_finance.py            # 宏观金融
+    ├── asset_pricing.py            # 资产定价
+    ├── behavioral_finance.py        # 行为金融
+    ├── fintech_innovation.py        # 金融科技创新
+    ├── real_estate_finance.py      # 房地产金融
+    ├── international_finance.py    # 国际金融
+    └── political_economy_finance.py # 政治经济学
+
+mcp_servers/                      # 43个MCP数据服务器
+output/                           # 输出目录
+├── fin-literature/              # 文献综述
+├── fin-ideas/                   # 研究想法
+├── fin-novelty/                # 新颖性验证
+├── fin-refinement/              # 研究设计
+├── fin-experiments/             # 实证结果
+├── fin-review/                 # 对抗性review
+└── fin-manuscript/             # 论文草稿
 ```
 
 ---
 
-## ⚙️ 可选标志（按需设置）
+## 关键入口脚本
 
-在开始前或 `FIN_BRIEF.md` 中配置：
+| 脚本 | 功能 |
+|------|------|
+| `scripts/agent_pipeline.py` | 完整流水线（主题 → 论文 PDF）|
+| `scripts/health_check.py` | 系统健康检查（每次启动前必运行）|
+| `scripts/idea_data_checker.py` | 想法-数据交叉验证（**新**）|
+| `scripts/data_source_checker.py` | 数据源预检查（**新**）|
+| `scripts/pipeline_checkpoint.py` | 强制交互 checkpoint（**新**）|
+| `scripts/setup_wizard.py --guided` | 交互式配置向导 |
+| `scripts/research_framework/pipeline.py` | 研究执行层 |
+| `scripts/research_framework/modern_did.py` | 现代 DID 回归 |
+| `scripts/research_framework/fin_charts.py` | 专业金融图表 |
+| `scripts/research_framework/report_generator.py` | LaTeX 论文生成 |
+| `scripts/demo_research_report.py` | 演示研报生成（**已修复静默fallback**）|
+| `scripts/journal_template.py --list` | 列出所有期刊模板 |
+| `scripts/event_monitor.py --test` | 测试事件监控 |
 
-| 标志 | 默认 | 说明 |
+---
+
+## 可用技能（17个）
+
+技能文档在 `.claude/skills/`（Claude Code）、`.github/skills/`（Copilot）和 `knowledge/skills/`（真相源）。在 Cursor 中直接用 `Skill:` 语法触发。
+
+| 技能 | 功能 |
+|------|------|
+| `fin-full-pipeline` | 端到端流水线（主题 → 论文 PDF）|
+| `fin-idea-discovery` | 想法发现 + 数据验证 |
+| `fin-lit-review` | 系统性文献综述 |
+| `fin-generate-idea` | 8-12 个排序想法（含实证验证）|
+| `fin-novelty-check` | 新颖性验证（JF/JFE/RFS 查重）|
+| `fin-experiment-design` | 完整实证设计（DID/IV/RD/PSM）|
+| `fin-paper-writing` | 论文写作编排 |
+| `fin-paper-draft` | 正文生成（LaTeX）|
+| `fin-paper-plan` | 大纲生成（41种期刊模板）|
+| `fin-paper-figure` | 图表生成（≥300 DPI，20+类型）|
+| `fin-paper-convert` | LaTeX 编译 |
+| `fin-review-loop` | 多轮对抗性 review |
+| `fin-submit-check` | 投稿前检查 |
+| `fin-data-acquisition` | 数据获取 + 回归脚本生成 |
+| `fin-brief-generator` | 生成 `FIN_BRIEF.md` |
+| `fin-ref-paper` | BibTeX 参考文献管理 |
+| `fin-viz-launch` | 自然语言 → 学术图表 |
+
+---
+
+## 核心原则
+
+1. **数据优先** — 数据验证前移到想法生成阶段，不编造，不等到阶段5才发现无数据
+2. **数据溯源** — 每次数据获取记录来源和时间戳
+3. **禁止静默Fallback** — 模拟数据必须经用户明确授权才可使用
+4. **强制交互Checkpoint** — 每阶段完成后暂停，等待用户确认，不自动继续
+5. **生成-评审分离** — 写作和 review 由不同模块处理
+6. **中文顶刊标准** — 经济研究 / 金融研究 / 管理世界（含稳健性检验）
+
+---
+
+## 研究流程（8步）
+
+```
+第0步  系统自检     → python scripts/health_check.py → 确认工具就绪
+第1步  研究想法     → 描述方向 → 8-12个候选想法 → 确认
+第1.5步想法-数据交叉验证 → idea_data_checker.py → 用户决策（补充数据/授权模拟/更换）→ 确认
+第2步  文献综述     → MCP搜索 → 引文网络 → 识别研究缺口
+第3步  新颖性验证   → JF/JFE/RFS/arXiv/NBER检索 → 确认
+第4步  实证设计     → DID/IV/RDD → REFINED_DESIGN.md → data_source_checker.py → 确认
+第5步  数据获取     → 43个MCP → Python/Stata脚本 → 确认
+第6步  论文写作     → 大纲 → 正文 → 图表 → LaTeX草稿
+第7步  对抗性Review → 多轮严格评审 → 达到发表标准
+```
+
+---
+
+## 环境变量
+
+参考 `.env.example`，主要变量：
+
+| 变量 | 必需 | 说明 |
 |------|------|------|
-| `AUTO_PROCEED` | `false` | `true`=自动选最优；`false`=checkpoint确认 |
-| `HUMAN_CHECKPOINT` | `true` | `true`=review后暂停 |
-| `REVIEWER_DIFFICULTY` | `standard` | standard / strict / nightmare |
-| `COMPACT_MODE` | `false` | `true`=精简输出 |
-| `TARGET_JOURNAL` | `auto` | JF / JFE / RFS / 经济研究 / 金融研究 等 |
-
-> 可选功能使用前会先询问你是否安装了对应依赖（sandbox / browser 等）。
+| `DEEPSEEK_API_KEY` | 推荐 | DeepSeek 直连（中文写作/代码/分析）|
+| `RELAY_API_KEY` | 可选 | B.AI 中转（GPT/Claude）|
+| `TUSHARE_TOKEN` | A股必需 | Tushare Pro Token |
+| `EODHD_API_KEY` | 美宏观可选 | EODHD |
+| `FRED_API_KEY` | 美宏观可选 | FRED |
+| `BRAVE_SEARCH_API_KEY` | 搜索可选 | Brave Search |
 
 ---
 
-## 🏗️ 参考架构
+## 工具适配说明
+
+本项目为三个 AI 编码工具提供完整支持：
+
+| 目录 | 适用工具 | 说明 |
+|------|---------|------|
+| `scripts/` / `mcp_servers/` / `tests/` | 全部工具 | 核心业务逻辑，无 IDE 依赖 |
+| `CLAUDE.md` | Claude Code（主要）/ Cursor / Codex | 项目主入口 |
+| `.claude/` | Claude Code | 命令 + 技能文档 |
+| `.cursor/rules/` | Cursor | 角色规则（analyst/paper_writer/researcher/mcp_tools/system-init）|
+| `.cursor/skills/` | Cursor | 17 个 Skill 文件（原生 Skill 系统）|
+| `.cursor/agents/` | Cursor | Agent 指令（literature-scout）|
+| `.github/copilot-instructions.md` | GitHub Copilot | Copilot 指令文件 |
+| `knowledge/skills/` | Claude Code / Copilot | 17 个技能文档（真相源，目录副本到 .claude/skills/ 和 .github/skills/）|
+
+## Skill: 语法（Cursor 专用）
+
+在 Cursor 中，使用 `Skill:` 语法触发自动化流程。例如：
+
+```
+Skill: fin-full-pipeline
+```
+触发端到端流水线（主题 → 论文 PDF）。
+
+可用的 Skill 语法：
+- `Skill: fin-full-pipeline` — 完整流水线
+- `Skill: fin-idea-discovery` — 想法发现 + 数据验证
+- `Skill: fin-lit-review` — 系统性文献综述
+- `Skill: fin-generate-idea` — 8-12 个排序想法
+- `Skill: fin-novelty-check` — 新颖性验证
+- `Skill: fin-experiment-design` — DID/IV/RDD 方案设计
+- `Skill: fin-paper-writing` — 论文写作编排
+- `Skill: fin-paper-draft` — 正文生成（LaTeX）
+- `Skill: fin-paper-figure` — 图表生成
+- `Skill: fin-review-loop` — 对抗性 review
+- `Skill: fin-data-acquisition` — MCP 数据获取
+- `Skill: fin-brief-generator` — 生成 FIN_BRIEF.md
+
+直接用自然语言描述需求也可以正常工作，Skill 语法是快捷方式。
+
+---
+
+## 参考架构
 
 - [Night Owl Research Agent (NORA)](https://github.com/GRIND-Lab-Core/night_owl_research_agent)
 - [PaperOrchestra (Google)](https://github.com/google-research/paper-orchestra)
 - [ARK (KAUST)](https://github.com/kaust-ark/ARK)
 - [Qiongli (穷理)](https://github.com/jxpeng98/qiongli)
-- [MSc (PoggioAI)](https://github.com/PoggioAI/PoggioAI_MSc)
-
----
-
-## 🖼️ 可视化技能
-
-| 技能 | 功能 | 典型调用 |
-|------|------|---------|
-| `fin-paper-figure` | matplotlib 图表生成（≥300 DPI）| `Skill: fin-paper-figure "[FIGURE_PLAN.md]"` |
-| `fin-viz-launch` | 可视化唤起入口（自然语言 → 图表）| `Skill: fin-viz-launch "绘制DID系数森林图"` |
-| `fin-paper-convert` | LaTeX 编译 + 多版本 | `Skill: fin-paper-convert "[draft_vN/]"` |

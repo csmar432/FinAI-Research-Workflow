@@ -19,6 +19,7 @@
     },
     "required": [
       "fund_code"
-    ]
+    ],
+    "description": "获取基金净值数据（东方财富风格）。"
   }
 }

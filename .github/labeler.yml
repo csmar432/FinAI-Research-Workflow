@@ -1,0 +1,63 @@
+# .github/labeler.yml
+# 根据改动文件路径自动打 PR 标签
+# 文档: https://github.com/actions/labeler
+
+# ── 代码 ──────────────────────────────────────────────────────────
+code:
+  - scripts/**
+  - mcp_servers/**/server.py
+
+tests:
+  - tests/**
+
+ci:
+  - .github/workflows/**
+  - .github/labeler.yml
+
+# ── 文档 ──────────────────────────────────────────────────────────
+docs:
+  - docs/**
+  - "**/*.md"
+  - "**/*.rst"
+
+# ── 论文/研报 ─────────────────────────────────────────────────────
+paper:
+  - "**/*.tex"
+  - "**/*.bib"
+
+output:
+  - output/**
+
+# ── 配置 ──────────────────────────────────────────────────────────
+config:
+  - "**/*.json"
+  - "**/*.yml"
+  - "**/*.yaml"
+  - "**/*.toml"
+  - "**/*.ini"
+  - ".env.example"
+  - "pyproject.toml"
+
+# ── 依赖 ──────────────────────────────────────────────────────────
+dependencies:
+  - "**/requirements*.txt"
+  - "**/pyproject.toml"
+  - "**/uv.lock"
+  - "**/poetry.lock"
+
+# ── 数据 (一般不进 git, 但偶尔有 schema/seed) ─────────────────────
+data:
+  - data/**
+  - "**/*.csv"
+  - "**/*.parquet"
+  - "**/*.xlsx"
+
+# ── Skills / Knowledge ───────────────────────────────────────────
+skills:
+  - knowledge/skills/**
+  - .claude/commands/**
+  - .claude/skills/**
+
+# ── 特殊分类 ──────────────────────────────────────────────────────
+mcp:
+  - mcp_servers/**

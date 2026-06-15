@@ -11,6 +11,7 @@ Five professional agents following PaperOrchestra's design:
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,8 @@ from scripts.core.agents.base import (
     BaseAgent,
     HaltDecision,
 )
+
+logger = logging.getLogger(__name__)
 
 # ─── Shared Halt Rules ────────────────────────────────────────────────────────
 
@@ -345,7 +348,7 @@ class LiteratureReviewAgent(BaseAgent):
         # Try MCP brave_search first
         try:
             from scripts.core.llm_gateway import MCPResult, call_mcp_tool
-            mcp_result = call_mcp_tool("brave-search", "brave_search",
+            mcp_result = call_mcp_tool("user-brave-search", "brave_web_search",
                                         {"query": f"{query} academic paper", "count": max_results})
             if isinstance(mcp_result, MCPResult) and mcp_result.success:
                 data = mcp_result.data
@@ -371,7 +374,7 @@ class LiteratureReviewAgent(BaseAgent):
         if not results:
             try:
                 from scripts.core.llm_gateway import MCPResult, call_mcp_tool
-                mcp_result = call_mcp_tool("arxiv", "search_papers",
+                mcp_result = call_mcp_tool("user-arxiv", "semantic_search",
                                             {"query": query, "max_results": max_results})
                 if isinstance(mcp_result, MCPResult) and mcp_result.success:
                     data = mcp_result.data
@@ -1210,7 +1213,7 @@ class DataFetchAgent(BaseAgent):
         """Call province-stats MCP tool via gateway. Returns None on failure."""
         try:
             raw = self.gateway.call_mcp_tool(
-                "province-stats", tool, args
+                "user-province-stats", tool, args
             )
             # gateway.call_mcp_tool returns an MCPResult (dataclass) or raises
             if raw is None:
@@ -1223,7 +1226,7 @@ class DataFetchAgent(BaseAgent):
             return None
 
     def _fetch_summary(self) -> dict | None:
-        raw = self._call_province_mcp("get_all_provinces_summary", {})
+        raw = self._call_province_mcp("get_province_rankings", {"table": "GDP_2024"})
         return raw  # already extracts .data in _call_province_mcp
 
     def _fetch_province_indicators(

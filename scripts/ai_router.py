@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
@@ -54,6 +55,8 @@ import openai
 from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore")
+
+_log = logging.getLogger("ai_router")
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -160,9 +163,9 @@ class ModelKey(Enum):
     # ── Relay — Claude 系列 ──────────────────────────────────
     CLAUDE_OPUS            = "claude_opus"             # Claude 3 Opus：顶级推理
     CLAUDE_SONNET          = "claude_sonnet"           # Claude 3.5 Sonnet：英文分析
-    # ── Relay — DeepSeek via B.AI ────────────────────────────
-    DEEPSEEK_V4_PRO_RELAY  = "deepseek_v4_pro_relay"  # DeepSeek-V4-Pro via B.AI relay
-    # ── Relay — Gemini（暂禁用，via B.AI） ───────────────────
+    # ── Relay — DeepSeek ────────────────────────────
+    DEEPSEEK_V4_PRO_RELAY  = "deepseek_v4_pro_relay"  # DeepSeek-V4-Pro via Relay
+    # ── Relay — Gemini（暂禁用） ───────────────────
     GEMINI_20_FLASH        = "gemini_20_flash"        # Gemini 2.0-Flash（暂禁用）
     # ── Relay — 其他 ─────────────────────────────────────────
     KIMI                   = "kimi"                   # Kimi K2.5：长文档
@@ -206,9 +209,9 @@ class ModelPool:
     # Relay — Claude
     claude_opus:             ModelConfig | None = None
     claude_sonnet:            ModelConfig | None = None
-    # Relay — DeepSeek via B.AI
-    deepseek_v4_pro_relay:   ModelConfig | None = None  # 【修复】原 gemini_25_flash，实际是 DeepSeek-V4-Pro
-    # Relay — Gemini（via B.AI，暂禁用）
+    # Relay — DeepSeek
+    deepseek_v4_pro_relay:   ModelConfig | None = None  # DeepSeek-V4-Pro via Relay
+    # Relay — Gemini（暂禁用）
     gemini_20_flash:         ModelConfig | None = None
     # Relay — 其他
     kimi:                    ModelConfig | None = None
@@ -638,7 +641,7 @@ def build_model_pool() -> ModelPool:
                 context_window=1_000_000,
             )
 
-    # ── Relay 中转 API (B.AI — 2026-05-29 实测验证) ──────────────
+    # ── Relay 中转 API (Relay — 2026-05-29 实测验证) ──────────────
     if "relay" in cfg:
         relay = cfg["relay"]
         relay_key = relay.get("api_key", os.environ.get("RELAY_API_KEY", ""))
@@ -654,7 +657,7 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=defaults.get("temperature", 0.7),
                 timeout=120,
-                display_name="GPT-5.4-Mini (via B.AI)",
+                display_name="GPT-5.4-Mini (via Relay)",
                 strength="英文写作/翻译，✅实测可用",
                 context_window=128_000,
             )
@@ -666,7 +669,7 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=defaults.get("temperature", 0.7),
                 timeout=120,
-                display_name="GPT-5.5-Instant (via B.AI)",
+                display_name="GPT-5.5-Instant (via Relay)",
                 strength="快速英文，✅实测可用",
                 context_window=128_000,
             )
@@ -678,7 +681,7 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=defaults.get("temperature", 0.7),
                 timeout=120,
-                display_name="Claude Sonnet 4.6 (via B.AI)",
+                display_name="Claude Sonnet 4.6 (via Relay)",
                 strength="英文分析/翻译，✅实测可用",
                 context_window=200_000,
             )
@@ -690,11 +693,11 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=0.5,
                 timeout=180,
-                display_name="Claude Opus 4.7 (via B.AI)",
+                display_name="Claude Opus 4.7 (via Relay)",
                 strength="顶级推理，✅实测可用",
                 context_window=200_000,
             )
-            # DeepSeek-V4-Pro via B.AI relay — ✅ 实测可用
+            # DeepSeek-V4-Pro via Relay — ✅ 实测可用
             # 【修复】旧版误用 gemini_25_flash 变量名，现改为 deepseek_v4_pro_relay
             pool.deepseek_v4_pro_relay = ModelConfig(
                 provider="openai",
@@ -703,7 +706,7 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=defaults.get("temperature", 0.7),
                 timeout=180,
-                display_name="DeepSeek-V4-Pro (via B.AI)",
+                display_name="DeepSeek-V4-Pro (via Relay)",
                 strength="深度推理，✅实测可用",
                 context_window=1_000_000,
             )
@@ -716,11 +719,11 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=defaults.get("temperature", 0.7),
                 timeout=120,
-                display_name="GLM-5.1 (via B.AI)",
+                display_name="GLM-5.1 (via Relay)",
                 strength="结构化输出",
                 context_window=128_000,
             )
-            # Gemini via B.AI — ❌ B.AI 返回空内容，禁用（保留 slot 供将来启用）
+            # Gemini — ❌ 返回空内容，禁用（保留 slot 供将来启用）
             # pool.gemini_20_flash = ModelConfig(
             #     provider="openai", model_id=_get_id("gemini_20_flash", "gemini-3.5-flash"),
             #     api_key=relay_key, base_url=relay_url, ...
@@ -734,7 +737,7 @@ def build_model_pool() -> ModelPool:
                 max_tokens=defaults.get("max_tokens", 8192),
                 temperature=defaults.get("temperature", 0.7),
                 timeout=120,
-                display_name="Kimi K2.5 (via B.AI)",
+                display_name="Kimi K2.5 (via Relay)",
                 strength="长文档分析",
                 context_window=200_000,
             )
@@ -780,8 +783,12 @@ class LLMBridge:
                         base_url=cfg.base_url,
                         timeout=cfg.timeout,
                     )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log.warning(
+                        "[ModelPool._init_clients] OpenAI client init failed for %s: %s — "
+                        "model will be unavailable",
+                        key.name if hasattr(key, 'name') else key, exc
+                    )
 
     def _get_client(self, key: ModelKey) -> openai.OpenAI | None:
         """获取对应模型的客户端。"""
@@ -858,7 +865,7 @@ class LLMBridge:
                 "deepseek-chat": ModelKey.DEEPSEEK_FLASH,
                 "deepseek-reasoner": ModelKey.DEEPSEEK_R1,
                 "gpt-5.5": ModelKey.GPT_5_5_MINI,
-                # "gemini-3.5-flash": ModelKey.GEMINI_20_FLASH,  # B.AI returns empty, disabled
+                # "gemini-3.5-flash": ModelKey.GEMINI_20_FLASH,  # Relay returns empty, disabled
                 "claude-sonnet-4-7": ModelKey.CLAUDE_SONNET,
                 "claude-opus-4-7": ModelKey.CLAUDE_OPUS,
                 "claude-sonnet": ModelKey.CLAUDE_SONNET,
@@ -887,7 +894,7 @@ class LLMBridge:
 
         model_name = self._get_model_name(model_key)
 
-        # 部分模型不支持 temperature 参数（如 Claude Opus 4.7 via B.AI）
+        # 部分模型不支持 temperature 参数（如 Claude Opus 4.7 via Relay）
         _no_temp_models = {"claude-opus-4.7", "claude-sonnet-4.6"}
         create_kwargs = {"model": model_name, "messages": all_messages, "max_tokens": max_tokens}
         if model_name not in _no_temp_models:
@@ -948,7 +955,7 @@ class LLMBridge:
                 "deepseek-chat": ModelKey.DEEPSEEK_FLASH,
                 "deepseek-reasoner": ModelKey.DEEPSEEK_R1,
                 "gpt-5.5": ModelKey.GPT_5_5_MINI,
-                # "gemini-3.5-flash": ModelKey.GEMINI_20_FLASH,  # B.AI returns empty, disabled
+                # "gemini-3.5-flash": ModelKey.GEMINI_20_FLASH,  # Relay returns empty, disabled
                 "claude-sonnet-4-7": ModelKey.CLAUDE_SONNET,
                 "claude-opus-4-7": ModelKey.CLAUDE_OPUS,
                 "claude-sonnet": ModelKey.CLAUDE_SONNET,

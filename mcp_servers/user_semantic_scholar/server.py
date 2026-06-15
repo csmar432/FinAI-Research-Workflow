@@ -62,7 +62,7 @@ _SS_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")
 _OPENALEX_BASE = "https://api.openalex.org"
 _HEADERS: dict[str, str] = {
     "Accept": "application/json",
-    "User-Agent": "FinResearch-Agent/1.0 (mailto:xuzheyi@example.com)",
+    "User-Agent": "FinResearch-Agent/1.0 (mailto:research@example.com)",
 }
 if _SS_API_KEY:
     _HEADERS["x-api-key"] = _SS_API_KEY

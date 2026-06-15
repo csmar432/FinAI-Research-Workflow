@@ -19,6 +19,7 @@ ESG classification: integrated/refining → high, midstream → medium, e&p/equi
 SEC shock: 2021 SEC climate disclosure rulemaking → Post = 1 for 2022+
 """
 
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -87,8 +88,8 @@ def fetch_yfinance_financials(ticker: str) -> dict | None:
     result = {}
     for stmt in ["balance", "income", "cashflow"]:
         data = call_mcp_tool(
-            "user-yfinance", "get_financials",
-            {"symbol": ticker, "statement": stmt, "period": "yearly"}
+            "user-yfinance", "get_yf_financials",
+            {"ticker": ticker, "statement_type": stmt}
         )
         result[stmt] = data
     return result

@@ -496,7 +496,7 @@ def step4_data_analysis(workflow: PaperWorkflow):
 这将替换论文中的模拟数据为真实回归结果。
 
 可用的数据模块：
-1. econometrics.py - 计量经济学回归分析
+1. econometrics_extended.py - 计量经济学回归分析（DID / OLS / PSM / GMM / Heckman）
 2. data_pipeline.py - 数据清洗与预处理
 3. empirical_agent.py - 实证研究智能体
 """)
@@ -533,8 +533,8 @@ def step4_data_analysis(workflow: PaperWorkflow):
 1. 准备数据文件后，运行：
    python scripts/empirical_agent.py --data <您的数据文件>
    
-2. 或使用 econometrics 模块直接分析：
-   python scripts/econometrics.py --input <数据文件> --dep <被解释变量> --ind <解释变量>
+2. 或使用计量模块直接分析（推荐）：
+   python scripts/econometrics_extended.py --input <数据文件> --dep <被解释变量> --ind <解释变量>
    
 3. 推荐数据来源：
    - 东方财富 Choice金融终端
@@ -545,7 +545,7 @@ def step4_data_analysis(workflow: PaperWorkflow):
         print("""
 📋 数据分析可稍后单独运行：
 1. python scripts/empirical_agent.py
-2. python scripts/econometrics.py
+2. python scripts/econometrics_extended.py
 """)
 
     return workflow
@@ -758,7 +758,7 @@ def main():
         print(f"""
 下一步建议：
 1. 查看完整论文: {workflow.project_dir / '全文草稿.md'}
-2. 如需数据分析，请运行: python scripts/econometrics.py
+2. 如需数据分析，请运行: python scripts/econometrics_extended.py
 3. 如需导出Word，请运行: python scripts/generate_docx_tables.py
         """)
 

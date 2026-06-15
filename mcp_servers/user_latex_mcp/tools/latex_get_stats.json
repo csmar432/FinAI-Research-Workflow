@@ -1,13 +1,17 @@
 {
   "name": "latex_get_stats",
-  "description": "获取LaTeX项目统计信息：文件数、目录深度、主文件大小、预计页数。\\n\\n",
+  "description": "获取LaTeX项目统计信息：文件数、目录深度、主文件大小、预计页数。\\n\\nArgs:\\n  project_dir: 项目目录\\n\\nReturns: 项目统计信息",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "project_dir": {
+        "type": "string",
+        "description": "项目目录"
       }
     },
-    "required": []
+    "required": [
+      "project_dir"
+    ],
+    "description": "获取LaTeX项目统计信息：文件数、目录深度、主文件大小、预计页数。"
   }
 }

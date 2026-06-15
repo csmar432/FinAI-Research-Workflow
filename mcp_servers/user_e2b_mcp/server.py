@@ -257,11 +257,17 @@ async def handle_e2b_safe_eval(args: dict) -> list[TextContent]:
     """安全的本地表达式求值（不需要 E2B）。"""
     expression = args.get("expression", "")
     data = args.get("data", {})
+    if len(expression) > 1024:
+        return [TextContent(type="text", text=json.dumps({
+            "error": "Expression too long (max 1024 chars)",
+        }))]
 
-    # 白名单：只允许安全操作
+    # 白名单：仅允许数学运算符、字母数字和空格
     allowed_chars = set(
-        "0123456789+-*/()., []abcdefghijklmnopqrstuvwxyz"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ_=><!|&%@#$'"
+        "0123456789"
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "+-*/()., []_ "
     )
     if not all(c in allowed_chars for c in expression):
         return [TextContent(type="text", text=json.dumps({
@@ -279,7 +285,7 @@ async def handle_e2b_safe_eval(args: dict) -> list[TextContent]:
             "bool": bool, "list": list, "dict": dict, "tuple": tuple,
             "True": True, "False": False, "None": None,
         }
-        ctx.update(data)
+        ctx.update({k: v for k, v in data.items() if k.isidentifier() and not k.startswith('_')})
         result = eval(expression, ctx)
         return [TextContent(type="text", text=json.dumps({
             "expression": expression,

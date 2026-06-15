@@ -140,6 +140,7 @@ class TestModernDiDSig:
             coef=0.0,
             se=0.0,
             pval=pval,
+            n_obs=1,
         )
         assert result.sig == expected
 
@@ -492,7 +493,7 @@ class TestModernDiDEdgeCases:
         assert empty.coef == 0
         assert empty.se == 0
         assert empty.pval == 1
-        assert empty.n_obs == 0
+        assert empty.n_obs == 1
 
     def test_engine_missing_columns(self):
         """Engine with missing columns raises ValueError."""

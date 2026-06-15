@@ -3,6 +3,7 @@
   "description": "国家统计局分省数据备用方案",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "国家统计局分省数据（SSL不稳定，返回备用方案指引）"
   }
 }

@@ -1,0 +1,23 @@
+{
+  "name": "search_cssci_papers",
+  "description": "CSSCI（中文社会科学引文索引）期刊论文检索。通过 OpenAlex 筛选 CSSCI 来源期刊的论文，返回论文元数据和引用信息。CSSCI 是中文社会科学领域最高级别的学术评价来源期刊体系。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "搜索关键词",
+        "required": true
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "最大结果数（默认10，最大50）",
+        "default": 10
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "description": "Search parameters for 中文文献检索 MCP 服务器。整合百度学术（免费/API）、OpenAlex 和 Crossref，覆盖中国知网(CNKI)、万方数据cssci.cssn.cn的核心学术论文。提供论文元数据、引用关系、期刊分类等信息。 query"
+  }
+}

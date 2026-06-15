@@ -19,6 +19,7 @@
     },
     "required": [
       "ts_code"
-    ]
+    ],
+    "description": "获取CSMAR交易数据。"
   }
 }

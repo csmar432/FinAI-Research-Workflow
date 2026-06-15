@@ -32,6 +32,8 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from abc import ABC, abstractmethod
+
 import pandas as pd
 
 SCRIPT_DIR = Path(__file__).parent.parent
@@ -46,7 +48,7 @@ logger = logging.getLogger(__name__)
 # ─── Base Class ────────────────────────────────────────────────────────────────
 
 
-class BaseEconometricModel:
+class BaseEconometricModel(ABC):
     """Base class for advanced econometric models."""
 
     def __init__(self, name: str):
@@ -54,14 +56,14 @@ class BaseEconometricModel:
         self.results: dict = {}
         self.is_fitted: bool = False
 
+    @abstractmethod
     def fit(self, data: pd.DataFrame, *args, **kwargs) -> dict:
         """Fit the model - to be implemented by subclasses."""
         raise NotImplementedError
 
+    @abstractmethod
     def predict(self, data: pd.DataFrame, *args, **kwargs) -> pd.Series:
         """Make predictions - to be implemented by subclasses."""
-        if not self.is_fitted:
-            raise ValueError("Model must be fitted before prediction")
         raise NotImplementedError
 
     def summary(self) -> str:
@@ -1101,7 +1103,7 @@ class CallawaySantAnnaDID(BaseEconometricModel):
                 group_time_att[key] = val / n_cohorts
 
         overall_att = sum(group_time_att.values()) / max(len(group_time_att), 1)
-        overall_se = 0.05  # TODO: implement bootstrap for proper SE estimation
+        overall_se = 0.05  # Bootstrap SE estimation待实现
 
         self.results = {
             "method": "Callaway-Sant'Anna (2021) DID",
@@ -2061,6 +2063,534 @@ class BaconDeComposed(BaseEconometricModel):
         return self.results
 
 
+# ─── Vuong Test for Non-Nested Model Comparison ──────────────────────────────────
+
+from dataclasses import dataclass
+
+
+@dataclass
+class VuongTestResult:
+    """Result of the Vuong test for non-nested model comparison."""
+    vuong_statistic: float
+    pvalue: float
+    model1_preferred: bool
+    model2_preferred: bool
+    neither_preferred: bool
+    lr_numerator: float
+    lr_denominator: float
+    n_obs: int
+    aic_model1: float | None
+    aic_model2: float | None
+    bic_model1: float | None
+    bic_model2: float | None
+
+    def to_dict(self) -> dict:
+        return {
+            "vuong_statistic": self.vuong_statistic,
+            "pvalue": self.pvalue,
+            "model1_preferred": self.model1_preferred,
+            "model2_preferred": self.model2_preferred,
+            "neither_preferred": self.neither_preferred,
+            "lr_numerator": self.lr_numerator,
+            "lr_denominator": self.lr_denominator,
+            "n_obs": self.n_obs,
+            "aic_model1": self.aic_model1,
+            "aic_model2": self.aic_model2,
+            "bic_model1": self.bic_model1,
+            "bic_model2": self.bic_model2,
+        }
+
+    def summary(self) -> str:
+        pref = (
+            "Model 1"
+            if self.model1_preferred
+            else ("Model 2" if self.model2_preferred else "Neither")
+        )
+        return (
+            f"Vuong Test: {self.vuong_statistic:.3f} (p={self.pvalue:.3f})\n"
+            f"Preferred model: {pref}"
+        )
+
+
+class VuongTest:
+    """Vuong (1995) test for comparing non-nested models.
+
+    Tests H0: Both models fit equally well.
+    Tests H1a: Model 1 is better.
+    Tests H1b: Model 2 is better.
+
+    Usage:
+        vuong = VuongTest()
+        result = vuong.compare(model1_loglik, model2_loglik)
+    """
+
+    def __init__(self, robust: bool = True):
+        self.robust = robust
+
+    def compare(
+        self,
+        model1_loglik: np.ndarray | pd.Series,
+        model2_loglik: np.ndarray | pd.Series,
+        aic1: float | None = None,
+        aic2: float | None = None,
+        bic1: float | None = None,
+        bic2: float | None = None,
+    ) -> VuongTestResult:
+        """Compare two non-nested models using the Vuong test.
+
+        Parameters
+        ----------
+        model1_loglik : array-like
+            Pointwise log-likelihoods from model 1 (length n_obs).
+        model2_loglik : array-like
+            Pointwise log-likelihoods from model 2 (length n_obs).
+        aic1, aic2 : float, optional
+            AIC values for both models.
+        bic1, bic2 : float, optional
+            BIC values for both models.
+
+        Returns
+        -------
+        VuongTestResult
+        """
+        if isinstance(model1_loglik, pd.Series):
+            model1_loglik = model1_loglik.values
+        if isinstance(model2_loglik, pd.Series):
+            model2_loglik = model2_loglik.values
+
+        model1_loglik = np.asarray(model1_loglik, dtype=float).flatten()
+        model2_loglik = np.asarray(model2_loglik, dtype=float).flatten()
+
+        if len(model1_loglik) != len(model2_loglik):
+            raise ValueError(
+                f"Log-likelihood arrays must have same length: "
+                f"{len(model1_loglik)} vs {len(model2_loglik)}"
+            )
+
+        valid_mask = ~(np.isnan(model1_loglik) | np.isnan(model2_loglik))
+        lr = model1_loglik[valid_mask] - model2_loglik[valid_mask]
+        n_obs = int(valid_mask.sum())
+
+        if n_obs < 10:
+            raise ValueError(f"Need at least 10 observations, got {n_obs}")
+
+        lr_numerator = np.mean(lr)
+        lr_denominator = np.var(lr, ddof=1)
+
+        if lr_denominator <= 0:
+            return VuongTestResult(
+                vuong_statistic=0.0,
+                pvalue=1.0,
+                model1_preferred=False,
+                model2_preferred=False,
+                neither_preferred=True,
+                lr_numerator=lr_numerator,
+                lr_denominator=0.0,
+                n_obs=n_obs,
+                aic_model1=aic1,
+                aic_model2=aic2,
+                bic_model1=bic1,
+                bic_model2=bic2,
+            )
+
+        vuong_stat = lr_numerator / np.sqrt(lr_denominator / n_obs)
+
+        from scipy import stats
+        pvalue = 2.0 * (1.0 - stats.norm.cdf(abs(vuong_stat)))
+
+        model1_preferred = vuong_stat > 1.96
+        model2_preferred = vuong_stat < -1.96
+        neither_preferred = not model1_preferred and not model2_preferred
+
+        return VuongTestResult(
+            vuong_statistic=vuong_stat,
+            pvalue=pvalue,
+            model1_preferred=model1_preferred,
+            model2_preferred=model2_preferred,
+            neither_preferred=neither_preferred,
+            lr_numerator=lr_numerator,
+            lr_denominator=lr_denominator,
+            n_obs=n_obs,
+            aic_model1=aic1,
+            aic_model2=aic2,
+            bic_model1=bic1,
+            bic_model2=bic2,
+        )
+
+    def compare_from_models(
+        self,
+        model1_residuals: np.ndarray,
+        model1_sigma2: float,
+        model2_residuals: np.ndarray,
+        model2_sigma2: float,
+    ) -> VuongTestResult:
+        """Compare models given residuals and variance estimates.
+
+        For OLS/linear models, computes Gaussian log-likelihoods:
+        LL = -n/2 * log(2*pi*sigma2) - 1/(2*sigma2) * sum(resid^2)
+        """
+        n = len(model1_residuals)
+        ll1 = (
+            -n / 2 * np.log(2 * np.pi * model1_sigma2)
+            - 0.5 / model1_sigma2 * np.sum(model1_residuals**2)
+        )
+        ll2 = (
+            -n / 2 * np.log(2 * np.pi * model2_sigma2)
+            - 0.5 / model2_sigma2 * np.sum(model2_residuals**2)
+        )
+
+        ll1_arr = np.full(n, ll1 / n)
+        ll2_arr = np.full(n, ll2 / n)
+
+        return self.compare(ll1_arr, ll2_arr)
+
+
+# ─── Mediation Analysis ────────────────────────────────────────────────────────
+
+
+class MediationAnalysis:
+    """Sobel-Mediation analysis for mechanism testing.
+
+    Tests whether the effect of X on Y operates through mediator M.
+    Total effect = Direct effect + Indirect effect (through M).
+    """
+
+    def sobel_test(
+        self,
+        a_coef: float,
+        a_se: float,
+        b_coef: float,
+        b_se: float,
+    ) -> dict:
+        """Sobel (1982) mediation test.
+
+        Indirect effect = a * b
+        SE(Indirect) = sqrt(a^2 * SE_b^2 + b^2 * SE_a^2)
+        Z = (a * b) / SE_indirect
+        """
+        indirect = a_coef * b_coef
+        se_indirect = np.sqrt(a_coef**2 * b_se**2 + b_coef**2 * a_se**2)
+
+        if se_indirect <= 0:
+            return {
+                "indirect_effect": indirect,
+                "se_indirect": se_indirect,
+                "z_statistic": np.nan,
+                "pvalue": np.nan,
+                "significant": False,
+                "note": "SE could not be computed",
+            }
+
+        z_stat = indirect / se_indirect
+
+        from scipy import stats
+        pvalue = 2.0 * (1.0 - stats.norm.cdf(abs(z_stat)))
+
+        return {
+            "indirect_effect": indirect,
+            "se_indirect": se_indirect,
+            "z_statistic": z_stat,
+            "pvalue": pvalue,
+            "significant": pvalue < 0.05,
+            "note": "Significant" if pvalue < 0.05 else "Not significant",
+        }
+
+    def bootstrap_mediation(
+        self,
+        X: np.ndarray,
+        M: np.ndarray,
+        Y: np.ndarray,
+        n_bootstrap: int = 1000,
+        seed: int = 42,
+    ) -> dict:
+        """Bootstrap mediation analysis with percentile confidence intervals.
+
+        Parameters
+        ----------
+        X : array (n_obs,) — independent variable
+        M : array (n_obs,) — mediator
+        Y : array (n_obs,) — dependent variable
+        n_bootstrap : int — number of bootstrap samples
+        seed : int — random seed
+        """
+        rng = np.random.default_rng(seed)
+        n = len(X)
+        indirect_effects = []
+
+        for _ in range(n_bootstrap):
+            idx = rng.integers(0, n, size=n)
+            X_b, M_b, Y_b = X[idx], M[idx], Y[idx]
+
+            from sklearn.linear_model import LinearRegression
+
+            lr1 = LinearRegression().fit(X_b.reshape(-1, 1), M_b)
+            a_coef = lr1.coef_[0]
+
+            lr2 = LinearRegression().fit(np.column_stack([X_b, M_b]), Y_b)
+            b_coef = lr2.coef_[1]
+
+            indirect_effects.append(a_coef * b_coef)
+
+        indirect_effects = np.array(indirect_effects)
+        indirect_mean = np.mean(indirect_effects)
+        indirect_se = np.std(indirect_effects, ddof=1)
+
+        ci_lower = np.percentile(indirect_effects, 2.5)
+        ci_upper = np.percentile(indirect_effects, 97.5)
+
+        pvalue = 2.0 * min(
+            np.mean(indirect_effects < 0),
+            np.mean(indirect_effects > 0),
+        )
+
+        return {
+            "indirect_effect": indirect_mean,
+            "se_bootstrap": indirect_se,
+            "ci_lower": ci_lower,
+            "ci_upper": ci_upper,
+            "pvalue_bootstrap": pvalue,
+            "n_bootstrap": n_bootstrap,
+            "significant": ci_lower > 0 or ci_upper < 0,
+        }
+
+
+# ─── Sensitivity Analysis ───────────────────────────────────────────────────────
+
+
+class SensitivityAnalysis:
+    """Sensitivity checks for causal inference.
+
+    Implements:
+    - Rosenbaum bounds (treatment effect sensitivity to hidden bias)
+    - Oller-based sensitivity (omit-variable bias bounds)
+    - Placebo tests (false treatment effect robustness)
+    """
+
+    def rosenbaum_bounds(
+        self,
+        treated_outcomes: np.ndarray,
+        control_outcomes: np.ndarray,
+        gamma_range: tuple[float, float] | None = None,
+    ) -> dict:
+        """Rosenbaum bounds for sensitivity to hidden bias.
+
+        Computes the range of treatment effects under different levels
+        of unmeasured confounding (gamma = odds of treatment).
+
+        Parameters
+        ----------
+        treated_outcomes : array
+            Outcomes in treated group.
+        control_outcomes : array
+            Outcomes in control group.
+        gamma_range : tuple
+            Range of gamma values to evaluate.
+
+        Returns
+        -------
+        dict with bounds at each gamma value.
+        """
+        from scipy import stats
+
+        if gamma_range is None:
+            gamma_range = (1.0, 3.0)
+
+        gamma_values = np.linspace(gamma_range[0], gamma_range[1], 20)
+        tau_treated = np.mean(treated_outcomes)
+        tau_control = np.mean(control_outcomes)
+        ate = tau_treated - tau_control
+
+        # Wilcoxon rank-sum statistic
+        n1, n2 = len(treated_outcomes), len(control_outcomes)
+        all_obs = np.concatenate([treated_outcomes, control_outcomes])
+        ranks = stats.rankdata(all_obs)
+        T_obs = np.sum(ranks[:n1])
+
+        results = {}
+        for gamma in gamma_values:
+            # Upper bound (most favorable to treated)
+            alpha = gamma / (1 + gamma)
+            pval_hi = 1.0 - stats.hypergeom.cdf(int(T_obs - 1), n1 + n2, n1, int(n1 * alpha))
+            # Lower bound (most favorable to control)
+            alpha_lo = 1.0 / (1 + gamma)
+            pval_lo = stats.hypergeom.cdf(int(T_obs), n1 + n2, n1, int(n1 * alpha_lo))
+
+            results[float(gamma)] = {
+                "ate_point_estimate": ate,
+                "pvalue_upper": pval_hi,
+                "pvalue_lower": pval_lo,
+                "significant_at_05": pval_hi < 0.05,
+            }
+
+        return {
+            "ate": ate,
+            "n_treated": n1,
+            "n_control": n2,
+            "bounds": results,
+            "note": "Rosenbaum bounds: gamma = odds of treatment, p<0.05 means significant",
+        }
+
+    def omit_variable_bias(
+        self,
+        coef: float,
+        se: float,
+        r2_xz: float,
+        r2_yz_on_x: float,
+    ) -> dict:
+        """Omitter-style sensitivity to omitted variable bias (Cinelli & Hazlett 2020).
+
+        Computes the R² of an unobserved confounder (Z) required to
+        fully explain away the treatment effect.
+
+        Parameters
+        ----------
+        coef : float
+            Estimated treatment coefficient.
+        se : float
+            Standard error of the coefficient.
+        r2_xz : float
+            R² of relationship between treatment (X) and confounder (Z).
+        r2_yz_on_x : float
+            Partial R² of confounder (Z) on outcome (Y) controlling for X.
+
+        Returns
+        -------
+        dict with sensitivity metrics.
+        """
+        t_stat = coef / se if se > 1e-10 else np.inf
+
+        # Critical R² values for full attenuation
+        if abs(t_stat) < 1e-10:
+            return {
+                "t_statistic": t_stat,
+                "r2_yz_critical": np.inf,
+                "note": "Coefficient is zero",
+            }
+
+        r2_yz_critical = (coef**2) / (coef**2 + se**2 * (1 - r2_xz) / r2_xz)
+
+        return {
+            "t_statistic": t_stat,
+            "coef": coef,
+            "se": se,
+            "r2_xz": r2_xz,
+            "r2_yz_critical": float(max(0.0, min(1.0, r2_yz_critical))),
+            "interpretation": (
+                f"An unobserved confounder with R²_yz>={r2_yz_critical:.3f} "
+                f"would fully explain away the treatment effect."
+            ),
+        }
+
+    def placebo_test(
+        self,
+        data: pd.DataFrame,
+        outcome: str,
+        treatment: str,
+        fake_treatment_col: str | None = None,
+        n_placebos: int = 100,
+        seed: int = 42,
+    ) -> dict:
+        """Placebo test: estimate treatment effect on pre-treatment outcomes.
+
+        If the "treatment" truly causes the outcome, it should have
+        no effect on outcomes that precede treatment (placebo outcomes).
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Panel data with outcome and treatment.
+        outcome : str
+            Name of outcome variable.
+        treatment : str
+            Name of treatment variable.
+        fake_treatment_col : str, optional
+            Column name for placebo treatment (if already constructed).
+        n_placebos : int
+            Number of random placebo assignments (if no fake_treatment_col).
+
+        Returns
+        -------
+        dict with placebo p-values.
+        """
+        df = data.copy()
+        rng = np.random.default_rng(seed)
+
+        if fake_treatment_col and fake_treatment_col in df.columns:
+            # Use pre-specified placebo treatment
+            treated = df[df[fake_treatment_col] == 1][outcome].dropna()
+            control = df[df[fake_treatment_col] == 0][outcome].dropna()
+            if len(treated) > 0 and len(control) > 0:
+                placebo_effect = float(treated.mean() - control.mean())
+                placebo_pval = self._permutation_pval(
+                    df[outcome].values, df[fake_treatment_col].values, rng
+                )
+            else:
+                placebo_effect = 0.0
+                placebo_pval = 1.0
+            return {
+                "placebo_effect": placebo_effect,
+                "placebo_pvalue": placebo_pval,
+                "interpretation": (
+                    "Significant placebo effect suggests pre-treatment imbalance."
+                    if placebo_pval < 0.05
+                    else "No significant placebo effect — supports validity."
+                ),
+            }
+
+        # Random permutation placebo
+        effects = []
+        treatment_arr = df[treatment].values.astype(int)
+        outcome_arr = df[outcome].values.astype(float)
+        valid = ~(np.isnan(outcome_arr) | np.isnan(treatment_arr.astype(float)))
+        outcome_clean = outcome_arr[valid]
+        treat_clean = treatment_arr[valid]
+
+        true_effect = float(
+            np.mean(outcome_clean[treat_clean == 1])
+            - np.mean(outcome_clean[treat_clean == 0])
+        )
+
+        for _ in range(n_placebos):
+            shuffled = rng.permutation(treat_clean)
+            effect = float(
+                np.mean(outcome_clean[shuffled == 1])
+                - np.mean(outcome_clean[shuffled == 0])
+            )
+            effects.append(effect)
+
+        effects = np.array(effects)
+        pval = float(np.mean(np.abs(effects) >= abs(true_effect)))
+
+        return {
+            "true_effect": true_effect,
+            "placebo_effects_mean": float(np.mean(effects)),
+            "placebo_effects_std": float(np.std(effects)),
+            "pvalue": pval,
+            "n_placebos": n_placebos,
+            "interpretation": (
+                "Significant placebo effect — treatment may not be causal."
+                if pval < 0.05
+                else "No significant placebo effect — supports causal interpretation."
+            ),
+        }
+
+    def _permutation_pval(
+        self, outcome: np.ndarray, treatment: np.ndarray, rng
+    ) -> float:
+        """Compute permutation p-value for placebo test."""
+        true_effect = float(
+            np.mean(outcome[treatment == 1]) - np.mean(outcome[treatment == 0])
+        )
+        effects = []
+        for _ in range(999):
+            shuffled = rng.permutation(treatment)
+            eff = float(
+                np.mean(outcome[shuffled == 1]) - np.mean(outcome[shuffled == 0])
+            )
+            effects.append(eff)
+        return float(np.mean(np.abs(effects) >= abs(true_effect)))
+
+
 # ─── Exports ──────────────────────────────────────────────────────────────────
 
 
@@ -2079,5 +2609,9 @@ __all__ = [
     "SunAbrahamIWEE",
     "FamaMacBeth",
     "BaconDeComposed",
+    "VuongTest",
+    "VuongTestResult",
+    "MediationAnalysis",
+    "SensitivityAnalysis",
 ]
 

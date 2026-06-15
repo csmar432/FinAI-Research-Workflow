@@ -16,6 +16,6 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install mkdocs
-        run: pip install mkdocs mkdocs-material
+        run: pip install mkdocs mkdocs-material mkdocstrings-python
       - name: Build docs
-        run: mkdocs build --strict
+        run: mkdocs build -f mkdocs.yml

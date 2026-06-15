@@ -54,10 +54,6 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-# Install dependencies
-pip install -e .
-```
-
 ### Verify Installation
 
 ```bash
@@ -115,7 +111,7 @@ python scripts/setup_wizard.py --status
 
 | Key | Required | Service | Get Key From |
 |-----|----------|---------|--------------|
-| `TUSHARE_API_KEY` | Optional | A-share data (full access) | [tushare.pro](https://tushare.pro/register) |
+| `TUSHARE_TOKEN` | Optional | A-share data (full access) | [tushare.pro](https://tushare.pro/register) |
 | `EODHD_API_KEY` | Optional | Macro data (yield curve, calendar) | [eodhd.com](https://eodhd.com) |
 | `FRED_API_KEY` | Optional | US macro (GDP, CPI) | [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) |
 | `BRAVE_SEARCH_API_KEY` | Optional | Web search | [brave.com/search/api](https://brave.com/search/api/) |
@@ -128,7 +124,7 @@ DEEPSEEK_API_KEY=sk-your-deepseek-key-here
 RELAY_API_KEY=your-relay-key-here
 
 # Data Sources (optional)
-TUSHARE_API_KEY=your-tushare-token
+TUSHARE_TOKEN=your-tushare-token
 EODHD_API_KEY=your-eodhd-key
 FRED_API_KEY=your-fred-key
 
@@ -150,17 +146,18 @@ The system will automatically route tasks to the appropriate model.
 
 ### Overview
 
-The system includes 25+ MCP servers providing financial data:
+The system includes 43 MCP servers providing financial data:
 
 | Category | Servers |
 |----------|---------|
-| **A-shares** | `user-tushare`, `user-eastmoney*`, `user-csmar`, `user-wind` |
-| **Macro** | `user-financial`, `user-wb-data`, `user-imf-data`, `user-oecd-data` |
-| **US Stocks** | `user-yfinance`, `user-finviz-sec`, `user-eodhd` |
-| **Academic** | `user-arxiv`, `user-nber-wp` |
-| **Utilities** | `user-filesystem-mcp`, `user-latex-mcp`, `user-e2b-mcp` |
+| **A-shares** | `user-tushare`, `user-csmar`, `user-wind`, `user-eastmoney-reports`, `user-eastmoney-fund`, `user-eastmoney-bond`, `user-eastmoney-option` |
+| **Macro** | `user-financial`, `user-wb-data`, `user-imf-data`, `user-oecd-data`, `user-bea-data`, `user-fed-data`, `user-macro-ceic`, `user-macro-datas`, `user-macro-stats` |
+| **US Stocks** | `user-yfinance`, `user-eodhd`, `user-sec-edgar` |
+| **Academic** | `user-arxiv`, `user-nber-wp`, `user-openalex`, `user-context7`, `user-semantic-scholar`, `user-chinese-literature` |
+| **Provincial Stats** | `user-province-stats`, `user-hubei-stats`, `user-wuhan-stats` |
+| **Utilities** | `user-filesystem-mcp`, `user-latex-mcp`, `user-e2b-mcp`, `user-pandas-mcp`, `user-playwright-mcp` |
 
-*EastMoney servers: reports, fund, option, bond (no API key required)
+Most servers require no API key. See [docs/tutorials/04-mcp-marketplace.md](docs/tutorials/04-mcp-marketplace.md) for the complete catalog.
 
 ### Cursor MCP Integration
 
@@ -277,7 +274,7 @@ OLLAMA_CONFIG = {
 ### Run All Tests
 
 ```bash
-cd /Users/xuzheyi/Desktop/论文-研报工作流
+cd /path/to/论文-研报工作流
 python -m pytest tests/ -v --tb=short
 ```
 
@@ -291,17 +288,19 @@ python scripts/agent.py --test
 python scripts/core/mcp_tool_market.py --report
 
 # Test data fetching
-python scripts/research_framework/data_fetcher.py --test
+# 测试数据获取（通过 Python API）
+from scripts.research_framework.data_fetcher import DataFetcher
+fetcher = DataFetcher()
 
-# Test literature search
-python scripts/literature_manager.py --search "carbon trading innovation"
+# Test literature search (use AI Agent or research_framework pipeline)
+python scripts/research_framework/pipeline.py --topic "carbon trading innovation"
 ```
 
 ### Test Paper Pipeline
 
 ```bash
 # Generate a test paper
-python scripts/agent_pipeline.py --topic "测试：AI在金融领域的应用" --test
+python scripts/agent.py --goal "测试：AI在金融领域的应用"
 ```
 
 ### Verify Dashboard
@@ -402,11 +401,11 @@ pip install -e .
 
 ### Getting Help
 
-1. Check existing issues: [GitHub Issues](https://github.com/YOUR_USERNAME/fin-research-workflow/issues)
+1. Check existing issues: [GitHub Issues](https://github.com/csmar432/论文-研报工作流/issues)
 2. Run with verbose logging:
 
 ```bash
-python scripts/agent_pipeline.py --topic "xxx" --verbose
+python scripts/agent.py --goal "xxx" --verbose
 ```
 
 3. Check logs in `logs/` directory
@@ -433,7 +432,7 @@ python scripts/agent_pipeline.py --topic "xxx" --verbose
 | `.env.example` | Template for .env |
 | `config/llm_config.json` | Model configuration |
 | `config/project_config.json` | Project settings |
-| `papers/` | Output directory |
+| `output/` | Output directory |
 | `data/` | Input data directory |
 | `logs/` | Log files |
 

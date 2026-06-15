@@ -1,7 +1,7 @@
 {
   "name": "get_context7_by_doi",
   "description": "通过 DOI 获取论文全文内容",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
       "doi": {
@@ -9,6 +9,9 @@
         "description": "论文 DOI，例如 '10.1038/nature12373'"
       }
     },
-    "required": ["doi"]
+    "required": [
+      "doi"
+    ],
+    "description": "通过 DOI 获取论文全文内容。"
   }
 }

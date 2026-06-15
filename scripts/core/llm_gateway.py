@@ -18,12 +18,21 @@ Usage:
 MCP Tool Usage:
     from scripts.core.llm_gateway import call_mcp_tool
 
-    data = call_mcp_tool("user-yfinance", "get_stock_info", {"ticker": "AAPL"})
+    data = call_mcp_tool("user-yfinance", "get_yf_quote", {"ticker": "AAPL"})
 """
 
 from __future__ import annotations
 
+__all__ = [
+    "MCPResult",
+    "LLMCallResult",
+    "CostStats",
+    "LLMGateway",
+    "call_mcp_tool",
+]
+
 import json
+import logging
 import os
 import re
 import subprocess
@@ -129,6 +138,9 @@ _mcp_registry_lock = threading.Lock()
 _MCP_TIMEOUT: float = float(os.environ.get("RESEARCH_MCP_TIMEOUT", "30.0"))
 
 
+_mcp_log = logging.getLogger("llm_gateway.mcp")
+
+
 def _get_mcp_server_cmd(server_name: str) -> list[str] | None:
     """Read mcp.json and return the command/args for a server, or None if not found.
     Searches all platform-aware MCP config paths (Cursor, Claude Code, VS Code, project-local).
@@ -146,7 +158,11 @@ def _get_mcp_server_cmd(server_name: str) -> list[str] | None:
                     args = srv.get("args", [])
                     return [cmd] + args
         return None
-    except Exception:
+    except (json.JSONDecodeError, OSError) as e:
+        _mcp_log.warning("Failed to read MCP config %s: %s", config_file, e)
+        return None
+    except Exception as e:
+        _mcp_log.error("Unexpected error reading MCP config %s: %s", config_file, e, exc_info=True)
         return None
 
 
@@ -243,7 +259,13 @@ def _call_via_venv_subprocess(server: str, tool: str, arguments: dict,
             return None
         result = json.loads(output)
         return result
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception) as exc:
+        # Log instead of silent swallow — makes debugging MCP failures possible
+        import logging as _ll
+        _ll.getLogger("llm_gateway.mcp").warning(
+            "MCP venv fallback failed for %s/%s: %s",
+            server, tool, exc
+        )
         return None
 
 
@@ -289,17 +311,17 @@ def call_mcp_tool(server: str, tool: str, arguments: dict,
 
     Examples
     --------
-        # Get stock info
-        data = call_mcp_tool("user-yfinance", "get_stock_info",
-                             {"symbol": "AAPL"})
+        # Get stock quote
+        data = call_mcp_tool("user-yfinance", "get_yf_quote",
+                             {"ticker": "AAPL"})
 
         # Get price history
-        prices = call_mcp_tool("user-yfinance", "get_price_history",
-                              {"symbol": "AAPL", "interval": "1d"})
+        prices = call_mcp_tool("user-yfinance", "get_yf_historical",
+                              {"ticker": "AAPL", "start_date": "2024-01-01", "end_date": "2024-12-31"})
 
         # Get financial statements
-        financials = call_mcp_tool("user-yfinance", "get_financials",
-                                  {"symbol": "AAPL", "statement_type": "income"})
+        financials = call_mcp_tool("user-yfinance", "get_yf_financials",
+                                  {"ticker": "AAPL", "statement_type": "income"})
     """
     start = time.time()
     result = _call_via_venv_subprocess(server, tool, arguments, timeout)
@@ -360,14 +382,20 @@ def call_mcp_tool(server: str, tool: str, arguments: dict,
                     if "result" in resp:
                         result_data = resp["result"]
                         is_mock = False
-                        if isinstance(result_data, dict) and result_data.get("_mock") is True:
-                            is_mock = True
-                        elif isinstance(result_data, dict) and "_mock" not in result_data:
-                            # Also check nested data fields
-                            for v in result_data.values():
-                                if isinstance(v, dict) and v.get("_mock") is True:
-                                    is_mock = True
-                                    break
+                        if isinstance(result_data, dict):
+                            def _has_mock(obj) -> bool:
+                                if isinstance(obj, dict):
+                                    if obj.get("_mock") is True:
+                                        return True
+                                    for v in obj.values():
+                                        if _has_mock(v):
+                                            return True
+                                elif isinstance(obj, list):
+                                    for item in obj:
+                                        if _has_mock(item):
+                                            return True
+                                return False
+                            is_mock = _has_mock(result_data)
                         return MCPResult(success=True, data=result_data,
                                          server=server, tool=tool,
                                          latency_ms=(time.time() - start) * 1000,
@@ -427,7 +455,7 @@ class LLMCallResult:
     cached: bool = False
     fallback_tried: list[str] = field(default_factory=list)
     call_id: str = ""
-    timestamp: float = field(default_factory=time.time)
+    timestamp: float = field(default_factory=lambda: time.time())
     tokens_used: int = 0
 
 
@@ -443,7 +471,7 @@ class CostStats:
     total_tokens_estimate: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
-    def record(self, cached: bool, latency_ms: float):
+    def record(self, cached: bool, latency_ms: float, tokens_used: int = 0):
         with self._lock:
             self.total_calls += 1
             if cached:
@@ -454,8 +482,7 @@ class CostStats:
                 self.total_cost_usd += 0.001
             else:
                 self.total_cost_usd += 0.01
-            # Rough token estimate from latency (1 token ≈ 50ms at avg speed)
-            self.total_tokens_estimate += int(latency_ms / 50)
+            self.total_tokens_estimate += tokens_used
 
 
 # ─── LLM Gateway ──────────────────────────────────────────────────────────────
@@ -561,7 +588,8 @@ class LLMGateway:
         latency_ms = (time.time() - start) * 1000
 
         # Record cost
-        self.stats.record(cached=ai_result.cached, latency_ms=latency_ms)
+        estimated_tokens = self._estimate_tokens(ai_result.response, latency_ms)
+        self.stats.record(cached=ai_result.cached, latency_ms=latency_ms, tokens_used=estimated_tokens)
 
         # Log to short-term memory
         self._log_call(
@@ -588,9 +616,10 @@ class LLMGateway:
         )
 
     def _estimate_tokens(self, response: str, latency_ms: float) -> int:
-        """Rough token estimate: word count × 1.3 + latency-based overhead."""
+        """Rough token estimate: word count × 1.3 + char/4 approximation."""
         words = len(response.split())
-        return int(words * 1.3) + int(latency_ms / 50)
+        chars = len(response)
+        return int(words * 1.3 + chars / 4)
 
     def generate_batch(
         self,
@@ -660,7 +689,11 @@ class LLMGateway:
             for future in concurrent.futures.as_completed(futures):
                 try:
                     results.append(future.result())
-                except Exception:
+                except Exception as exc:
+                    import logging as _bl
+                    _bl.getLogger("llm_gateway.batch").warning(
+                        "Batch parallel call failed: %s", exc
+                    )
                     results.append(LLMCallResult(
                         response="",
                         model_used="unknown",

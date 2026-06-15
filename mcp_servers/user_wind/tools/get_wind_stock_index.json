@@ -17,6 +17,7 @@
         "type": "string",
         "description": "结束日期 YYYYMMDD"
       }
-    }
+    },
+    "description": "获取主要股票指数行情（模拟Wind风格）。"
   }
 }

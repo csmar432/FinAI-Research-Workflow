@@ -1,8 +1,9 @@
 {
   "name": "get_wuhan_tech",
-  "description": "武汉科技创新数据",
+  "description": "查询武汉市科技创新数据，包括高新技术企业数量/研发投入/专利申请授权/技术合同成交额等指标。",
   "inputSchema": {
     "type": "object",
-    "properties": {}
+    "properties": {},
+    "description": "查询武汉市科技创新数据，包括高新技术企业数量/研发投入/专利申请授权/技术合同成交额等指标。"
   }
 }

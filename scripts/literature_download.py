@@ -54,8 +54,8 @@ _OA_BASE = "https://api.openalex.org"
 _NBER_BASE = "https://www.nber.org"
 
 _SS_HEADERS = {"Accept": "application/json", "User-Agent": "FinResearch-Agent/1.0"}
-_OA_HEADERS = {"User-Agent": "FinResearch-Agent/1.0 (mailto:xuzheyi@example.com)"}
-_ARXIV_UA = "FinResearch-Agent/1.0 (mailto:xuzheyi@example.com)"
+_OA_HEADERS = {"User-Agent": "FinResearch-Agent/1.0 (mailto:research@example.com)"}
+_ARXIV_UA = "FinResearch-Agent/1.0 (mailto:research@example.com)"
 
 _MIN_PDF_BYTES = 5_000  # 最小有效 PDF 大小
 
@@ -240,7 +240,8 @@ def get_semantic_details(paper_id: str) -> dict | None:
             return None
         resp.raise_for_status()
         return resp.json()
-    except Exception:
+    except (requests.RequestException, ValueError, OSError) as exc:
+        # Specific errors: network failure, JSON decode error, file I/O
         return None
 
 

@@ -1,13 +1,27 @@
 {
   "name": "latex_diff",
-  "description": "比较两个LaTeX文件，生成差异文档（latexdiff风格）。适合审稿时标注修改。\\n\\n",
+  "description": "比较两个LaTeX文件，生成差异文档（latexdiff风格）。适合审稿时标注修改。\\n\\nArgs:\\n  old_file: 旧版本tex文件\\n  new_file: 新版本tex文件\\n  output_file: 差异文件输出路径\\n\\nReturns: 差异分析结果",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "properties": {
-        "type": "string"
+      "old_file": {
+        "type": "string",
+        "description": "旧版本tex文件"
+      },
+      "new_file": {
+        "type": "string",
+        "description": "新版本tex文件"
+      },
+      "output_file": {
+        "type": "string",
+        "description": "差异tex文件输出路径"
       }
     },
-    "required": []
+    "required": [
+      "old_file",
+      "new_file",
+      "output_file"
+    ],
+    "description": "比较两个LaTeX文件，生成差异文档（latexdiff风格）。适合审稿时标注修改。"
   }
 }

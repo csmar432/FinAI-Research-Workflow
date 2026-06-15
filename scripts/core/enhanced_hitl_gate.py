@@ -464,7 +464,7 @@ class EnhancedHITLGate(HITLGate):
         序列化完整 HITL state（含 interrupt snapshot），
         供 CheckpointManager.save() 使用。
         """
-        base = super().get_state() if hasattr(super(), "get_state") else {}
+        base = super().get_state()
 
         pending = [
             {"gate_id": r.gate_id, "stage": r.stage, "state": r.state.value,

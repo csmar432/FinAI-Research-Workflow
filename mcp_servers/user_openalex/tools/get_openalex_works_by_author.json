@@ -1,0 +1,22 @@
+{
+  "name": "get_openalex_works_by_author",
+  "description": "获取特定作者的所有发表成果（通过作者ID查询）。无需 API Key。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "author_id": {
+        "type": "string",
+        "description": "OpenAlex 作者 ID（如 A123456789）"
+      },
+      "per_page": {
+        "type": "integer",
+        "description": "每页结果数（最大200）",
+        "default": 25
+      }
+    },
+    "required": [
+      "author_id"
+    ],
+    "description": "获取特定作者的所有发表成果（通过作者ID查询）。无需 API Key。"
+  }
+}

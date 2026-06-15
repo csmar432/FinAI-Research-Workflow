@@ -1,11 +1,17 @@
 {
   "name": "get_yf_news",
-  "description": "获取股票最新新闻",
-  "parameters": {
+  "description": "获取指定股票的最新财经新闻标题和摘要",
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "ticker": { "type": "string", "description": "股票代码，例如 'AAPL'" }
+      "ticker": {
+        "type": "string",
+        "description": "股票代码"
+      }
     },
-    "required": ["ticker"]
+    "required": [
+      "ticker"
+    ],
+    "description": "获取股票最新新闻。使用 Yahoo Finance API，无需 API Key。"
   }
 }

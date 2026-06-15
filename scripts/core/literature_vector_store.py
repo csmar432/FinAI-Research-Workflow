@@ -16,6 +16,16 @@ literature_vector_store.py — 学术论文向量文献库
 
 from __future__ import annotations
 
+__all__ = [
+    "PaperMetadata",
+    "PaperSection",
+    "LiteratureQueryResult",
+    "AcademicPaperChunker",
+    "LiteratureVectorStore",
+    "CHROMA_AVAILABLE",
+    "NP_AVAILABLE",
+]
+
 import hashlib
 import json
 import logging
