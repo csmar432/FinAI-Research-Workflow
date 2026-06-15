@@ -69,8 +69,8 @@ dependencies = [
     "fastmcp>=0.1.0",
     "mcp>=1.0.0",
     # ── LLM / AI ─────────────────────────────────────────────────────────────
-    "openai>=2.0.0",
-    "anthropic>=7.0.0",
+    "openai>=1.0.0",
+    "anthropic>=0.30.0",
     "httpx>=0.27.0",
     "tiktoken>=0.7.0",
     # ── 计量经济 ─────────────────────────────────────────────────────────────
@@ -175,6 +175,30 @@ Releases = "https://github.com/csmar432/论文-研报工作流/releases"
 # ── Hatch 构建配置 ───────────────────────────────────────────────
 [tool.hatch.build.targets.wheel]
 packages = ["scripts"]
+# 不打包的东西 (字符串数组)
+exclude = [
+    "tests",
+    "docs",
+    "papers",
+    "output",
+    "data",
+    "projects",
+    "canvases",
+    ".github",
+    "scripts/legacy",
+    "scripts/deprecated",
+    "scripts/__pycache__",
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/*.pyo",
+    "**/.DS_Store",
+    "**/.env",
+    "**/.env.local",
+    "**/Thumbs.db",
+    "**/*.db",
+    "**/*.db-journal",
+    "**/*.bak",
+]
 
 [tool.hatch.build.targets.wheel.force-include]
 # 数据/资源目录必须显式 include，否则 wheel 不含
@@ -184,30 +208,6 @@ packages = ["scripts"]
 "mcp_servers" = "finai_research_workflow/mcp_servers"
 "examples" = "finai_research_workflow/examples"
 "releases" = "finai_research_workflow/releases"
-
-[tool.hatch.build.targets.wheel.exclude]
-# 不打包的东西
-"tests/**" = "tests"
-"docs/**" = "docs"
-"papers/**" = "papers"
-"output/**" = "output"
-"data/**" = "data"
-"projects/**" = "projects"
-"canvases/**" = "canvases"
-".github/**" = ".github"
-"scripts/legacy/**" = "scripts/legacy"
-"scripts/deprecated/**" = "scripts/deprecated"
-"scripts/__pycache__/**" = "scripts/__pycache__"
-"**/__pycache__/**" = "**/__pycache__"
-"**/*.pyc" = "**/*.pyc"
-"**/*.pyo" = "**/*.pyo"
-"**/.DS_Store" = "**/.DS_Store"
-"**/.env" = "**/.env"
-"**/.env.local" = "**/.env.local"
-"**/Thumbs.db" = "**/Thumbs.db"
-"**/*.db" = "**/*.db"
-"**/*.db-journal" = "**/*.db-journal"
-"**/*.bak" = "**/*.bak"
 
 [tool.hatch.build.targets.sdist]
 include = [
