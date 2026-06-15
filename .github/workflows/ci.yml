@@ -83,7 +83,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          # Fetch current state (main is fine base)
+          git fetch origin main
+          # Create or rebase onto ci-debug
+          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
+            git fetch origin ci-debug
+            git checkout -B ci-debug origin/ci-debug
+            git rebase origin/main || true
+          else
+            git checkout -b ci-debug origin/main
+          fi
           mkdir -p .ci-fail-logs
           cp pytest-batch1.log .ci-fail-logs/batch1-${GITHUB_SHA:0:7}.log
           echo "### batch 1 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
@@ -138,7 +147,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          git fetch origin main
+          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
+            git fetch origin ci-debug
+            git checkout -B ci-debug origin/ci-debug
+            git rebase origin/main || true
+          else
+            git checkout -b ci-debug origin/main
+          fi
           mkdir -p .ci-fail-logs
           cp pytest-batch2.log .ci-fail-logs/batch2-${GITHUB_SHA:0:7}.log
           echo "### batch 2 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
@@ -199,7 +215,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          git fetch origin main
+          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
+            git fetch origin ci-debug
+            git checkout -B ci-debug origin/ci-debug
+            git rebase origin/main || true
+          else
+            git checkout -b ci-debug origin/main
+          fi
           mkdir -p .ci-fail-logs
           cp pytest-batch3.log .ci-fail-logs/batch3-${GITHUB_SHA:0:7}.log
           echo "### batch 3 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
@@ -259,7 +282,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          git fetch origin main
+          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
+            git fetch origin ci-debug
+            git checkout -B ci-debug origin/ci-debug
+            git rebase origin/main || true
+          else
+            git checkout -b ci-debug origin/main
+          fi
           mkdir -p .ci-fail-logs
           cp pytest-cs.log .ci-fail-logs/cs-${{ matrix.os }}-${GITHUB_SHA:0:7}.log
           echo "### cs (${{ matrix.os }}) fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
