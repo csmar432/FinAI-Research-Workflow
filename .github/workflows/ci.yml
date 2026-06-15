@@ -82,6 +82,13 @@ jobs:
           name: pytest-batch1-log
           path: pytest-batch1.log
           retention-days: 7
+      - name: Upload coverage data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-batch1
+          path: .coverage
+          retention-days: 7
       - name: Append fail log to issue tracker
         if: failure()
         uses: actions/github-script@v7
@@ -196,6 +203,13 @@ jobs:
           name: pytest-batch2-log
           path: pytest-batch2.log
           retention-days: 7
+      - name: Upload coverage data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-batch2
+          path: .coverage
+          retention-days: 7
       - name: Append fail log to issue tracker
         if: failure()
         uses: actions/github-script@v7
@@ -306,6 +320,13 @@ jobs:
         with:
           name: pytest-batch3-log
           path: pytest-batch3.log
+          retention-days: 7
+      - name: Upload coverage data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-batch3
+          path: .coverage
           retention-days: 7
       - name: Append fail log to issue tracker
         if: failure()
@@ -502,3 +523,48 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Build
         run: docker build -t finai-research-workflow:test .
+
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test-batch-1, test-batch-2, test-batch-3]
+    if: always()
+    steps:
+      - name: Skip when any test failed
+        if: needs.test-batch-1.result != 'success' || needs.test-batch-2.result != 'success' || needs.test-batch-3.result != 'success'
+        run: |
+          echo "::warning::Skipping coverage upload because at least one test batch did not succeed:"
+          echo "  batch 1: ${{ needs.test-batch-1.result }}"
+          echo "  batch 2: ${{ needs.test-batch-2.result }}"
+          echo "  batch 3: ${{ needs.test-batch-3.result }}"
+      - name: Download all coverage artifacts
+        if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage-data
+          merge-multiple: true
+      - name: Set up Python
+        if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install coverage reporter
+        if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
+        run: pip install coverage[toml]
+      - name: Combine coverage reports
+        if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
+        run: |
+          coverage combine coverage-data/.coverage.* || true
+          coverage report -m
+      - name: Upload to Codecov
+        if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-data/.coverage
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

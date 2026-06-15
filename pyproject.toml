@@ -337,3 +337,36 @@ filterwarnings = [
 # Set lower than production target to allow incremental improvement
 # 目标是 80%, 当前设为 60% (在 ci.yml 中)
 minversion = "7.0"
+
+# ── Coverage configuration ─────────────────────────────────────────────
+# 在 CI 中, 3 个 test batch 各自上传 .coverage 文件,
+# 由 coverage job 用 `coverage combine` 合并后上报 Codecov.
+[tool.coverage.run]
+branch = true
+source = ["scripts"]
+omit = [
+    "scripts/ci_verify.py",
+    "scripts/mcp_schema_check.py",
+    "scripts/keychain_setup.py",
+    "scripts/setup_wizard.py",
+    "scripts/universal_data_fetcher.py",
+    "scripts/research_directions/*",
+    "scripts/research_framework/journal_templates*.py",
+    "scripts/research_framework/chinese_journal*.py",
+    "scripts/research_framework/multilang*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "pass",
+    "\\.\\.\\.",
+    "except ImportError:",
+    "except ModuleNotFoundError:",
+]
+show_missing = true
+skip_covered = false
+precision = 1
