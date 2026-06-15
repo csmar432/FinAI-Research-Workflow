@@ -255,7 +255,9 @@ exclude = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+# GitHub Actions CI 用 Python 3.12, 这里必须设 3.12 (或更高)
+# 否则 3.12 引入的 f-string escape 语法会被 ruff 视为 invalid syntax
+target-version = "py312"
 
 [tool.ruff.lint]
 # 项目代码库历史遗留较多 PEP8/import 风格问题, 只启用核心规则
