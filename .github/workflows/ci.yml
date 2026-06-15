@@ -78,6 +78,20 @@ jobs:
           name: pytest-batch1-log
           path: pytest-batch1.log
           retention-days: 7
+      - name: Publish fail log to ci-debug branch
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          mkdir -p .ci-fail-logs
+          cp pytest-batch1.log .ci-fail-logs/batch1-${GITHUB_SHA:0:7}.log
+          echo "### batch 1 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
+          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
+          echo "" >> .ci-fail-logs/INDEX.md
+          git add .ci-fail-logs/
+          git commit -m "ci: batch 1 fail log @ ${GITHUB_SHA:0:7}" || true
+          git push -f origin ci-debug 2>&1 | tail -5 || true
       - name: Surface fail reason via step summary
         if: failure()
         run: |
@@ -119,6 +133,20 @@ jobs:
           name: pytest-batch2-log
           path: pytest-batch2.log
           retention-days: 7
+      - name: Publish fail log to ci-debug branch
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          mkdir -p .ci-fail-logs
+          cp pytest-batch2.log .ci-fail-logs/batch2-${GITHUB_SHA:0:7}.log
+          echo "### batch 2 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
+          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
+          echo "" >> .ci-fail-logs/INDEX.md
+          git add .ci-fail-logs/
+          git commit -m "ci: batch 2 fail log @ ${GITHUB_SHA:0:7}" || true
+          git push -f origin ci-debug 2>&1 | tail -5 || true
       - name: Surface fail reason via step summary
         if: failure()
         run: |
@@ -166,6 +194,20 @@ jobs:
           name: pytest-batch3-log
           path: pytest-batch3.log
           retention-days: 7
+      - name: Publish fail log to ci-debug branch
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          mkdir -p .ci-fail-logs
+          cp pytest-batch3.log .ci-fail-logs/batch3-${GITHUB_SHA:0:7}.log
+          echo "### batch 3 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
+          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
+          echo "" >> .ci-fail-logs/INDEX.md
+          git add .ci-fail-logs/
+          git commit -m "ci: batch 3 fail log @ ${GITHUB_SHA:0:7}" || true
+          git push -f origin ci-debug 2>&1 | tail -5 || true
       - name: Surface fail reason via step summary
         if: failure()
         run: |
@@ -212,6 +254,20 @@ jobs:
           name: pytest-cs-${{ matrix.os }}-log
           path: pytest-cs.log
           retention-days: 7
+      - name: Publish fail log to ci-debug branch
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ci-debug 2>/dev/null || git checkout ci-debug
+          mkdir -p .ci-fail-logs
+          cp pytest-cs.log .ci-fail-logs/cs-${{ matrix.os }}-${GITHUB_SHA:0:7}.log
+          echo "### cs (${{ matrix.os }}) fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
+          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
+          echo "" >> .ci-fail-logs/INDEX.md
+          git add .ci-fail-logs/
+          git commit -m "ci: cs (${{ matrix.os }}) fail log @ ${GITHUB_SHA:0:7}" || true
+          git push -f origin ci-debug 2>&1 | tail -5 || true
       - name: Surface fail reason via step summary
         if: failure()
         run: |
