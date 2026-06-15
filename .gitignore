@@ -145,18 +145,6 @@ scripts/core/interactive_explorer.py
 scripts/core/orchestrator_lg_bridge.py
 scripts/core/paper_deep_parser.py
 scripts/health_check_mcp.py
-scripts/research_framework/causal_ml.py
-scripts/research_framework/discrete_choice.py
-scripts/research_framework/green_bond_model.py
-scripts/research_framework/mediation_test.py
-scripts/research_framework/options_iv_surface.py
-scripts/research_framework/panel_cointegration.py
-scripts/research_framework/panel_threshold_regression.py
-scripts/research_framework/panel_var.py
-scripts/research_framework/prisma_compliance.py
-scripts/research_framework/survival_analysis.py
-scripts/research_framework/time_varying_models.py
-scripts/research_framework/volatility_models.py
 tests/test_debate_arena.py
 tests/test_debate_calibrator_bridge.py
 tests/test_econometrics_DEPRECATED.py
@@ -208,7 +196,6 @@ tests/test_health_check.py
 tests/test_hitl_gate.py
 tests/test_hitl_gate_comprehensive.py
 tests/test_idea_data_checker.py
-tests/test_journal_templates_multilang.py
 tests/test_multi_agent.py
 tests/test_orchestrator.py
 tests/test_orchestrator_comprehensive.py
@@ -231,5 +218,4 @@ scripts/benchmark_econometrics.py
 scripts/core/mock_data_governance.py
 scripts/deprecated/research_workflow.py
 scripts/entity_list_data_fetcher.py
-scripts/research_framework/journal_templates_multilang.py
 mcp_servers/user_chinese_literature/Dockerfile
