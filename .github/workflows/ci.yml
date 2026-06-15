@@ -544,7 +544,7 @@ jobs:
         with:
           pattern: coverage-*
           path: coverage-data
-          merge-multiple: true
+          merge-multiple: false
       - name: Set up Python
         if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
         uses: actions/setup-python@v5
@@ -557,21 +557,9 @@ jobs:
         if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
         run: |
           set -x
-          # download-artifact@v4 with merge-multiple=true writes each
-          # artifact under a directory of the same name:
-          #   coverage-data/coverage-batch1/.coverage
-          #   coverage-data/coverage-batch2/.coverage
-          #   coverage-data/coverage-batch3/.coverage
-          ls -la coverage-data/
+          ls -la coverage-data/ || true
           ls -la coverage-data/coverage-batch*/ 2>/dev/null || true
-          set +e
           coverage combine coverage-data/coverage-batch*/.coverage
-          COMBINE_RC=$?
-          set -e
-          if [ $COMBINE_RC -ne 0 ]; then
-            echo "::warning::coverage combine exited with $COMBINE_RC"
-            exit $COMBINE_RC
-          fi
           coverage report -m
       - name: Upload to Codecov
         if: needs.test-batch-1.result == 'success' && needs.test-batch-2.result == 'success' && needs.test-batch-3.result == 'success'
@@ -589,22 +577,21 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            let log = 'NO LOG';
-            // Re-derive the diagnostic from the previous step's log via
-            // the step summary, which is the only place GitHub guarantees
-            // a short, public message even when a job fails and step logs
-            // are auth-gated.
-            const head = process.env.COVERAGE_HEAD || 'coverage-data/';
             let listing = '';
             try {
               const { execSync } = require('child_process');
-              listing = execSync('ls -la coverage-data/ 2>&1; echo ---; ls -la coverage-data/coverage-batch*/ 2>&1 || true', { encoding: 'utf-8' });
+              listing = execSync(
+                'echo "=== workspace ==="; ls -la; ' +
+                'echo "=== coverage-data ==="; ls -laR coverage-data/ 2>&1 || true; ' +
+                'echo "=== find .coverage ==="; find . -name ".coverage*" -maxdepth 4 2>&1 || true',
+                { encoding: 'utf-8' }
+              );
             } catch (e) { listing = 'ls err: ' + e.message; }
             const body = [
               '### coverage fail @ ' + context.sha.slice(0,7),
               '',
               '```',
-              listing.slice(0, 4000),
+              listing.slice(0, 5000),
               '```',
             ].join('\n');
             const existing = await github.rest.issues.listForRepo({
