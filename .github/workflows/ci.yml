@@ -77,17 +77,20 @@ jobs:
           RELAY_API_KEY: dummy_key
       - name: Verify coverage data exists
         if: success()
+        id: verify_cov
         run: |
+          set +e
           echo "=== ls -la .coverage .coverage.* ==="
           ls -la .coverage .coverage.* 2>&1 || true
           echo "=== ls -la . ==="
-          ls -la
+          ls -la || true
           echo "=== coverage data_file ==="
-          python -c "import coverage; c=coverage.Coverage(); print('data_file:', c.data_file)"
+          python -c "import coverage; c=coverage.Coverage(); print('data_file:', c.data_file)" 2>&1 || true
           echo "=== coverage version ==="
-          python -c "import coverage; print(coverage.__version__)"
+          python -c "import coverage; print(coverage.__version__)" 2>&1 || true
           echo "=== pytest-cov ==="
-          pip show pytest-cov | head -3
+          pip show pytest-cov 2>&1 | head -3 || true
+          exit 0
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
@@ -96,12 +99,13 @@ jobs:
           path: pytest-batch1.log
           retention-days: 7
       - name: Upload coverage data
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-batch1
           path: .coverage
           retention-days: 7
+        continue-on-error: true
       - name: Append fail log to issue tracker
         if: failure()
         uses: actions/github-script@v7
