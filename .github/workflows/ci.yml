@@ -70,7 +70,7 @@ jobs:
             tests/test_checkpoint.py tests/test_event_monitor.py \
             tests/test_llm_gateway.py tests/test_session.py \
             tests/test_tool_selector.py \
-            --cov=scripts --cov-append --cov-branch --tb=long --timeout=60 --maxfail=10 -rfE \
+            --cov=scripts --cov-branch --tb=long --timeout=60 --maxfail=10 -rfE \
             -v 2>&1 | tee pytest-batch1.log
         env:
           DEEPSEEK_API_KEY: dummy_key
@@ -82,6 +82,12 @@ jobs:
           ls -la .coverage* || echo "NO .coverage FOUND"
           echo "=== ls -la . ==="
           ls -la
+          echo "=== coverage data_file ==="
+          python -c "import coverage; c=coverage.Coverage(); print('data_file:', c.data_file)"
+          echo "=== coverage version ==="
+          python -c "import coverage; print(coverage.__version__)"
+          echo "=== pytest-cov ==="
+          pip show pytest-cov | head -3
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
