@@ -1,0 +1,4138 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="经济金融领域 AI 学术研究工作流文档">
+      
+      
+        <meta name="author" content="FinAI Research Workflow Contributors">
+      
+      
+        <link rel="canonical" href="https://csmar432.github.io/finai-research-workflow/api_reference/">
+      
+      
+        <link rel="prev" href="../tutorials/05-event-driven-research/">
+      
+      
+        <link rel="next" href="../ARCHITECTURE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>API 参考 - FinResearch Agent 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="FinResearch Agent 文档" class="md-header__button md-logo" aria-label="FinResearch Agent 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FinResearch Agent 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API 参考
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/csmar432/finai-research-workflow" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    csmar432/finai-research-workflow
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../tutorials/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/01-quickstart/" class="md-tabs__link">
+          
+  
+  
+  快速入门
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/04-mcp-marketplace/" class="md-tabs__link">
+          
+  
+  
+  MCP 工具
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../tutorials/05-event-driven-research/" class="md-tabs__link">
+          
+  
+  
+  进阶
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../ARCHITECTURE/" class="md-tabs__link">
+          
+  
+  
+  项目
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="FinResearch Agent 文档" class="md-nav__button md-logo" aria-label="FinResearch Agent 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FinResearch Agent 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/csmar432/finai-research-workflow" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    csmar432/finai-research-workflow
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速入门
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    快速入门
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/01-quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/02-financial-report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    金融研究报告
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/03-research-directions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    研究方向设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP 工具
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MCP 工具
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/04-mcp-marketplace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP 市场
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../external_data_sources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据源参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    进阶
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    进阶
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/05-event-driven-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事件驱动研究
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agentorchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentOrchestrator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AgentOrchestrator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-agentorchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: AgentOrchestrator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: AgentOrchestrator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__gateway-llmgateway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(gateway: LLMGateway)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#registeragent-baseagent-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register(agent: BaseAgent) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run_pipelinename-str-input_data-dict-pipelineresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_pipeline(name: str, input_data: dict) -&gt; PipelineResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run_parallelagent_names-liststr-input_data-dict-dictstr-agentresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_parallel(agent_names: list[str], input_data: dict) -&gt; dict[str, AgentResult]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_default_agents-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_default_agents() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_financial_agents-parallelanalystorchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_financial_agents() -&gt; ParallelAnalystOrchestrator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cancel_agentagent_name-str-reason-str-bool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cancel_agent(agent_name: str, reason: str) -&gt; bool
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enum-pipelinestage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enum: PipelineStage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-pipelineresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: PipelineResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#provenancetracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProvenanceTracker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ProvenanceTracker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-provenancetracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: ProvenanceTracker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: ProvenanceTracker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__session_id-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(session_id: str = "")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_data_sourcenode_id-str-source-str-mcp_server-str-mcp_tool-str-api_params-dict-description-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_data_source(node_id: str, source: str, mcp_server: str, mcp_tool: str, api_params: dict, description: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_transformationnode_id-str-transformation-str-parent_ids-liststr-description-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_transformation(node_id: str, transformation: str, parent_ids: list[str], description: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_chartnode_id-str-title-str-data_source_ref-str-chart_type-str-output_path-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_chart(node_id: str, title: str, data_source_ref: str, chart_type: str, output_path: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_tablenode_id-str-title-str-data_source_ref-str-table_type-str-output_path-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_table(node_id: str, title: str, data_source_ref: str, table_type: str, output_path: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_lineagenode_id-str-listprovenancenode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_lineage(node_id: str) -&gt; list[ProvenanceNode]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_latex_provenancenode_id-str-none-none-include_checksum-bool-true-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_latex_provenance(node_id: str | None = None, include_checksum: bool = True) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#to_graphvizdirection-str-tb-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_graphviz(direction: str = "TB") -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#savefilepath-str-none-loadfilepath-str-provenancetracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save(filepath: str) -&gt; None / load(filepath: str) -&gt; ProvenanceTracker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-provenancenode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: ProvenanceNode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decorators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decorators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcptoolregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCPToolRegistry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MCPToolRegistry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-toolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: ToolMetadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-mcptoolregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: MCPToolRegistry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: MCPToolRegistry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from_directorypath-str-path-mcptoolregistry-classmethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_directory(path: str | Path) -&gt; MCPToolRegistry (classmethod)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#searchquery-str-category-str-none-none-max_results-int-10-listtoolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        search(query: str, category: str | None = None, max_results: int = 10) -&gt; list[ToolMetadata]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_by_serverserver-str-listtoolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_by_server(server: str) -&gt; list[ToolMetadata]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_by_categorycategory-str-listtoolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_by_category(category: str) -&gt; list[ToolMetadata]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_marketplace_report-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_marketplace_report() -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#to_json-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_json() -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#print_catalogcategory-str-none-none-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        print_catalog(category: str | None = None) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#global-singleton" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Singleton
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calibrationdataset-calibrationanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CalibrationDataset &amp; CalibrationAnalyzer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CalibrationDataset &amp; CalibrationAnalyzer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-calibrationdataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: CalibrationDataset
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: CalibrationDataset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init___1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_samplesample-calibrationsample-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        add_sample(sample: CalibrationSample) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_builtin_dataset-calibrationdataset-classmethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_builtin_dataset() -&gt; CalibrationDataset (classmethod)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_from_jsonpath-str-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_from_json(path: str) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save_to_jsonpath-str-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save_to_json(path: str) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_benchmark_stats-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_benchmark_stats() -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-calibrationanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: CalibrationAnalyzer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: CalibrationAnalyzer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__dataset-calibrationdataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(dataset: CalibrationDataset)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluate_reviewerreviewer-calibrationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        evaluate_reviewer(reviewer) -&gt; CalibrationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generate_calibration_reportresult-calibrationresult-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generate_calibration_report(result: CalibrationResult) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-calibrationsample" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: CalibrationSample
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#econometricsruleengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EconometricsRuleEngine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EconometricsRuleEngine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-econometricsruleengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: EconometricsRuleEngine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: EconometricsRuleEngine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init___2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validatemethod-str-params-dict-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate(method: str, params: dict) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_did_parallel_trendevent_study_df-pre_periods-int-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_did_parallel_trend(event_study_df, pre_periods: int) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_iv_strengthfirst_stage_f-float-stock_yogo-float-1638-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_iv_strength(first_stage_f: float, stock_yogo: float = 16.38) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_psm_balancematched_df-threshold-float-01-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_psm_balance(matched_df, threshold: float = 0.1) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#journaltemplateselector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JournalTemplateSelector
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="JournalTemplateSelector">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-journaltemplate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: JournalTemplate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: JournalTemplate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get_templatejournal-str-journaltemplate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_template(journal: str) -&gt; JournalTemplate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generate_exampleoutput_path-str-path-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generate_example(output_path: str | Path) -&gt; Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compiletex_path-str-path-engine-str-pdflatex-passes-int-2-bool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compile(tex_path: str | Path, engine: str = "pdflatex", passes: int = 2) -&gt; bool
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#template-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Template Attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Templates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eventmonitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EventMonitor
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EventMonitor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-eventmonitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: EventMonitor
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: EventMonitor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__check_interval-int-300-auto_trigger-bool-false-config_path-str-configproject_configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(check_interval: int = 300, auto_trigger: bool = False, config_path: str = "config/project_config.json")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_event_handlerevent_type-str-handler-callable-kwargs-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        add_event_handler(event_type: str, handler: Callable, **kwargs) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_custom_eventname-str-check_function-callable-handler-callable-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        add_custom_event(name: str, check_function: Callable, handler: Callable) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#start-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        start() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stop-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stop() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_eventslimit-int-100-listdict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_events(limit: int = 100) -&gt; list[dict]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_historydays-int-7-listdict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_history(days: int = 7) -&gt; list[dict]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clear_events-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clear_events() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-object-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Object Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-usage_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Modules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Additional Modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#datafetcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DataFetcher
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmgateway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLMGateway
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#researchsession" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ResearchSession
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setupwizard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SetupWizard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SetupWizard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        核心函数
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="核心函数">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check_and_guide_setuptopic-str-none-none-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_and_guide_setup(topic: str | None = None) -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_current_status-dictstr-configstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_current_status() -&gt; dict[str, ConfigStatus]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_all_configs-listconfigstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_all_configs() -&gt; list[ConfigStatus]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direction_requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DIRECTION_REQUIREMENTS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI 用法
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentpipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与 AgentPipeline 的集成
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    项目
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agentorchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentOrchestrator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AgentOrchestrator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-agentorchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: AgentOrchestrator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: AgentOrchestrator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__gateway-llmgateway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(gateway: LLMGateway)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#registeragent-baseagent-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register(agent: BaseAgent) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run_pipelinename-str-input_data-dict-pipelineresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_pipeline(name: str, input_data: dict) -&gt; PipelineResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run_parallelagent_names-liststr-input_data-dict-dictstr-agentresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_parallel(agent_names: list[str], input_data: dict) -&gt; dict[str, AgentResult]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_default_agents-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_default_agents() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_financial_agents-parallelanalystorchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_financial_agents() -&gt; ParallelAnalystOrchestrator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cancel_agentagent_name-str-reason-str-bool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cancel_agent(agent_name: str, reason: str) -&gt; bool
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enum-pipelinestage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enum: PipelineStage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-pipelineresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: PipelineResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#provenancetracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProvenanceTracker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ProvenanceTracker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-provenancetracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: ProvenanceTracker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: ProvenanceTracker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__session_id-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(session_id: str = "")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_data_sourcenode_id-str-source-str-mcp_server-str-mcp_tool-str-api_params-dict-description-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_data_source(node_id: str, source: str, mcp_server: str, mcp_tool: str, api_params: dict, description: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_transformationnode_id-str-transformation-str-parent_ids-liststr-description-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_transformation(node_id: str, transformation: str, parent_ids: list[str], description: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_chartnode_id-str-title-str-data_source_ref-str-chart_type-str-output_path-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_chart(node_id: str, title: str, data_source_ref: str, chart_type: str, output_path: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register_tablenode_id-str-title-str-data_source_ref-str-table_type-str-output_path-str-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        register_table(node_id: str, title: str, data_source_ref: str, table_type: str, output_path: str) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_lineagenode_id-str-listprovenancenode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_lineage(node_id: str) -&gt; list[ProvenanceNode]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_latex_provenancenode_id-str-none-none-include_checksum-bool-true-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_latex_provenance(node_id: str | None = None, include_checksum: bool = True) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#to_graphvizdirection-str-tb-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_graphviz(direction: str = "TB") -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#savefilepath-str-none-loadfilepath-str-provenancetracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save(filepath: str) -&gt; None / load(filepath: str) -&gt; ProvenanceTracker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-provenancenode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: ProvenanceNode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decorators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decorators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcptoolregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCPToolRegistry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MCPToolRegistry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-toolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: ToolMetadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-mcptoolregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: MCPToolRegistry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: MCPToolRegistry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from_directorypath-str-path-mcptoolregistry-classmethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_directory(path: str | Path) -&gt; MCPToolRegistry (classmethod)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#searchquery-str-category-str-none-none-max_results-int-10-listtoolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        search(query: str, category: str | None = None, max_results: int = 10) -&gt; list[ToolMetadata]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_by_serverserver-str-listtoolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_by_server(server: str) -&gt; list[ToolMetadata]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_by_categorycategory-str-listtoolmetadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_by_category(category: str) -&gt; list[ToolMetadata]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_marketplace_report-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_marketplace_report() -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#to_json-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_json() -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#print_catalogcategory-str-none-none-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        print_catalog(category: str | None = None) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#global-singleton" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Singleton
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calibrationdataset-calibrationanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CalibrationDataset &amp; CalibrationAnalyzer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CalibrationDataset &amp; CalibrationAnalyzer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-calibrationdataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: CalibrationDataset
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: CalibrationDataset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init___1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_samplesample-calibrationsample-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        add_sample(sample: CalibrationSample) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_builtin_dataset-calibrationdataset-classmethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_builtin_dataset() -&gt; CalibrationDataset (classmethod)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_from_jsonpath-str-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_from_json(path: str) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save_to_jsonpath-str-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save_to_json(path: str) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_benchmark_stats-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_benchmark_stats() -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-calibrationanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: CalibrationAnalyzer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: CalibrationAnalyzer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__dataset-calibrationdataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(dataset: CalibrationDataset)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluate_reviewerreviewer-calibrationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        evaluate_reviewer(reviewer) -&gt; CalibrationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generate_calibration_reportresult-calibrationresult-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generate_calibration_report(result: CalibrationResult) -&gt; str
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-calibrationsample" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: CalibrationSample
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#econometricsruleengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EconometricsRuleEngine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EconometricsRuleEngine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-econometricsruleengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: EconometricsRuleEngine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: EconometricsRuleEngine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init___2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validatemethod-str-params-dict-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate(method: str, params: dict) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_did_parallel_trendevent_study_df-pre_periods-int-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_did_parallel_trend(event_study_df, pre_periods: int) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_iv_strengthfirst_stage_f-float-stock_yogo-float-1638-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_iv_strength(first_stage_f: float, stock_yogo: float = 16.38) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_psm_balancematched_df-threshold-float-01-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_psm_balance(matched_df, threshold: float = 0.1) -&gt; ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-validationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: ValidationResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#journaltemplateselector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JournalTemplateSelector
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="JournalTemplateSelector">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-journaltemplate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: JournalTemplate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: JournalTemplate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get_templatejournal-str-journaltemplate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_template(journal: str) -&gt; JournalTemplate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generate_exampleoutput_path-str-path-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generate_example(output_path: str | Path) -&gt; Path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compiletex_path-str-path-engine-str-pdflatex-passes-int-2-bool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compile(tex_path: str | Path, engine: str = "pdflatex", passes: int = 2) -&gt; bool
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#template-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Template Attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Templates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eventmonitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EventMonitor
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EventMonitor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-eventmonitor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: EventMonitor
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Class: EventMonitor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__init__check_interval-int-300-auto_trigger-bool-false-config_path-str-configproject_configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__(check_interval: int = 300, auto_trigger: bool = False, config_path: str = "config/project_config.json")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_event_handlerevent_type-str-handler-callable-kwargs-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        add_event_handler(event_type: str, handler: Callable, **kwargs) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_custom_eventname-str-check_function-callable-handler-callable-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        add_custom_event(name: str, check_function: Callable, handler: Callable) -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#start-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        start() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stop-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stop() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_eventslimit-int-100-listdict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_events(limit: int = 100) -&gt; list[dict]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_historydays-int-7-listdict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_history(days: int = 7) -&gt; list[dict]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clear_events-none" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clear_events() -&gt; None
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-object-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Object Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-usage_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Modules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Additional Modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#datafetcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DataFetcher
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmgateway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLMGateway
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#researchsession" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ResearchSession
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setupwizard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SetupWizard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SetupWizard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        核心函数
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="核心函数">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check_and_guide_setuptopic-str-none-none-dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_and_guide_setup(topic: str | None = None) -&gt; dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_current_status-dictstr-configstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_current_status() -&gt; dict[str, ConfigStatus]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_all_configs-listconfigstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_all_configs() -&gt; list[ConfigStatus]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#direction_requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DIRECTION_REQUIREMENTS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI 用法
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentpipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与 AgentPipeline 的集成
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="api-reference">API Reference</h1>
+<blockquote>
+<p>Complete API documentation for the core modules of the research workflow system.</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#agentorchestrator">AgentOrchestrator</a></li>
+<li><a href="#provenanttracker">ProvenanceTracker</a></li>
+<li><a href="#mcptoolregistry">MCPToolRegistry</a></li>
+<li><a href="#calibrationdataset--calibrationanalyzer">CalibrationDataset &amp; CalibrationAnalyzer</a></li>
+<li><a href="#econometricsruleengine">EconometricsRuleEngine</a></li>
+<li><a href="#journaltemplateselector">JournalTemplateSelector</a></li>
+<li><a href="#eventmonitor">EventMonitor</a></li>
+</ol>
+<hr />
+<h2 id="agentorchestrator">AgentOrchestrator</h2>
+<p><strong>File</strong>: <code>scripts/core/orchestrator.py</code></p>
+<p>Professional agent orchestration engine with pipeline execution, parallel agents, and HITL gates.</p>
+<h3 id="class-agentorchestrator">Class: <code>AgentOrchestrator</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.orchestrator</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentOrchestrator</span><span class="p">,</span> <span class="n">PipelineStage</span><span class="p">,</span> <span class="n">PipelineStep</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.llm_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMGateway</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">orchestrator</span> <span class="o">=</span> <span class="n">AgentOrchestrator</span><span class="p">(</span><span class="n">gateway</span><span class="o">=</span><span class="n">gateway</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="__init__gateway-llmgateway"><code>__init__(gateway: LLMGateway)</code></h4>
+<p>Initialize the orchestrator with an LLM gateway.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">gateway</span> <span class="o">=</span> <span class="n">LLMGateway</span><span class="p">()</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">orchestrator</span> <span class="o">=</span> <span class="n">AgentOrchestrator</span><span class="p">(</span><span class="n">gateway</span><span class="o">=</span><span class="n">gateway</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="registeragent-baseagent-none"><code>register(agent: BaseAgent) -&gt; None</code></h4>
+<p>Register a professional agent (DeepResearchAgent Agent Registry pattern).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.agents.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentConfig</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.agents.paper_agents</span><span class="w"> </span><span class="kn">import</span> <span class="n">OutlineAgent</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">orchestrator</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">OutlineAgent</span><span class="p">(</span><span class="n">AgentConfig</span><span class="p">(</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;outline&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;论文大纲设计专家&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">goal</span><span class="o">=</span><span class="s2">&quot;将研究想法转化为结构化论文大纲&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">),</span> <span class="n">gateway</span><span class="p">))</span>
+</code></pre></div>
+<h4 id="run_pipelinename-str-input_data-dict-pipelineresult"><code>run_pipeline(name: str, input_data: dict) -&gt; PipelineResult</code></h4>
+<p>Execute a multi-stage pipeline.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.orchestrator</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span><span class="p">,</span> <span class="n">PipelineStage</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">steps</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">PipelineStep</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="n">PipelineStage</span><span class="o">.</span><span class="n">OUTLINE</span><span class="p">,</span> <span class="n">agent_name</span><span class="o">=</span><span class="s2">&quot;outline&quot;</span><span class="p">),</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">PipelineStep</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="n">PipelineStage</span><span class="o">.</span><span class="n">LITERATURE</span><span class="p">,</span> <span class="n">agent_name</span><span class="o">=</span><span class="s2">&quot;literature&quot;</span><span class="p">),</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">PipelineStep</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="n">PipelineStage</span><span class="o">.</span><span class="n">WRITING</span><span class="p">,</span> <span class="n">agent_name</span><span class="o">=</span><span class="s2">&quot;writing&quot;</span><span class="p">),</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">]</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">orchestrator</span><span class="o">.</span><span class="n">run_pipeline</span><span class="p">(</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">pipeline_name</span><span class="o">=</span><span class="s2">&quot;paper_pipeline&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">steps</span><span class="o">=</span><span class="n">steps</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">input_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;topic&quot;</span><span class="p">:</span> <span class="s2">&quot;碳排放权交易对企业绿色创新的影响&quot;</span><span class="p">,</span> <span class="s2">&quot;venue&quot;</span><span class="p">:</span> <span class="s2">&quot;经济研究&quot;</span><span class="p">}</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">)</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Success: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">success</span><span class="si">}</span><span class="s2">, Latency: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">total_latency_ms</span><span class="si">}</span><span class="s2">ms&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="run_parallelagent_names-liststr-input_data-dict-dictstr-agentresult"><code>run_parallel(agent_names: list[str], input_data: dict) -&gt; dict[str, AgentResult]</code></h4>
+<p>Run multiple agents in parallel (independent stages only).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">orchestrator</span><span class="o">.</span><span class="n">run_parallel</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">agent_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;literature&quot;</span><span class="p">,</span> <span class="s2">&quot;plotting&quot;</span><span class="p">],</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">input_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;outline&quot;</span><span class="p">:</span> <span class="n">outline_result</span><span class="p">}</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="register_default_agents-none"><code>register_default_agents() -&gt; None</code></h4>
+<p>Register PaperOrchestra's standard 5-agent pipeline:
+1. <code>outline</code> — OutlineAgent
+2. <code>literature</code> — LiteratureReviewAgent
+3. <code>plotting</code> — PlottingAgent
+4. <code>writing</code> — SectionWritingAgent
+5. <code>refinement</code> — ContentRefinementAgent</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">orchestrator</span><span class="o">.</span><span class="n">register_default_agents</span><span class="p">()</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">orchestrator</span><span class="o">.</span><span class="n">list_agents</span><span class="p">())</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># [&#39;outline&#39;, &#39;literature&#39;, &#39;plotting&#39;, &#39;writing&#39;, &#39;refinement&#39;, &#39;data_fetch&#39;]</span>
+</code></pre></div>
+<h4 id="register_financial_agents-parallelanalystorchestrator"><code>register_financial_agents() -&gt; ParallelAnalystOrchestrator</code></h4>
+<p>Register financial analyst agents for research report generation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">analyst_orchestrator</span> <span class="o">=</span> <span class="n">orchestrator</span><span class="o">.</span><span class="n">register_financial_agents</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="cancel_agentagent_name-str-reason-str-bool"><code>cancel_agent(agent_name: str, reason: str) -&gt; bool</code></h4>
+<p>Cancel a running agent by name.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">orchestrator</span><span class="o">.</span><span class="n">cancel_agent</span><span class="p">(</span><span class="s2">&quot;literature&quot;</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Timeout&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="enum-pipelinestage">Enum: <code>PipelineStage</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PipelineStage</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">OUTLINE</span> <span class="o">=</span> <span class="s2">&quot;outline&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">LITERATURE</span> <span class="o">=</span> <span class="s2">&quot;literature&quot;</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">PLOTTING</span> <span class="o">=</span> <span class="s2">&quot;plotting&quot;</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">WRITING</span> <span class="o">=</span> <span class="s2">&quot;writing&quot;</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">REFINEMENT</span> <span class="o">=</span> <span class="s2">&quot;refinement&quot;</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="n">EVALUATION</span> <span class="o">=</span> <span class="s2">&quot;evaluation&quot;</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="n">FINANCIAL_ANALYSIS</span> <span class="o">=</span> <span class="s2">&quot;financial_analysis&quot;</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">REPORT_WRITING</span> <span class="o">=</span> <span class="s2">&quot;report_writing&quot;</span>
+</code></pre></div>
+<h3 id="dataclass-pipelineresult">Dataclass: <code>PipelineResult</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">PipelineResult</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">pipeline_name</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">success</span><span class="p">:</span> <span class="nb">bool</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">stage_results</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">PipelineStage</span><span class="p">,</span> <span class="n">AgentResult</span><span class="p">]</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="n">final_context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="n">total_latency_ms</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="n">hitl_paused_at</span><span class="p">:</span> <span class="n">PipelineStage</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="n">evolution_events</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">trace</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">timestamp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="provenancetracker">ProvenanceTracker</h2>
+<p><strong>File</strong>: <code>scripts/core/provenance.py</code></p>
+<p>Track the data lineage of every chart and table, from raw API calls to final output.</p>
+<h3 id="class-provenancetracker">Class: <code>ProvenanceTracker</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.provenance</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProvenanceTracker</span><span class="p">,</span> <span class="n">ProvenanceNode</span>
+</code></pre></div>
+<h4 id="__init__session_id-str"><code>__init__(session_id: str = "")</code></h4>
+<p>Initialize the provenance tracker.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">tracker</span> <span class="o">=</span> <span class="n">ProvenanceTracker</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;carbon_trading_2024&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="register_data_sourcenode_id-str-source-str-mcp_server-str-mcp_tool-str-api_params-dict-description-str-str"><code>register_data_source(node_id: str, source: str, mcp_server: str, mcp_tool: str, api_params: dict, description: str) -&gt; str</code></h4>
+<p>Register a data source node.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">tracker</span><span class="o">.</span><span class="n">register_data_source</span><span class="p">(</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">node_id</span><span class="o">=</span><span class="s2">&quot;tushare_daily&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">source</span><span class="o">=</span><span class="s2">&quot;MCP:user_tushare&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">mcp_server</span><span class="o">=</span><span class="s2">&quot;user-tushare&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">mcp_tool</span><span class="o">=</span><span class="s2">&quot;get_daily_quote&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">api_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;ts_code&quot;</span><span class="p">:</span> <span class="s2">&quot;000001.SZ&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="s2">&quot;20240101&quot;</span><span class="p">},</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;平安银行日线行情&quot;</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="register_transformationnode_id-str-transformation-str-parent_ids-liststr-description-str-str"><code>register_transformation(node_id: str, transformation: str, parent_ids: list[str], description: str) -&gt; str</code></h4>
+<p>Register a data transformation node (cleaning, merging, aggregation).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">tracker</span><span class="o">.</span><span class="n">register_transformation</span><span class="p">(</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">node_id</span><span class="o">=</span><span class="s2">&quot;cleaned_data&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">transformation</span><span class="o">=</span><span class="s2">&quot;dropna + rename columns&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">parent_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;tushare_daily&quot;</span><span class="p">],</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;数据清洗&quot;</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="register_chartnode_id-str-title-str-data_source_ref-str-chart_type-str-output_path-str-str"><code>register_chart(node_id: str, title: str, data_source_ref: str, chart_type: str, output_path: str) -&gt; str</code></h4>
+<p>Register a chart node.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">tracker</span><span class="o">.</span><span class="n">register_chart</span><span class="p">(</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">node_id</span><span class="o">=</span><span class="s2">&quot;fig1_price&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;平安银行股价走势图&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">data_source_ref</span><span class="o">=</span><span class="s2">&quot;cleaned_data&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;line&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;output/figures/stock_price.png&quot;</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="register_tablenode_id-str-title-str-data_source_ref-str-table_type-str-output_path-str-str"><code>register_table(node_id: str, title: str, data_source_ref: str, table_type: str, output_path: str) -&gt; str</code></h4>
+<p>Register a table node.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">tracker</span><span class="o">.</span><span class="n">register_table</span><span class="p">(</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">node_id</span><span class="o">=</span><span class="s2">&quot;tab1_regression&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;回归分析结果&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">data_source_ref</span><span class="o">=</span><span class="s2">&quot;merged_data&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="n">table_type</span><span class="o">=</span><span class="s2">&quot;regression&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;output/tables/regression.tex&quot;</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_lineagenode_id-str-listprovenancenode"><code>get_lineage(node_id: str) -&gt; list[ProvenanceNode]</code></h4>
+<p>Get the complete lineage from root nodes to the target node.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">lineage</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">get_lineage</span><span class="p">(</span><span class="s2">&quot;fig1_price&quot;</span><span class="p">)</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">lineage</span><span class="p">:</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">node_type</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_latex_provenancenode_id-str-none-none-include_checksum-bool-true-str"><code>get_latex_provenance(node_id: str | None = None, include_checksum: bool = True) -&gt; str</code></h4>
+<p>Generate LaTeX-formatted provenance comments.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nb">print</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">get_latex_provenance</span><span class="p">())</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># % ===== Data Provenance =====</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="c1"># % Session: carbon_trading_2024</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># % \ provenance{</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="c1"># %   session = {carbon_trading_2024},</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="c1"># %   data_source 0: tushare_daily {</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="c1"># %     description = {平安银行日线行情},</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="c1"># %     mcp_server = {user-tushare},</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="c1"># % ...</span>
+</code></pre></div>
+<h4 id="to_graphvizdirection-str-tb-str"><code>to_graphviz(direction: str = "TB") -&gt; str</code></h4>
+<p>Generate Graphviz DOT format provenance graph.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">dot</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">to_graphviz</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;LR&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="savefilepath-str-none-loadfilepath-str-provenancetracker"><code>save(filepath: str) -&gt; None</code> / <code>load(filepath: str) -&gt; ProvenanceTracker</code></h4>
+<p>Save and load tracker state.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">tracker</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;provenance/session_001.json&quot;</span><span class="p">)</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">tracker</span> <span class="o">=</span> <span class="n">ProvenanceTracker</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;provenance/session_001.json&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="dataclass-provenancenode">Dataclass: <code>ProvenanceNode</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProvenanceNode</span><span class="p">:</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    <span class="n">node_id</span><span class="p">:</span> <span class="nb">str</span>                                    <span class="c1"># Unique identifier</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    <span class="n">node_type</span><span class="p">:</span> <span class="nb">str</span>                                   <span class="c1"># &quot;data_source&quot; | &quot;transformation&quot; | &quot;chart&quot; | &quot;table&quot;</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>                                 <span class="c1"># Description</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    <span class="n">source_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>                <span class="c1"># Source file</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">source_line</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># Source line number</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="n">mcp_server</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>                 <span class="c1"># MCP server name</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>    <span class="n">mcp_tool</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>                  <span class="c1"># MCP tool name</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>    <span class="n">api_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># API call parameters</span>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>    <span class="n">timestamp</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>                              <span class="c1"># ISO timestamp</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>    <span class="n">checksum</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>                   <span class="c1"># SHA256 checksum</span>
+<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>    <span class="n">parent_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>   <span class="c1"># Parent node IDs</span>
+<a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>            <span class="c1"># Extra metadata</span>
+</code></pre></div>
+<h3 id="decorators">Decorators</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nd">@register_chart</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;股价走势图&quot;</span><span class="p">,</span> <span class="n">data_source</span><span class="o">=</span><span class="s2">&quot;tushare_daily&quot;</span><span class="p">,</span> <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;line&quot;</span><span class="p">)</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">generate_chart</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    <span class="c1"># ... chart generation code ...</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    <span class="k">return</span> <span class="n">fig</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="nd">@register_data_source</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="s2">&quot;MCP:user_tushare&quot;</span><span class="p">,</span> <span class="n">mcp_server</span><span class="o">=</span><span class="s2">&quot;user-tushare&quot;</span><span class="p">,</span> <span class="n">mcp_tool</span><span class="o">=</span><span class="s2">&quot;get_daily_quote&quot;</span><span class="p">)</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">fetch_stock_data</span><span class="p">(</span><span class="n">ts_code</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    <span class="c1"># ... data fetching code ...</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>    <span class="k">return</span> <span class="n">data</span>
+</code></pre></div>
+<hr />
+<h2 id="mcptoolregistry">MCPToolRegistry</h2>
+<p><strong>File</strong>: <code>scripts/core/mcp_tool_market.py</code></p>
+<p>Searchable registry for all MCP servers under <code>mcp_servers/</code>.</p>
+<h3 id="class-toolmetadata">Class: <code>ToolMetadata</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolMetadata</span><span class="p">:</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    <span class="n">input_schema</span><span class="p">:</span> <span class="nb">dict</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>    <span class="n">mcp_server</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>    <span class="n">quality_score</span><span class="p">:</span> <span class="nb">float</span>          <span class="c1"># 0.0–1.0</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>    <span class="n">is_mock</span><span class="p">:</span> <span class="nb">bool</span>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>    <span class="n">requires_api_key</span><span class="p">:</span> <span class="nb">bool</span>
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>    <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>    <span class="n">last_updated</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>    <span class="n">example_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+<h3 id="class-mcptoolregistry">Class: <code>MCPToolRegistry</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.mcp_tool_market</span><span class="w"> </span><span class="kn">import</span> <span class="n">MCPToolRegistry</span><span class="p">,</span> <span class="n">ToolMetadata</span>
+</code></pre></div>
+<h4 id="__init__"><code>__init__()</code></h4>
+<p>Initialize an empty registry.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">MCPToolRegistry</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="from_directorypath-str-path-mcptoolregistry-classmethod"><code>from_directory(path: str | Path) -&gt; MCPToolRegistry</code> (classmethod)</h4>
+<p>Scan a directory and build the registry.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">MCPToolRegistry</span><span class="o">.</span><span class="n">from_directory</span><span class="p">(</span><span class="s2">&quot;mcp_servers&quot;</span><span class="p">)</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">registry</span><span class="p">)</span><span class="si">}</span><span class="s2"> tools&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="searchquery-str-category-str-none-none-max_results-int-10-listtoolmetadata"><code>search(query: str, category: str | None = None, max_results: int = 10) -&gt; list[ToolMetadata]</code></h4>
+<p>Full-text search across name, description, and tags.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;gdp&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;macro_data&quot;</span><span class="p">)</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">quality_score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">mcp_server</span><span class="si">}</span><span class="s2">::</span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_by_serverserver-str-listtoolmetadata"><code>get_by_server(server: str) -&gt; list[ToolMetadata]</code></h4>
+<p>Get all tools from a specific MCP server.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="n">tools</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_by_server</span><span class="p">(</span><span class="s2">&quot;user-tushare&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_by_categorycategory-str-listtoolmetadata"><code>get_by_category(category: str) -&gt; list[ToolMetadata]</code></h4>
+<p>Get all tools in a specific category.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="n">financial_tools</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_by_category</span><span class="p">(</span><span class="s2">&quot;financial&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_marketplace_report-dict"><code>get_marketplace_report() -&gt; dict</code></h4>
+<p>Generate marketplace statistics.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">report</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_marketplace_report</span><span class="p">()</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total: </span><span class="si">{</span><span class="n">report</span><span class="p">[</span><span class="s1">&#39;total_tools&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> tools&quot;</span><span class="p">)</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Top 5: </span><span class="si">{</span><span class="n">report</span><span class="p">[</span><span class="s1">&#39;top_5_by_quality&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Report structure:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="p">{</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>    <span class="s2">&quot;total_tools&quot;</span><span class="p">:</span> <span class="mi">142</span><span class="p">,</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>    <span class="s2">&quot;total_servers&quot;</span><span class="p">:</span> <span class="mi">25</span><span class="p">,</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>    <span class="s2">&quot;by_category&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;financial&quot;</span><span class="p">:</span> <span class="mi">38</span><span class="p">,</span> <span class="s2">&quot;macro_data&quot;</span><span class="p">:</span> <span class="mi">45</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>    <span class="s2">&quot;by_server&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;user-tushare&quot;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>    <span class="s2">&quot;category_avg_quality&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;market_data&quot;</span><span class="p">:</span> <span class="mf">0.72</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>    <span class="s2">&quot;requires_api_key&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+<a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>    <span class="s2">&quot;mock_tools&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+<a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>    <span class="s2">&quot;top_5_by_quality&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+<a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a>    <span class="s2">&quot;generated_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-06-02T12:00:00&quot;</span>
+<a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a><span class="p">}</span>
+</code></pre></div></p>
+<h4 id="to_json-dict"><code>to_json() -&gt; dict</code></h4>
+<p>Export registry as JSON-serializable dict.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="n">data</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="print_catalogcategory-str-none-none-none"><code>print_catalog(category: str | None = None) -&gt; None</code></h4>
+<p>Print formatted catalog to console.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="n">registry</span><span class="o">.</span><span class="n">print_catalog</span><span class="p">()</span>           <span class="c1"># All tools</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="n">registry</span><span class="o">.</span><span class="n">print_catalog</span><span class="p">(</span><span class="s2">&quot;financial&quot;</span><span class="p">)</span> <span class="c1"># Financial only</span>
+</code></pre></div>
+<h3 id="global-singleton">Global Singleton</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.mcp_tool_market</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_default_registry</span>
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">get_default_registry</span><span class="p">()</span>  <span class="c1"># Cached instance</span>
+</code></pre></div>
+<h3 id="cli-usage">CLI Usage</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># Show all tools</span>
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>python<span class="w"> </span>scripts/core/mcp_tool_market.py<span class="w"> </span>--dir<span class="w"> </span>mcp_servers
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="c1"># Search</span>
+<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>python<span class="w"> </span>scripts/core/mcp_tool_market.py<span class="w"> </span>--search<span class="w"> </span><span class="s2">&quot;gdp&quot;</span><span class="w"> </span>--report
+<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>
+<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="c1"># By category</span>
+<a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>python<span class="w"> </span>scripts/core/mcp_tool_market.py<span class="w"> </span>--category<span class="w"> </span>financial
+<a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>
+<a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a><span class="c1"># By server</span>
+<a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a>python<span class="w"> </span>scripts/core/mcp_tool_market.py<span class="w"> </span>--server<span class="w"> </span>user-tushare
+<a id="__codelineno-34-12" name="__codelineno-34-12" href="#__codelineno-34-12"></a>
+<a id="__codelineno-34-13" name="__codelineno-34-13" href="#__codelineno-34-13"></a><span class="c1"># Export JSON</span>
+<a id="__codelineno-34-14" name="__codelineno-34-14" href="#__codelineno-34-14"></a>python<span class="w"> </span>scripts/core/mcp_tool_market.py<span class="w"> </span>--json<span class="w"> </span>&gt;<span class="w"> </span>registry.json
+</code></pre></div>
+<hr />
+<h2 id="calibrationdataset-calibrationanalyzer">CalibrationDataset &amp; CalibrationAnalyzer</h2>
+<p><strong>File</strong>: <code>scripts/core/reviewer_calibration.py</code></p>
+<p>Measure LLM reviewer accuracy against human-labeled benchmark datasets.</p>
+<h3 id="class-calibrationdataset">Class: <code>CalibrationDataset</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.reviewer_calibration</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>    <span class="n">CalibrationDataset</span><span class="p">,</span> <span class="n">CalibrationAnalyzer</span><span class="p">,</span> <span class="n">CalibrationResult</span>
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="__init___1"><code>__init__()</code></h4>
+<p>Initialize an empty calibration dataset.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">CalibrationDataset</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="add_samplesample-calibrationsample-none"><code>add_sample(sample: CalibrationSample) -&gt; None</code></h4>
+<p>Add a single calibration sample.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.reviewer_calibration</span><span class="w"> </span><span class="kn">import</span> <span class="n">CalibrationSample</span>
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>
+<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="n">sample</span> <span class="o">=</span> <span class="n">CalibrationSample</span><span class="p">(</span>
+<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>    <span class="n">sample_id</span><span class="o">=</span><span class="s2">&quot;test_001&quot;</span><span class="p">,</span>
+<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>    <span class="n">paper_abstract</span><span class="o">=</span><span class="s2">&quot;This paper studies...&quot;</span><span class="p">,</span>
+<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a>    <span class="n">human_scores</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a>        <span class="s2">&quot;methodology_rigor&quot;</span><span class="p">:</span> <span class="mf">8.0</span><span class="p">,</span>
+<a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a>        <span class="s2">&quot;novelty&quot;</span><span class="p">:</span> <span class="mf">7.5</span><span class="p">,</span>
+<a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a>        <span class="s2">&quot;clarity&quot;</span><span class="p">:</span> <span class="mf">8.0</span><span class="p">,</span>
+<a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a>        <span class="s2">&quot;reproducibility&quot;</span><span class="p">:</span> <span class="mf">7.5</span><span class="p">,</span>
+<a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a>        <span class="s2">&quot;significance&quot;</span><span class="p">:</span> <span class="mf">8.0</span><span class="p">,</span>
+<a id="__codelineno-37-12" name="__codelineno-37-12" href="#__codelineno-37-12"></a>        <span class="s2">&quot;overall&quot;</span><span class="p">:</span> <span class="mf">8.0</span><span class="p">,</span>
+<a id="__codelineno-37-13" name="__codelineno-37-13" href="#__codelineno-37-13"></a>    <span class="p">},</span>
+<a id="__codelineno-37-14" name="__codelineno-37-14" href="#__codelineno-37-14"></a>    <span class="n">human_recommendation</span><span class="o">=</span><span class="s2">&quot;accept&quot;</span><span class="p">,</span>
+<a id="__codelineno-37-15" name="__codelineno-37-15" href="#__codelineno-37-15"></a>    <span class="n">venue</span><span class="o">=</span><span class="s2">&quot;JFE&quot;</span><span class="p">,</span>
+<a id="__codelineno-37-16" name="__codelineno-37-16" href="#__codelineno-37-16"></a>    <span class="n">year</span><span class="o">=</span><span class="mi">2024</span>
+<a id="__codelineno-37-17" name="__codelineno-37-17" href="#__codelineno-37-17"></a><span class="p">)</span>
+<a id="__codelineno-37-18" name="__codelineno-37-18" href="#__codelineno-37-18"></a><span class="n">dataset</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="load_builtin_dataset-calibrationdataset-classmethod"><code>load_builtin_dataset() -&gt; CalibrationDataset</code> (classmethod)</h4>
+<p>Load the built-in 20-sample benchmark dataset.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">CalibrationDataset</span><span class="o">.</span><span class="n">load_builtin_dataset</span><span class="p">()</span>
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="load_from_jsonpath-str-none"><code>load_from_json(path: str) -&gt; None</code></h4>
+<p>Load dataset from JSON file.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="n">dataset</span><span class="o">.</span><span class="n">load_from_json</span><span class="p">(</span><span class="s2">&quot;data/calibration/my_benchmark.json&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="save_to_jsonpath-str-none"><code>save_to_json(path: str) -&gt; None</code></h4>
+<p>Save dataset to JSON file.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="n">dataset</span><span class="o">.</span><span class="n">save_to_json</span><span class="p">(</span><span class="s2">&quot;data/calibration/my_benchmark.json&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_benchmark_stats-dict"><code>get_benchmark_stats() -&gt; dict</code></h4>
+<p>Get benchmark dataset statistics.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="n">stats</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_benchmark_stats</span><span class="p">()</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
+<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="c1"># {&#39;n_samples&#39;: 20, &#39;recommendation_counts&#39;: {&#39;accept&#39;: 8, &#39;reject&#39;: 6, &#39;borderline&#39;: 6}, ...}</span>
+</code></pre></div>
+<h3 id="class-calibrationanalyzer">Class: <code>CalibrationAnalyzer</code></h3>
+<h4 id="__init__dataset-calibrationdataset"><code>__init__(dataset: CalibrationDataset)</code></h4>
+<p>Initialize analyzer with a calibration dataset.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="n">analyzer</span> <span class="o">=</span> <span class="n">CalibrationAnalyzer</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="evaluate_reviewerreviewer-calibrationresult"><code>evaluate_reviewer(reviewer) -&gt; CalibrationResult</code></h4>
+<p>Evaluate an LLMReviewer instance.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.llm_reviewer</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMReviewer</span>
+<a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a>
+<a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a><span class="n">reviewer</span> <span class="o">=</span> <span class="n">LLMReviewer</span><span class="p">()</span>
+<a id="__codelineno-43-4" name="__codelineno-43-4" href="#__codelineno-43-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">evaluate_reviewer</span><span class="p">(</span><span class="n">reviewer</span><span class="p">)</span>
+<a id="__codelineno-43-5" name="__codelineno-43-5" href="#__codelineno-43-5"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Balanced Accuracy: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">balanced_accuracy</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Returns:</strong> <code>CalibrationResult</code> with fields:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">CalibrationResult</span><span class="p">:</span>
+<a id="__codelineno-44-3" name="__codelineno-44-3" href="#__codelineno-44-3"></a>    <span class="n">balanced_accuracy</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># 0.0–1.0</span>
+<a id="__codelineno-44-4" name="__codelineno-44-4" href="#__codelineno-44-4"></a>    <span class="n">overall_accuracy</span><span class="p">:</span> <span class="nb">float</span>    <span class="c1"># 0.0–1.0</span>
+<a id="__codelineno-44-5" name="__codelineno-44-5" href="#__codelineno-44-5"></a>    <span class="n">per_dimension</span><span class="p">:</span> <span class="nb">dict</span>       <span class="c1"># {dim: {&quot;mae&quot;: float, &quot;acc_within_1&quot;: float, &quot;corr&quot;: float}}</span>
+<a id="__codelineno-44-6" name="__codelineno-44-6" href="#__codelineno-44-6"></a>    <span class="n">confusion_matrix</span><span class="p">:</span> <span class="nb">dict</span>     <span class="c1"># {actual_class: {predicted_class: count}}</span>
+<a id="__codelineno-44-7" name="__codelineno-44-7" href="#__codelineno-44-7"></a>    <span class="n">recommendations</span><span class="p">:</span> <span class="nb">dict</span>      <span class="c1"># {sample_id: {&quot;predicted&quot;: str, &quot;actual&quot;: str, &quot;correct&quot;: bool}}</span>
+<a id="__codelineno-44-8" name="__codelineno-44-8" href="#__codelineno-44-8"></a>    <span class="n">benchmark_name</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-44-9" name="__codelineno-44-9" href="#__codelineno-44-9"></a>    <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span>
+</code></pre></div></p>
+<h4 id="generate_calibration_reportresult-calibrationresult-str"><code>generate_calibration_report(result: CalibrationResult) -&gt; str</code></h4>
+<p>Generate human-readable calibration report.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a><span class="n">report</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">generate_calibration_report</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Example output:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>============================================================
+<a id="__codelineno-46-2" name="__codelineno-46-2" href="#__codelineno-46-2"></a>LLM Reviewer Calibration Report
+<a id="__codelineno-46-3" name="__codelineno-46-3" href="#__codelineno-46-3"></a>============================================================
+<a id="__codelineno-46-4" name="__codelineno-46-4" href="#__codelineno-46-4"></a>Benchmark : builtin_20
+<a id="__codelineno-46-5" name="__codelineno-46-5" href="#__codelineno-46-5"></a>Samples   : 20
+<a id="__codelineno-46-6" name="__codelineno-46-6" href="#__codelineno-46-6"></a>
+<a id="__codelineno-46-7" name="__codelineno-46-7" href="#__codelineno-46-7"></a>Overall Metrics
+<a id="__codelineno-46-8" name="__codelineno-46-8" href="#__codelineno-46-8"></a>----------------------------------------
+<a id="__codelineno-46-9" name="__codelineno-46-9" href="#__codelineno-46-9"></a>  Balanced Accuracy : 75.0%
+<a id="__codelineno-46-10" name="__codelineno-46-10" href="#__codelineno-46-10"></a>  Overall Accuracy : 80.0%
+<a id="__codelineno-46-11" name="__codelineno-46-11" href="#__codelineno-46-11"></a>
+<a id="__codelineno-46-12" name="__codelineno-46-12" href="#__codelineno-46-12"></a>Confusion Matrix
+<a id="__codelineno-46-13" name="__codelineno-46-13" href="#__codelineno-46-13"></a>----------------------------------------
+<a id="__codelineno-46-14" name="__codelineno-46-14" href="#__codelineno-46-14"></a>  Actual        Accept   Reject Borderline
+<a id="__codelineno-46-15" name="__codelineno-46-15" href="#__codelineno-46-15"></a>  accept            6       1          1
+<a id="__codelineno-46-16" name="__codelineno-46-16" href="#__codelineno-46-16"></a>  reject            1       4          1
+<a id="__codelineno-46-17" name="__codelineno-46-17" href="#__codelineno-46-17"></a>  borderline        1       1          4
+<a id="__codelineno-46-18" name="__codelineno-46-18" href="#__codelineno-46-18"></a>
+<a id="__codelineno-46-19" name="__codelineno-46-19" href="#__codelineno-46-19"></a>Per-Dimension Metrics
+<a id="__codelineno-46-20" name="__codelineno-46-20" href="#__codelineno-46-20"></a>----------------------------------------
+<a id="__codelineno-46-21" name="__codelineno-46-21" href="#__codelineno-46-21"></a>  Dimension                   MAE    ±1    ±2   Corr
+<a id="__codelineno-46-22" name="__codelineno-46-22" href="#__codelineno-46-22"></a>  Methodology Rigor        0.85   75.0% 90.0%  0.82
+<a id="__codelineno-46-23" name="__codelineno-46-23" href="#__codelineno-46-23"></a>  ...
+</code></pre></div></p>
+<h3 id="dataclass-calibrationsample">Dataclass: <code>CalibrationSample</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-47-2" name="__codelineno-47-2" href="#__codelineno-47-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">CalibrationSample</span><span class="p">:</span>
+<a id="__codelineno-47-3" name="__codelineno-47-3" href="#__codelineno-47-3"></a>    <span class="n">sample_id</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-47-4" name="__codelineno-47-4" href="#__codelineno-47-4"></a>    <span class="n">paper_abstract</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-47-5" name="__codelineno-47-5" href="#__codelineno-47-5"></a>    <span class="n">human_scores</span><span class="p">:</span> <span class="nb">dict</span>       <span class="c1"># {dimension: score (1-10)}</span>
+<a id="__codelineno-47-6" name="__codelineno-47-6" href="#__codelineno-47-6"></a>    <span class="n">human_recommendation</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># accept / reject / borderline</span>
+<a id="__codelineno-47-7" name="__codelineno-47-7" href="#__codelineno-47-7"></a>    <span class="n">venue</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-47-8" name="__codelineno-47-8" href="#__codelineno-47-8"></a>    <span class="n">year</span><span class="p">:</span> <span class="nb">int</span>
+</code></pre></div>
+<hr />
+<h2 id="econometricsruleengine">EconometricsRuleEngine</h2>
+<p><strong>File</strong>: <code>scripts/core/econometrics_rules.py</code></p>
+<p>Automated validation of econometric methods in empirical research papers.</p>
+<h3 id="class-econometricsruleengine">Class: <code>EconometricsRuleEngine</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.econometrics_rules</span><span class="w"> </span><span class="kn">import</span> <span class="n">EconometricsRuleEngine</span><span class="p">,</span> <span class="n">ValidationResult</span>
+</code></pre></div>
+<h4 id="__init___2"><code>__init__()</code></h4>
+<p>Initialize the econometrics rule engine.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">EconometricsRuleEngine</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="validatemethod-str-params-dict-validationresult"><code>validate(method: str, params: dict) -&gt; ValidationResult</code></h4>
+<p>Run validation for a specific econometric method.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1"># Validate DID parallel trends</span>
+<a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;did&quot;</span><span class="p">,</span> <span class="p">{</span>
+<a id="__codelineno-50-3" name="__codelineno-50-3" href="#__codelineno-50-3"></a>    <span class="s2">&quot;event_study_df&quot;</span><span class="p">:</span> <span class="n">df</span><span class="p">,</span>  <span class="c1"># DataFrame with [period, coef, se]</span>
+<a id="__codelineno-50-4" name="__codelineno-50-4" href="#__codelineno-50-4"></a>    <span class="s2">&quot;pre_periods&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-50-5" name="__codelineno-50-5" href="#__codelineno-50-5"></a><span class="p">})</span>
+<a id="__codelineno-50-6" name="__codelineno-50-6" href="#__codelineno-50-6"></a>
+<a id="__codelineno-50-7" name="__codelineno-50-7" href="#__codelineno-50-7"></a><span class="c1"># Validate IV instruments</span>
+<a id="__codelineno-50-8" name="__codelineno-50-8" href="#__codelineno-50-8"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;iv&quot;</span><span class="p">,</span> <span class="p">{</span>
+<a id="__codelineno-50-9" name="__codelineno-50-9" href="#__codelineno-50-9"></a>    <span class="s2">&quot;first_stage_f_stat&quot;</span><span class="p">:</span> <span class="mf">24.5</span><span class="p">,</span>
+<a id="__codelineno-50-10" name="__codelineno-50-10" href="#__codelineno-50-10"></a>    <span class="s2">&quot;stock_yogo_threshold&quot;</span><span class="p">:</span> <span class="mf">16.38</span><span class="p">,</span>
+<a id="__codelineno-50-11" name="__codelineno-50-11" href="#__codelineno-50-11"></a><span class="p">})</span>
+<a id="__codelineno-50-12" name="__codelineno-50-12" href="#__codelineno-50-12"></a>
+<a id="__codelineno-50-13" name="__codelineno-50-13" href="#__codelineno-50-13"></a><span class="c1"># Validate PSM propensity score matching</span>
+<a id="__codelineno-50-14" name="__codelineno-50-14" href="#__codelineno-50-14"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;psm&quot;</span><span class="p">,</span> <span class="p">{</span>
+<a id="__codelineno-50-15" name="__codelineno-50-15" href="#__codelineno-50-15"></a>    <span class="s2">&quot;matched_df&quot;</span><span class="p">:</span> <span class="n">df</span><span class="p">,</span>
+<a id="__codelineno-50-16" name="__codelineno-50-16" href="#__codelineno-50-16"></a>    <span class="s2">&quot;balance_threshold&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>  <span class="c1"># Max std. mean diff after matching</span>
+<a id="__codelineno-50-17" name="__codelineno-50-17" href="#__codelineno-50-17"></a><span class="p">})</span>
+<a id="__codelineno-50-18" name="__codelineno-50-18" href="#__codelineno-50-18"></a>
+<a id="__codelineno-50-19" name="__codelineno-50-19" href="#__codelineno-50-19"></a><span class="c1"># Validate OLS heteroskedasticity</span>
+<a id="__codelineno-50-20" name="__codelineno-50-20" href="#__codelineno-50-20"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="s2">&quot;ols&quot;</span><span class="p">,</span> <span class="p">{</span>
+<a id="__codelineno-50-21" name="__codelineno-50-21" href="#__codelineno-50-21"></a>    <span class="s2">&quot;residuals&quot;</span><span class="p">:</span> <span class="n">residuals</span><span class="p">,</span>
+<a id="__codelineno-50-22" name="__codelineno-50-22" href="#__codelineno-50-22"></a>    <span class="s2">&quot;fitted_values&quot;</span><span class="p">:</span> <span class="n">fitted</span><span class="p">,</span>
+<a id="__codelineno-50-23" name="__codelineno-50-23" href="#__codelineno-50-23"></a><span class="p">})</span>
+</code></pre></div>
+<h4 id="validate_did_parallel_trendevent_study_df-pre_periods-int-validationresult"><code>validate_did_parallel_trend(event_study_df, pre_periods: int) -&gt; ValidationResult</code></h4>
+<p>Validate DID parallel trends assumption via event study.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate_did_parallel_trend</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pre_periods</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-51-2" name="__codelineno-51-2" href="#__codelineno-51-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</code></pre></div>
+<h4 id="validate_iv_strengthfirst_stage_f-float-stock_yogo-float-1638-validationresult"><code>validate_iv_strength(first_stage_f: float, stock_yogo: float = 16.38) -&gt; ValidationResult</code></h4>
+<p>Validate IV instrument strength (Stock-Yogo threshold).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate_iv_strength</span><span class="p">(</span><span class="n">first_stage_f</span><span class="o">=</span><span class="mf">24.5</span><span class="p">)</span>
+<a id="__codelineno-52-2" name="__codelineno-52-2" href="#__codelineno-52-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</code></pre></div>
+<h4 id="validate_psm_balancematched_df-threshold-float-01-validationresult"><code>validate_psm_balance(matched_df, threshold: float = 0.1) -&gt; ValidationResult</code></h4>
+<p>Validate PSM propensity score matching balance.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">validate_psm_balance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<a id="__codelineno-53-2" name="__codelineno-53-2" href="#__codelineno-53-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</code></pre></div>
+<h3 id="dataclass-validationresult">Dataclass: <code>ValidationResult</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-54-2" name="__codelineno-54-2" href="#__codelineno-54-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ValidationResult</span><span class="p">:</span>
+<a id="__codelineno-54-3" name="__codelineno-54-3" href="#__codelineno-54-3"></a>    <span class="n">passed</span><span class="p">:</span> <span class="nb">bool</span>                           <span class="c1"># Whether all checks passed</span>
+<a id="__codelineno-54-4" name="__codelineno-54-4" href="#__codelineno-54-4"></a>    <span class="n">warnings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>   <span class="c1"># Warning messages</span>
+<a id="__codelineno-54-5" name="__codelineno-54-5" href="#__codelineno-54-5"></a>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>     <span class="c1"># Error messages</span>
+<a id="__codelineno-54-6" name="__codelineno-54-6" href="#__codelineno-54-6"></a>    <span class="n">details</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>  <span class="c1"># Test details</span>
+<a id="__codelineno-54-7" name="__codelineno-54-7" href="#__codelineno-54-7"></a>
+<a id="__codelineno-54-8" name="__codelineno-54-8" href="#__codelineno-54-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+<a id="__codelineno-54-9" name="__codelineno-54-9" href="#__codelineno-54-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+<a id="__codelineno-54-10" name="__codelineno-54-10" href="#__codelineno-54-10"></a>    <span class="nd">@property</span>
+<a id="__codelineno-54-11" name="__codelineno-54-11" href="#__codelineno-54-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">has_warnings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+<a id="__codelineno-54-12" name="__codelineno-54-12" href="#__codelineno-54-12"></a>    <span class="nd">@property</span>
+<a id="__codelineno-54-13" name="__codelineno-54-13" href="#__codelineno-54-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">has_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+<a id="__codelineno-54-14" name="__codelineno-54-14" href="#__codelineno-54-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</code></pre></div>
+<h3 id="validation-methods">Validation Methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+<th>Key Parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>did</code></td>
+<td>Parallel trends for difference-in-differences</td>
+<td><code>event_study_df</code>, <code>pre_periods</code></td>
+</tr>
+<tr>
+<td><code>iv</code></td>
+<td>Instrumental variables strength</td>
+<td><code>first_stage_f_stat</code>, <code>stock_yogo_threshold</code></td>
+</tr>
+<tr>
+<td><code>psm</code></td>
+<td>Propensity score matching balance</td>
+<td><code>matched_df</code>, <code>balance_threshold</code></td>
+</tr>
+<tr>
+<td><code>ols</code></td>
+<td>Heteroskedasticity in OLS</td>
+<td><code>residuals</code>, <code>fitted_values</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="journaltemplateselector">JournalTemplateSelector</h2>
+<p><strong>File</strong>: <code>scripts/journal_template.py</code></p>
+<p>Manage LaTeX templates for financial and economics journals.</p>
+<h3 id="class-journaltemplate">Class: <code>JournalTemplate</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.journal_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">JournalTemplate</span><span class="p">,</span> <span class="n">get_template</span>
+</code></pre></div>
+<h4 id="get_templatejournal-str-journaltemplate"><code>get_template(journal: str) -&gt; JournalTemplate</code></h4>
+<p>Get template by journal name.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a><span class="c1"># English top journals</span>
+<a id="__codelineno-56-2" name="__codelineno-56-2" href="#__codelineno-56-2"></a><span class="n">jfe</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;JFE&quot;</span><span class="p">)</span>
+<a id="__codelineno-56-3" name="__codelineno-56-3" href="#__codelineno-56-3"></a><span class="n">jf</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;JF&quot;</span><span class="p">)</span>
+<a id="__codelineno-56-4" name="__codelineno-56-4" href="#__codelineno-56-4"></a><span class="n">rfs</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;RFS&quot;</span><span class="p">)</span>
+<a id="__codelineno-56-5" name="__codelineno-56-5" href="#__codelineno-56-5"></a>
+<a id="__codelineno-56-6" name="__codelineno-56-6" href="#__codelineno-56-6"></a><span class="c1"># Chinese top journals</span>
+<a id="__codelineno-56-7" name="__codelineno-56-7" href="#__codelineno-56-7"></a><span class="n">jjyj</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;经济研究&quot;</span><span class="p">)</span>
+<a id="__codelineno-56-8" name="__codelineno-56-8" href="#__codelineno-56-8"></a><span class="n">glsj</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;管理世界&quot;</span><span class="p">)</span>
+<a id="__codelineno-56-9" name="__codelineno-56-9" href="#__codelineno-56-9"></a><span class="n">jryj</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;金融研究&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="generate_exampleoutput_path-str-path-path"><code>generate_example(output_path: str | Path) -&gt; Path</code></h4>
+<p>Generate an example file from the template.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a><span class="n">path</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">generate_example</span><span class="p">(</span><span class="s2">&quot;output/paper.tex&quot;</span><span class="p">)</span>
+<a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="compiletex_path-str-path-engine-str-pdflatex-passes-int-2-bool"><code>compile(tex_path: str | Path, engine: str = "pdflatex", passes: int = 2) -&gt; bool</code></h4>
+<p>Compile a LaTeX file using the template's format.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a><span class="n">success</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;output/paper.tex&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="template-attributes">Template Attributes</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-59-2" name="__codelineno-59-2" href="#__codelineno-59-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">JournalTemplate</span><span class="p">:</span>
+<a id="__codelineno-59-3" name="__codelineno-59-3" href="#__codelineno-59-3"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>                      <span class="c1"># Display name</span>
+<a id="__codelineno-59-4" name="__codelineno-59-4" href="#__codelineno-59-4"></a>    <span class="n">short_name</span><span class="p">:</span> <span class="nb">str</span>               <span class="c1"># Short code (e.g., &quot;JFE&quot;)</span>
+<a id="__codelineno-59-5" name="__codelineno-59-5" href="#__codelineno-59-5"></a>    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span>                 <span class="c1"># Category (financial/accounting/economics)</span>
+<a id="__codelineno-59-6" name="__codelineno-59-6" href="#__codelineno-59-6"></a>    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>              <span class="c1"># Description</span>
+<a id="__codelineno-59-7" name="__codelineno-59-7" href="#__codelineno-59-7"></a>    <span class="n">latex_code</span><span class="p">:</span> <span class="nb">str</span>              <span class="c1"># Main template code</span>
+<a id="__codelineno-59-8" name="__codelineno-59-8" href="#__codelineno-59-8"></a>    <span class="n">bibliography_style</span><span class="p">:</span> <span class="nb">str</span>       <span class="c1"># Bibliography format</span>
+<a id="__codelineno-59-9" name="__codelineno-59-9" href="#__codelineno-59-9"></a>    <span class="n">required_packages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>  <span class="c1"># Required LaTeX packages</span>
+<a id="__codelineno-59-10" name="__codelineno-59-10" href="#__codelineno-59-10"></a>    <span class="n">page_limit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>     <span class="c1"># Page limit</span>
+<a id="__codelineno-59-11" name="__codelineno-59-11" href="#__codelineno-59-11"></a>    <span class="n">author_notes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>    <span class="c1"># Has author notes</span>
+<a id="__codelineno-59-12" name="__codelineno-59-12" href="#__codelineno-59-12"></a>    <span class="n">blind_review</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>     <span class="c1"># Supports blind review</span>
+<a id="__codelineno-59-13" name="__codelineno-59-13" href="#__codelineno-59-13"></a>    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>                <span class="c1"># Journal website</span>
+</code></pre></div>
+<h3 id="available-templates">Available Templates</h3>
+<table>
+<thead>
+<tr>
+<th>Journal</th>
+<th>Short</th>
+<th>Category</th>
+<th>Page Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Journal of Financial Economics</td>
+<td>JFE</td>
+<td>金融</td>
+<td>~50 pages (double column)</td>
+</tr>
+<tr>
+<td>Journal of Finance</td>
+<td>JF</td>
+<td>金融</td>
+<td>~50 pages (double column)</td>
+</tr>
+<tr>
+<td>Review of Financial Studies</td>
+<td>RFS</td>
+<td>金融</td>
+<td>~60 pages (double column)</td>
+</tr>
+<tr>
+<td>经济研究</td>
+<td>经济研究</td>
+<td>经济</td>
+<td>~20000 words</td>
+</tr>
+<tr>
+<td>管理世界</td>
+<td>管理世界</td>
+<td>经济</td>
+<td>~20000 words</td>
+</tr>
+<tr>
+<td>金融研究</td>
+<td>金融研究</td>
+<td>金融</td>
+<td>~20000 words</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cli-usage_1">CLI Usage</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a><span class="c1"># List all templates</span>
+<a id="__codelineno-60-2" name="__codelineno-60-2" href="#__codelineno-60-2"></a>python<span class="w"> </span>scripts/journal_template.py<span class="w"> </span>--list
+<a id="__codelineno-60-3" name="__codelineno-60-3" href="#__codelineno-60-3"></a>
+<a id="__codelineno-60-4" name="__codelineno-60-4" href="#__codelineno-60-4"></a><span class="c1"># Generate a template</span>
+<a id="__codelineno-60-5" name="__codelineno-60-5" href="#__codelineno-60-5"></a>python<span class="w"> </span>scripts/journal_template.py<span class="w"> </span>--generate<span class="w"> </span>JFE<span class="w"> </span>output/paper.tex
+</code></pre></div>
+<hr />
+<h2 id="eventmonitor">EventMonitor</h2>
+<p><strong>File</strong>: <code>scripts/event_monitor.py</code></p>
+<p>Monitor financial events and trigger research pipelines automatically.</p>
+<h3 id="class-eventmonitor">Class: <code>EventMonitor</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.event_monitor</span><span class="w"> </span><span class="kn">import</span> <span class="n">EventMonitor</span>
+</code></pre></div>
+<h4 id="__init__check_interval-int-300-auto_trigger-bool-false-config_path-str-configproject_configjson"><code>__init__(check_interval: int = 300, auto_trigger: bool = False, config_path: str = "config/project_config.json")</code></h4>
+<p>Initialize the event monitor.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a><span class="n">monitor</span> <span class="o">=</span> <span class="n">EventMonitor</span><span class="p">(</span>
+<a id="__codelineno-62-2" name="__codelineno-62-2" href="#__codelineno-62-2"></a>    <span class="n">check_interval</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>      <span class="c1"># Check every 5 minutes</span>
+<a id="__codelineno-62-3" name="__codelineno-62-3" href="#__codelineno-62-3"></a>    <span class="n">auto_trigger</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>      <span class="c1"># Require human approval</span>
+<a id="__codelineno-62-4" name="__codelineno-62-4" href="#__codelineno-62-4"></a>    <span class="n">config_path</span><span class="o">=</span><span class="s2">&quot;config/project_config.json&quot;</span>
+<a id="__codelineno-62-5" name="__codelineno-62-5" href="#__codelineno-62-5"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="add_event_handlerevent_type-str-handler-callable-kwargs-none"><code>add_event_handler(event_type: str, handler: Callable, **kwargs) -&gt; None</code></h4>
+<p>Register an event handler.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_earnings</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<a id="__codelineno-63-2" name="__codelineno-63-2" href="#__codelineno-63-2"></a>    <span class="n">symbol</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;symbol&quot;</span><span class="p">]</span>
+<a id="__codelineno-63-3" name="__codelineno-63-3" href="#__codelineno-63-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Earnings released for </span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-63-4" name="__codelineno-63-4" href="#__codelineno-63-4"></a>    <span class="c1"># Trigger research pipeline</span>
+<a id="__codelineno-63-5" name="__codelineno-63-5" href="#__codelineno-63-5"></a>    <span class="k">return</span> <span class="n">result</span>
+<a id="__codelineno-63-6" name="__codelineno-63-6" href="#__codelineno-63-6"></a>
+<a id="__codelineno-63-7" name="__codelineno-63-7" href="#__codelineno-63-7"></a><span class="n">monitor</span><span class="o">.</span><span class="n">add_event_handler</span><span class="p">(</span>
+<a id="__codelineno-63-8" name="__codelineno-63-8" href="#__codelineno-63-8"></a>    <span class="n">event_type</span><span class="o">=</span><span class="s2">&quot;earnings&quot;</span><span class="p">,</span>
+<a id="__codelineno-63-9" name="__codelineno-63-9" href="#__codelineno-63-9"></a>    <span class="n">handler</span><span class="o">=</span><span class="n">on_earnings</span>
+<a id="__codelineno-63-10" name="__codelineno-63-10" href="#__codelineno-63-10"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="add_custom_eventname-str-check_function-callable-handler-callable-none"><code>add_custom_event(name: str, check_function: Callable, handler: Callable) -&gt; None</code></h4>
+<p>Register a custom event type.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">check_earnings_season</span><span class="p">():</span>
+<a id="__codelineno-64-2" name="__codelineno-64-2" href="#__codelineno-64-2"></a>    <span class="c1"># Check if we&#39;re in earnings season</span>
+<a id="__codelineno-64-3" name="__codelineno-64-3" href="#__codelineno-64-3"></a>    <span class="k">return</span> <span class="n">is_earnings_season</span><span class="p">()</span>
+<a id="__codelineno-64-4" name="__codelineno-64-4" href="#__codelineno-64-4"></a>
+<a id="__codelineno-64-5" name="__codelineno-64-5" href="#__codelineno-64-5"></a><span class="n">monitor</span><span class="o">.</span><span class="n">add_custom_event</span><span class="p">(</span>
+<a id="__codelineno-64-6" name="__codelineno-64-6" href="#__codelineno-64-6"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;earnings_season&quot;</span><span class="p">,</span>
+<a id="__codelineno-64-7" name="__codelineno-64-7" href="#__codelineno-64-7"></a>    <span class="n">check_function</span><span class="o">=</span><span class="n">check_earnings_season</span><span class="p">,</span>
+<a id="__codelineno-64-8" name="__codelineno-64-8" href="#__codelineno-64-8"></a>    <span class="n">handler</span><span class="o">=</span><span class="n">on_earnings</span>
+<a id="__codelineno-64-9" name="__codelineno-64-9" href="#__codelineno-64-9"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="start-none"><code>start() -&gt; None</code></h4>
+<p>Start the monitoring loop.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a><span class="n">monitor</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="stop-none"><code>stop() -&gt; None</code></h4>
+<p>Stop the monitoring loop.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a><span class="n">monitor</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="get_eventslimit-int-100-listdict"><code>get_events(limit: int = 100) -&gt; list[dict]</code></h4>
+<p>Get recent events from the queue.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a><span class="n">events</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_events</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-67-2" name="__codelineno-67-2" href="#__codelineno-67-2"></a><span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+<a id="__codelineno-67-3" name="__codelineno-67-3" href="#__codelineno-67-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">event</span><span class="p">[</span><span class="s1">&#39;event_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="get_historydays-int-7-listdict"><code>get_history(days: int = 7) -&gt; list[dict]</code></h4>
+<p>Get event history for the past N days.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a><span class="n">history</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">get_history</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="clear_events-none"><code>clear_events() -&gt; None</code></h4>
+<p>Clear the event queue.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a><span class="n">monitor</span><span class="o">.</span><span class="n">clear_events</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="event-types">Event Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>earnings</code></td>
+<td>Quarterly/annual earnings releases</td>
+<td>Symbol-based</td>
+</tr>
+<tr>
+<td><code>macro_release</code></td>
+<td>GDP, CPI, PMI announcements</td>
+<td>Country + indicator</td>
+</tr>
+<tr>
+<td><code>policy</code></td>
+<td>Policy announcements matching keywords</td>
+<td>Keyword-based</td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>User-defined event check functions</td>
+<td>Function-based</td>
+</tr>
+</tbody>
+</table>
+<h3 id="event-object-structure">Event Object Structure</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a><span class="p">{</span>
+<a id="__codelineno-70-2" name="__codelineno-70-2" href="#__codelineno-70-2"></a>    <span class="s2">&quot;event_id&quot;</span><span class="p">:</span> <span class="s2">&quot;evt_001&quot;</span><span class="p">,</span>
+<a id="__codelineno-70-3" name="__codelineno-70-3" href="#__codelineno-70-3"></a>    <span class="s2">&quot;event_type&quot;</span><span class="p">:</span> <span class="s2">&quot;earnings&quot;</span><span class="p">,</span>
+<a id="__codelineno-70-4" name="__codelineno-70-4" href="#__codelineno-70-4"></a>    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2024-04-15T09:30:00&quot;</span><span class="p">,</span>
+<a id="__codelineno-70-5" name="__codelineno-70-5" href="#__codelineno-70-5"></a>    <span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="s2">&quot;000001.SZ&quot;</span><span class="p">,</span>
+<a id="__codelineno-70-6" name="__codelineno-70-6" href="#__codelineno-70-6"></a>    <span class="s2">&quot;trigger&quot;</span><span class="p">:</span> <span class="s2">&quot;Q1 2024 earnings release&quot;</span><span class="p">,</span>
+<a id="__codelineno-70-7" name="__codelineno-70-7" href="#__codelineno-70-7"></a>    <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-70-8" name="__codelineno-70-8" href="#__codelineno-70-8"></a>        <span class="s2">&quot;estimate&quot;</span><span class="p">:</span> <span class="mf">1.25</span><span class="p">,</span>
+<a id="__codelineno-70-9" name="__codelineno-70-9" href="#__codelineno-70-9"></a>        <span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="mf">1.32</span><span class="p">,</span>
+<a id="__codelineno-70-10" name="__codelineno-70-10" href="#__codelineno-70-10"></a>        <span class="s2">&quot;beat&quot;</span><span class="p">:</span> <span class="kc">True</span>
+<a id="__codelineno-70-11" name="__codelineno-70-11" href="#__codelineno-70-11"></a>    <span class="p">}</span>
+<a id="__codelineno-70-12" name="__codelineno-70-12" href="#__codelineno-70-12"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="cli-usage_2">CLI Usage</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a><span class="c1"># Test mode (no real data)</span>
+<a id="__codelineno-71-2" name="__codelineno-71-2" href="#__codelineno-71-2"></a>python<span class="w"> </span>scripts/event_monitor.py<span class="w"> </span>--interval<span class="w"> </span><span class="m">60</span><span class="w"> </span>--test
+<a id="__codelineno-71-3" name="__codelineno-71-3" href="#__codelineno-71-3"></a>
+<a id="__codelineno-71-4" name="__codelineno-71-4" href="#__codelineno-71-4"></a><span class="c1"># Production mode</span>
+<a id="__codelineno-71-5" name="__codelineno-71-5" href="#__codelineno-71-5"></a>python<span class="w"> </span>scripts/event_monitor.py<span class="w"> </span>--interval<span class="w"> </span><span class="m">300</span>
+<a id="__codelineno-71-6" name="__codelineno-71-6" href="#__codelineno-71-6"></a>
+<a id="__codelineno-71-7" name="__codelineno-71-7" href="#__codelineno-71-7"></a><span class="c1"># Auto-trigger (no approval required)</span>
+<a id="__codelineno-71-8" name="__codelineno-71-8" href="#__codelineno-71-8"></a>python<span class="w"> </span>scripts/event_monitor.py<span class="w"> </span>--interval<span class="w"> </span><span class="m">300</span><span class="w"> </span>--auto-trigger
+<a id="__codelineno-71-9" name="__codelineno-71-9" href="#__codelineno-71-9"></a>
+<a id="__codelineno-71-10" name="__codelineno-71-10" href="#__codelineno-71-10"></a><span class="c1"># One-shot check</span>
+<a id="__codelineno-71-11" name="__codelineno-71-11" href="#__codelineno-71-11"></a>python<span class="w"> </span>scripts/event_monitor.py<span class="w"> </span>--check-once
+</code></pre></div>
+<hr />
+<h2 id="additional-modules">Additional Modules</h2>
+<h3 id="datafetcher">DataFetcher</h3>
+<p><strong>File</strong>: <code>scripts/research_framework/data_fetcher.py</code></p>
+<p>Unified data fetching with MCP fallback chain.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-72-1" name="__codelineno-72-1" href="#__codelineno-72-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.research_framework.data_fetcher</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFetcher</span>
+<a id="__codelineno-72-2" name="__codelineno-72-2" href="#__codelineno-72-2"></a>
+<a id="__codelineno-72-3" name="__codelineno-72-3" href="#__codelineno-72-3"></a><span class="n">fetcher</span> <span class="o">=</span> <span class="n">DataFetcher</span><span class="p">()</span>
+<a id="__codelineno-72-4" name="__codelineno-72-4" href="#__codelineno-72-4"></a>
+<a id="__codelineno-72-5" name="__codelineno-72-5" href="#__codelineno-72-5"></a><span class="c1"># Auto-selects best available data source</span>
+<a id="__codelineno-72-6" name="__codelineno-72-6" href="#__codelineno-72-6"></a><span class="n">data</span> <span class="o">=</span> <span class="n">fetcher</span><span class="o">.</span><span class="n">get_stock_data</span><span class="p">(</span><span class="s2">&quot;000001.SZ&quot;</span><span class="p">)</span>
+<a id="__codelineno-72-7" name="__codelineno-72-7" href="#__codelineno-72-7"></a>
+<a id="__codelineno-72-8" name="__codelineno-72-8" href="#__codelineno-72-8"></a><span class="c1"># Macro data</span>
+<a id="__codelineno-72-9" name="__codelineno-72-9" href="#__codelineno-72-9"></a><span class="n">macro</span> <span class="o">=</span> <span class="n">fetcher</span><span class="o">.</span><span class="n">get_macro_data</span><span class="p">(</span><span class="s2">&quot;china_gdp&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="llmgateway">LLMGateway</h3>
+<p><strong>File</strong>: <code>scripts/core/llm_gateway.py</code></p>
+<p>Unified LLM gateway with multi-model routing.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-73-1" name="__codelineno-73-1" href="#__codelineno-73-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.llm_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMGateway</span>
+<a id="__codelineno-73-2" name="__codelineno-73-2" href="#__codelineno-73-2"></a>
+<a id="__codelineno-73-3" name="__codelineno-73-3" href="#__codelineno-73-3"></a><span class="n">gateway</span> <span class="o">=</span> <span class="n">LLMGateway</span><span class="p">()</span>
+<a id="__codelineno-73-4" name="__codelineno-73-4" href="#__codelineno-73-4"></a><span class="n">response</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="s2">&quot;Analyze this paper abstract...&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="researchsession">ResearchSession</h3>
+<p><strong>File</strong>: <code>scripts/core/session.py</code></p>
+<p>Session management for research workflows.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-74-1" name="__codelineno-74-1" href="#__codelineno-74-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.core.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResearchSession</span><span class="p">,</span> <span class="n">SessionConfig</span>
+<a id="__codelineno-74-2" name="__codelineno-74-2" href="#__codelineno-74-2"></a>
+<a id="__codelineno-74-3" name="__codelineno-74-3" href="#__codelineno-74-3"></a><span class="n">session</span> <span class="o">=</span> <span class="n">ResearchSession</span><span class="p">(</span><span class="n">SessionConfig</span><span class="p">(</span>
+<a id="__codelineno-74-4" name="__codelineno-74-4" href="#__codelineno-74-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;carbon_trading_analysis&quot;</span><span class="p">,</span>
+<a id="__codelineno-74-5" name="__codelineno-74-5" href="#__codelineno-74-5"></a>    <span class="n">user_goal</span><span class="o">=</span><span class="s2">&quot;分析碳排放权交易对企业绿色创新的影响&quot;</span><span class="p">,</span>
+<a id="__codelineno-74-6" name="__codelineno-74-6" href="#__codelineno-74-6"></a>    <span class="n">workspace_root</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+<a id="__codelineno-74-7" name="__codelineno-74-7" href="#__codelineno-74-7"></a>    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-74-8" name="__codelineno-74-8" href="#__codelineno-74-8"></a><span class="p">))</span>
+<a id="__codelineno-74-9" name="__codelineno-74-9" href="#__codelineno-74-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;获取相关文献&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="setupwizard">SetupWizard</h3>
+<p><strong>File</strong>: <code>scripts/setup_wizard.py</code></p>
+<p>首次运行引导系统，基于研究方向推荐 API Key 和 MCP 服务器配置。</p>
+<h4 id="_1">核心函数</h4>
+<h5 id="check_and_guide_setuptopic-str-none-none-dict"><code>check_and_guide_setup(topic: str | None = None) -&gt; dict</code></h5>
+<p>由 <code>AgentPipeline</code> 自动调用，检测配置状态并返回引导信息。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-75-1" name="__codelineno-75-1" href="#__codelineno-75-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scripts.setup_wizard</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_and_guide_setup</span>
+<a id="__codelineno-75-2" name="__codelineno-75-2" href="#__codelineno-75-2"></a>
+<a id="__codelineno-75-3" name="__codelineno-75-3" href="#__codelineno-75-3"></a><span class="n">result</span> <span class="o">=</span> <span class="n">check_and_guide_setup</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;关税政策对A股的影响&quot;</span><span class="p">)</span>
+<a id="__codelineno-75-4" name="__codelineno-75-4" href="#__codelineno-75-4"></a><span class="c1"># result = {</span>
+<a id="__codelineno-75-5" name="__codelineno-75-5" href="#__codelineno-75-5"></a><span class="c1">#     &quot;needs_setup&quot;: True,</span>
+<a id="__codelineno-75-6" name="__codelineno-75-6" href="#__codelineno-75-6"></a><span class="c1">#     &quot;missing&quot;: [&quot;DEEPSEEK_API_KEY&quot;, &quot;TUSHARE_TOKEN&quot;],</span>
+<a id="__codelineno-75-7" name="__codelineno-75-7" href="#__codelineno-75-7"></a><span class="c1">#     &quot;guidance&quot;: &quot;...&quot;   # 格式化的配置指南文本</span>
+<a id="__codelineno-75-8" name="__codelineno-75-8" href="#__codelineno-75-8"></a><span class="c1"># }</span>
+</code></pre></div>
+<h5 id="get_current_status-dictstr-configstatus"><code>get_current_status() -&gt; dict[str, ConfigStatus]</code></h5>
+<p>检测所有配置项的当前状态（已设置/未设置/脱敏值）。</p>
+<h5 id="get_all_configs-listconfigstatus"><code>get_all_configs() -&gt; list[ConfigStatus]</code></h5>
+<p>返回完整配置项列表（含优先级、说明、适用方向）。</p>
+<h5 id="direction_requirements"><code>DIRECTION_REQUIREMENTS</code></h5>
+<p>研究方向 → 配置映射表：</p>
+<table>
+<thead>
+<tr>
+<th>Direction</th>
+<th>Label</th>
+<th>推荐配置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a_share</code></td>
+<td>A股研究</td>
+<td>DEEPSEEK_API_KEY, TUSHARE_TOKEN</td>
+</tr>
+<tr>
+<td><code>macro</code></td>
+<td>宏观经济研究</td>
+<td>DEEPSEEK_API_KEY, BRAVE_SEARCH_API_KEY</td>
+</tr>
+<tr>
+<td><code>empirical_paper</code></td>
+<td>实证学术论文</td>
+<td>DEEPSEEK_API_KEY, TUSHARE_TOKEN, BRAVE_SEARCH_API_KEY</td>
+</tr>
+<tr>
+<td><code>quantitative</code></td>
+<td>量化投资研究</td>
+<td>DEEPSEEK_API_KEY, TUSHARE_TOKEN, EODHD_API_KEY</td>
+</tr>
+<tr>
+<td><code>financial_report</code></td>
+<td>金融研究报告撰写</td>
+<td>DEEPSEEK_API_KEY, RELAY_API_KEY, TUSHARE_TOKEN, BRAVE_SEARCH_API_KEY</td>
+</tr>
+</tbody>
+</table>
+<h4 id="cli">CLI 用法</h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-76-1" name="__codelineno-76-1" href="#__codelineno-76-1"></a><span class="c1"># 交互式引导（推荐首次使用）</span>
+<a id="__codelineno-76-2" name="__codelineno-76-2" href="#__codelineno-76-2"></a>python<span class="w"> </span>scripts/setup_wizard.py<span class="w"> </span>--guided
+<a id="__codelineno-76-3" name="__codelineno-76-3" href="#__codelineno-76-3"></a>
+<a id="__codelineno-76-4" name="__codelineno-76-4" href="#__codelineno-76-4"></a><span class="c1"># 查看当前配置状态</span>
+<a id="__codelineno-76-5" name="__codelineno-76-5" href="#__codelineno-76-5"></a>python<span class="w"> </span>scripts/setup_wizard.py<span class="w"> </span>--status
+<a id="__codelineno-76-6" name="__codelineno-76-6" href="#__codelineno-76-6"></a>
+<a id="__codelineno-76-7" name="__codelineno-76-7" href="#__codelineno-76-7"></a><span class="c1"># 指定研究方向快速配置</span>
+<a id="__codelineno-76-8" name="__codelineno-76-8" href="#__codelineno-76-8"></a>python<span class="w"> </span>scripts/setup_wizard.py<span class="w"> </span>--direction<span class="w"> </span>a_share<span class="w"> </span>--key<span class="w"> </span><span class="nv">DEEPSEEK_API_KEY</span><span class="o">=</span>xxx
+<a id="__codelineno-76-9" name="__codelineno-76-9" href="#__codelineno-76-9"></a>
+<a id="__codelineno-76-10" name="__codelineno-76-10" href="#__codelineno-76-10"></a><span class="c1"># 验证配置有效性</span>
+<a id="__codelineno-76-11" name="__codelineno-76-11" href="#__codelineno-76-11"></a>python<span class="w"> </span>scripts/setup_wizard.py<span class="w"> </span>--validate
+<a id="__codelineno-76-12" name="__codelineno-76-12" href="#__codelineno-76-12"></a>
+<a id="__codelineno-76-13" name="__codelineno-76-13" href="#__codelineno-76-13"></a><span class="c1"># 生成 .env.local 模板</span>
+<a id="__codelineno-76-14" name="__codelineno-76-14" href="#__codelineno-76-14"></a>python<span class="w"> </span>scripts/setup_wizard.py<span class="w"> </span>--template
+</code></pre></div>
+<h4 id="agentpipeline">与 AgentPipeline 的集成</h4>
+<p><code>AgentPipeline.run()</code> 启动时自动调用 <code>check_and_suggest_setup()</code>：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-77-1" name="__codelineno-77-1" href="#__codelineno-77-1"></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">AgentPipeline</span><span class="p">()</span>
+<a id="__codelineno-77-2" name="__codelineno-77-2" href="#__codelineno-77-2"></a><span class="c1"># 输入研究主题后，系统自动检测并提示缺失配置</span>
+<a id="__codelineno-77-3" name="__codelineno-77-3" href="#__codelineno-77-3"></a><span class="n">result</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;关税政策对A股的影响&quot;</span><span class="p">)</span>
+<a id="__codelineno-77-4" name="__codelineno-77-4" href="#__codelineno-77-4"></a><span class="c1"># 输出示例：</span>
+<a id="__codelineno-77-5" name="__codelineno-77-5" href="#__codelineno-77-5"></a><span class="c1"># ============================================================</span>
+<a id="__codelineno-77-6" name="__codelineno-77-6" href="#__codelineno-77-6"></a><span class="c1">#   [配置提示] 研究工作流配置检测</span>
+<a id="__codelineno-77-7" name="__codelineno-77-7" href="#__codelineno-77-7"></a><span class="c1"># ============================================================</span>
+<a id="__codelineno-77-8" name="__codelineno-77-8" href="#__codelineno-77-8"></a><span class="c1">#   缺失 [必须] DEEPSEEK_API_KEY — DeepSeek API Key（中文LLM调用，必需）</span>
+<a id="__codelineno-77-9" name="__codelineno-77-9" href="#__codelineno-77-9"></a><span class="c1">#   缺失 [推荐] TUSHARE_TOKEN — Tushare Pro API Key（A股数据）</span>
+<a id="__codelineno-77-10" name="__codelineno-77-10" href="#__codelineno-77-10"></a><span class="c1">#   ...</span>
+<a id="__codelineno-77-11" name="__codelineno-77-11" href="#__codelineno-77-11"></a><span class="c1">#   快速配置: python scripts/setup_wizard.py --guided</span>
+<a id="__codelineno-77-12" name="__codelineno-77-12" href="#__codelineno-77-12"></a><span class="c1"># ============================================================</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "toc.follow", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

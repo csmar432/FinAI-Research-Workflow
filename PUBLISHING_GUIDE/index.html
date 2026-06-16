@@ -1,0 +1,1435 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="经济金融领域 AI 学术研究工作流文档">
+      
+      
+        <meta name="author" content="FinAI Research Workflow Contributors">
+      
+      
+        <link rel="canonical" href="https://csmar432.github.io/finai-research-workflow/PUBLISHING_GUIDE/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>🚀 v1.0.0 发布操作手册 - FinResearch Agent 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#v100" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="FinResearch Agent 文档" class="md-header__button md-logo" aria-label="FinResearch Agent 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FinResearch Agent 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              🚀 v1.0.0 发布操作手册
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/csmar432/finai-research-workflow" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    csmar432/finai-research-workflow
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../tutorials/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/01-quickstart/" class="md-tabs__link">
+          
+  
+  
+  快速入门
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/04-mcp-marketplace/" class="md-tabs__link">
+          
+  
+  
+  MCP 工具
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/05-event-driven-research/" class="md-tabs__link">
+          
+  
+  
+  进阶
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../ARCHITECTURE/" class="md-tabs__link">
+          
+  
+  
+  项目
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="FinResearch Agent 文档" class="md-nav__button md-logo" aria-label="FinResearch Agent 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FinResearch Agent 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/csmar432/finai-research-workflow" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    csmar432/finai-research-workflow
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速入门
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    快速入门
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/01-quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/02-financial-report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    金融研究报告
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/03-research-directions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    研究方向设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP 工具
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MCP 工具
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/04-mcp-marketplace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP 市场
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../external_data_sources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据源参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    进阶
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    进阶
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/05-event-driven-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事件驱动研究
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    项目
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 操作总览
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="v100">🚀 v1.0.0 发布操作手册</h1>
+<blockquote>
+<p><strong>目标</strong>: 帮你从 0 到 1 完成 GitHub 仓库的元数据设置 + 第三方服务配置，最终发布 v1.0.0 到 PyPI。
+<strong>预计时间</strong>: 45-60 分钟
+<strong>难度</strong>: ⭐⭐ (每个步骤都有详细指引)</p>
+</blockquote>
+<hr />
+<h2 id="_1">📋 操作总览</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>任务</th>
+<th>估时</th>
+<th>难度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Phase 1: GitHub 仓库元数据</strong></td>
+<td>5 项</td>
+<td>15 min</td>
+<td>⭐</td>
+</tr>
+<tr>
+<td><strong>Phase 2: 第三方服务</strong></td>
+<td>4 项</td>
+<td>25 min</td>
+<td>⭐⭐</td>
+</tr>
+<tr>
+<td><strong>Phase 3: PyPI Trusted Publishing</strong></td>
+<td>1 项</td>
+<td>5 min</td>
+<td>⭐</td>
+</tr>
+<tr>
+<td><strong>Phase 4: 正式发布</strong></td>
+<td>4 步</td>
+<td>10 min</td>
+<td>⭐</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>顺序很重要: 1 → 2 → 3 → 4</p>
+</blockquote>
+<hr />
+<h1 id="phase-1-github-15-min">Phase 1: GitHub 仓库元数据 (15 min)</h1>
+<blockquote>
+<p>位置: 浏览器打开 <code>https://github.com/csmar432/finai-research-workflow</code></p>
+</blockquote>
+<h2 id="11-description-1-min">1.1 添加 Description (1 min)</h2>
+<p><strong>为什么</strong>: 用户在搜索/发现项目时第一眼看到的内容。</p>
+<p><strong>操作</strong>:
+1. 打开仓库主页: https://github.com/csmar432/finai-research-workflow
+2. 在页面右侧 (About 区域) 找到 "Edit" 按钮
+3. Description 字段填入:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>End-to-end AI agent pipeline for economic and financial research. 
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>43 MCP data servers, 49 econometric methods (DID/IV/RDD/PSM), 
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>17 AI skills, 70 journal templates. 
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Designed for JF/JFE/RFS/经济研究/金融研究 submissions.
+</code></pre></div>
+<ol>
+<li>勾选 ✅ Releases / ✅ Packages / ✅ Contributors</li>
+<li>点击 "Save changes"</li>
+</ol>
+<p><strong>检查</strong>: 刷新页面，About 区域显示新 Description。</p>
+<hr />
+<h2 id="12-topics-1-min">1.2 添加 Topics (1 min)</h2>
+<p><strong>为什么</strong>: GitHub 搜索排名权重最高。</p>
+<p><strong>操作</strong>:
+1. 在仓库主页 → About 区域 → Edit
+2. Topics 输入框,逐个添加 (GitHub 会自动提示):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>academic-research
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>financial-ai
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>econometrics
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>paper-writing
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>latex
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>mcp
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>cursor
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>difference-in-differences
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>instrumental-variables
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>causal-inference
+</code></pre></div>
+<ol>
+<li>Save</li>
+</ol>
+<p><strong>检查</strong>: About 区域显示 10 个蓝色 topic 标签。</p>
+<hr />
+<h2 id="13-social-preview-2-min">1.3 添加 Social Preview 图片 (2 min)</h2>
+<p><strong>为什么</strong>: 用户在 Twitter/微博/搜索结果看到的第一印象图片 (1280×640)。</p>
+<p><strong>操作</strong>:
+1. Settings → General → Social preview
+2. 点击 "Upload an image" (注意: 必须 ≥ 1280×640, PNG/JPG)
+3. 推荐使用你已有的架构图:
+   - <code>.github/demo/01-architecture-overview.png</code>
+   - <code>.github/demo/04-research-pipeline.png</code>
+   - 或专门为 social preview 设计一个 (用 Figma/Canva)
+4. Upload</p>
+<p><strong>检查</strong>: 打开任何 Issue 页面,顶部会显示这张图。</p>
+<hr />
+<h2 id="14-discussions-1-min">1.4 启用 Discussions (1 min)</h2>
+<p><strong>为什么</strong>: 社区 Q&amp;A 平台 (替代单独的 Slack/微信群)。</p>
+<p><strong>操作</strong>:
+1. Settings → General → Features
+2. ✅ 勾选 "Discussions"
+3. (可选) 配置欢迎帖: Discussions → "Set up categories"</p>
+<p><strong>推荐 Categories</strong>:
+- 📣 Announcements
+- 💡 Ideas
+- 🙏 Q&amp;A
+- 📚 Show and tell</p>
+<p><strong>检查</strong>: 仓库顶部多出 "Discussions" 标签。</p>
+<hr />
+<h2 id="15-main-10-min">1.5 设置 main 分支保护 (10 min)</h2>
+<p><strong>为什么</strong>: 防止 main 分支被直接 push,要求 PR + CI 通过。</p>
+<p><strong>操作</strong>:
+1. Settings → Branches → Add branch protection rule
+2. Branch name pattern: <code>main</code>
+3. 配置:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>✅ Require a pull request before merging
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>   ✅ Require approvals: 1
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>   ✅ Dismiss stale pull request approvals when new commits are pushed
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>✅ Require status checks to pass before merging
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>   ✅ Require branches to be up to date before merging
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>   Status checks 搜索并添加 (CI 跑过后才显示):
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>   - Lint &amp; Type Check
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>   - Tests batch 1/3
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>   - Tests batch 2/3
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>   - Tests batch 3/3
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>   - Coverage Report
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>✅ Require conversation resolution before merging
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>✅ Include administrators (可选)
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>❌ Allow force pushes (永远关闭)
+</code></pre></div>
+<ol>
+<li>Save changes</li>
+</ol>
+<p><strong>检查</strong>: 尝试直接 push 到 main,应该被拒绝。</p>
+<hr />
+<h1 id="phase-2-25-min">Phase 2: 第三方服务 (25 min)</h1>
+<h2 id="21-codecov-5-min">2.1 注册 Codecov (代码覆盖率) (5 min)</h2>
+<p><strong>为什么</strong>: Coverage badge + 趋势图,自动从 CI 抓数据。</p>
+<p><strong>操作</strong>:
+1. 打开 https://about.codecov.io/
+2. 用 GitHub 账号登录
+3. 添加组织: 选择你的 GitHub 用户
+4. 添加仓库: csmar432/finai-research-workflow
+5. 复制 token (Settings → General → Repository Upload Token)
+6. 在 GitHub 仓库 → Settings → Secrets and variables → Actions → New repository secret
+   - Name: <code>CODECOV_TOKEN</code>
+   - Value: 粘贴上面复制的 token
+7. Add secret</p>
+<p><strong>激活</strong>:
+- 在 <code>.github/workflows/ci.yml</code> 的 coverage job 中加 (如果还没加):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload coverage to Codecov</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">codecov/codecov-action@v4</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">with</span><span class="p">:</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.CODECOV_TOKEN }}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">files</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./coverage.xml</span>
+</code></pre></div></p>
+<p><strong>检查</strong>:
+- 推一次新 commit → GitHub Actions → Coverage job → 上传成功
+- 打开 https://codecov.io/gh/csmar432/finai-research-workflow
+- README badge 自动激活 (现在显示具体百分比)</p>
+<hr />
+<h2 id="22-zenodo-doi-5-min">2.2 链接 Zenodo (学术 DOI) (5 min)</h2>
+<p><strong>为什么</strong>: 每次 GitHub Release 自动生成 DOI,适合学术引用。</p>
+<p><strong>操作</strong>:
+1. 打开 https://zenodo.org/
+2. 用 GitHub 账号登录 (首次需授权)
+3. 进入 https://zenodo.org/account/settings/github/
+4. 在 "GitHub repositories" 列表中找到 <code>csmar432/finai-research-workflow</code>
+5. 启用 sync (ON)
+6. (可选) 填写 <code>.zenodo.json</code> 中作者 ORCID (在 https://orcid.org/ 注册)</p>
+<p><strong>激活</strong>:
+- 第一次发布 GitHub Release 时自动触发
+- Zenodo 给你一个 DOI 链接,如 <code>10.5281/zenodo.1234567</code>
+- 更新 README 的 DOI badge:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>[<span class="nt">![DOI</span>](<span class="na">https://zenodo.org/badge/DOI/&lt;your-actual-doi&gt;.svg</span>)](https://doi.org/&lt;your-actual-doi&gt;)
+</code></pre></div></p>
+<p><strong>检查</strong>:
+- 在 Releases 页面发布 v1.0.0
+- 5-10 分钟后, https://zenodo.org/ 你的 dashboard 显示新版本</p>
+<hr />
+<h2 id="23-github-container-registry-docker-images-5-min">2.3 注册 GitHub Container Registry (Docker images) (5 min, 可选)</h2>
+<p><strong>为什么</strong>: 自动发布 Docker 镜像 (如果你的用户用 Docker 部署)。</p>
+<p><strong>操作</strong>:
+1. 仓库根目录创建 <code>.github/workflows/docker-publish.yml</code> (你已有,见下)
+2. (此项目可选,因用户通常 pip install)</p>
+<p><strong>检查</strong>:
+- 推送 tag → Actions 自动 build + push
+- <code>docker pull ghcr.io/csmar432/finai-research-workflow:v1.0.0</code></p>
+<hr />
+<h2 id="24-dependabot-2-min">2.4 设置 Dependabot (依赖自动更新) (2 min, 已配)</h2>
+<p><strong>状态</strong>: 已配置, 无需操作。</p>
+<p><strong>验证</strong>:
+- 打开 https://github.com/csmar432/finai-research-workflow/security/dependabot
+- 启用: Dependabot alerts ✅ / Dependabot security updates ✅</p>
+<hr />
+<h1 id="phase-3-pypi-trusted-publishing-5-min">Phase 3: PyPI Trusted Publishing (5 min)</h1>
+<blockquote>
+<p>这是<strong>关键</strong>,决定能否自动发布到 PyPI。</p>
+</blockquote>
+<h2 id="31-pypi-trusted-publisher">3.1 在 PyPI 配置 Trusted Publisher</h2>
+<p><strong>操作</strong>:
+1. 打开 https://pypi.org/manage/account/publishing/
+2. 滚动到 "Add a new pending publisher"
+3. 填写:
+   - <strong>Owner</strong>: <code>csmar432</code> (你的 PyPI 用户名, 如未注册先去 https://pypi.org/account/register/)
+   - <strong>Repository name</strong>: <code>finai-research-workflow</code> 
+   - <strong>Workflow filename</strong>: <code>publish-pypi.yml</code>
+   - <strong>Environment name</strong>: <code>pypi</code>
+4. Submit
+5. (可选) 同样在 https://test.pypi.org/manage/account/publishing/ 配置 TestPyPI</p>
+<p><strong>检查</strong>: 在你的 PyPI 账号 → Publishing → 看到 "csmar432/finai-research-workflow" 一条。</p>
+<hr />
+<h2 id="32-github-environment">3.2 在 GitHub 创建 Environment</h2>
+<p><strong>操作</strong>:
+1. GitHub 仓库 → Settings → Environments → New environment
+2. Name: <code>pypi</code>
+3. (可选) Protection rules: Required reviewers (推荐你自己)
+4. Configure environment
+5. (再次) 进 environment → Add secret (此项目不需要,因为用 OIDC)</p>
+<p><strong>检查</strong>: 仓库 → Settings → Environments 列表中有 <code>pypi</code>。</p>
+<hr />
+<h1 id="phase-4-10-min">Phase 4: 正式发布 (10 min)</h1>
+<blockquote>
+<p>此时所有"管道"已通,只需 push tag 触发自动发布。</p>
+</blockquote>
+<h2 id="41-1-min">4.1 提交当前所有改动 (1 min)</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">cd</span><span class="w"> </span><span class="nv">$REPO_ROOT</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>add<span class="w"> </span>-A
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore(release): prepare v1.0.0 - CLI, MANIFEST, publish workflow, badges&quot;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
+</code></pre></div>
+<hr />
+<h2 id="42-v100-tag-1-min">4.2 打 v1.0.0 tag 并推送 (1 min)</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>v1.0.0<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Release v1.0.0&quot;</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v1.0.0
+</code></pre></div>
+<p><strong>检查</strong>:
+- 仓库主页 → Releases 出现 v1.0.0 (draft)
+- Actions → publish-pypi.yml 自动开始跑</p>
+<hr />
+<h2 id="43-github-release-2-min">4.3 创建 GitHub Release (2 min)</h2>
+<p><strong>操作</strong>:
+1. 仓库主页 → Releases → v1.0.0 → Edit
+2. 填写:
+   - <strong>Title</strong>: v1.0.0
+   - <strong>Description</strong>: 复制 <code>releases/v1.0.0.md</code> 的内容
+   - <strong>Tag</strong>: v1.0.0
+   - <strong>Target</strong>: main
+3. ✅ Set as the latest release
+4. Publish release</p>
+<p><strong>触发</strong>:
+- publish-pypi.yml 自动 build + publish
+- release-sign.yml 自动 sigstore 签名
+- release-drafter.yml 后续版本自动生成 draft</p>
+<hr />
+<h2 id="44-5-min">4.4 验证发布成功 (5 min)</h2>
+<p><strong>验证清单</strong> (逐项打勾):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># A. PyPI 包可安装</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>pip<span class="w"> </span>install<span class="w"> </span>finai-research-workflow
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import scripts; print(&#39;✅ 安装成功&#39;)&quot;</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>finai<span class="w"> </span>version
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>finai<span class="w"> </span>health
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># B. 验证测试通过</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>-x<span class="w"> </span>-q
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># 应该: 86 tests passed</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1"># C. 验证 GitHub Release</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1"># 打开: https://github.com/csmar432/finai-research-workflow/releases/tag/v1.0.0</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1"># ✅ 看到 release notes</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c1"># ✅ 看到 .whl 和 .tar.gz 下载</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1"># ✅ sigstore 签名文件 (.sig, .cert)</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c1"># D. 验证 Zenodo DOI</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1"># 打开: https://zenodo.org/search?q=finai-research-workflow</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="c1"># ✅ 看到 v1.0.0 entry</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="c1"># ✅ 有 DOI 链接</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="c1"># E. 验证 Codecov</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="c1"># 打开: https://codecov.io/gh/csmar432/finai-research-workflow</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="c1"># ✅ 看到 coverage 报告</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="c1"># ✅ README badge 颜色正确 (绿/黄/红)</span>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a><span class="c1"># F. 验证 docs 部署</span>
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a><span class="c1"># 打开 GitHub Pages 链接</span>
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a><span class="c1"># ✅ 看到 mkdocs 站点</span>
+</code></pre></div>
+<hr />
+<h2 id="45-5-min">4.5 发布公告 (5 min, 可选)</h2>
+<p>在以下平台发布公告:</p>
+<ul>
+<li><strong>GitHub Discussions</strong>: 创建一个 "📣 v1.0.0 Released" pinned 帖</li>
+<li><strong>Twitter/X</strong>: 配架构图 + 一句话介绍</li>
+<li><strong>知乎/微博</strong>: 中文版本</li>
+<li><strong>Reddit</strong>: r/MachineLearning, r/econometrics</li>
+<li><strong>Hacker News</strong>: Show HN: FinAI Research Workflow</li>
+</ul>
+<hr />
+<h1 id="_2">📊 操作时间线 (推荐)</h1>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>任务</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0:00</td>
+<td>Phase 1.1: Description</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:01</td>
+<td>Phase 1.2: Topics</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:02</td>
+<td>Phase 1.3: Social Preview</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:05</td>
+<td>Phase 1.4: Discussions</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:06</td>
+<td>Phase 1.5: Branch protection</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:15</td>
+<td><strong>Phase 1 完成</strong></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:16</td>
+<td>Phase 2.1: Codecov</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:21</td>
+<td>Phase 2.2: Zenodo</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:26</td>
+<td>Phase 2.3: Container Registry (可选)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:31</td>
+<td>Phase 2.4: Dependabot 验证</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:33</td>
+<td><strong>Phase 2 完成</strong></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:34</td>
+<td>Phase 3.1: PyPI Trusted Publisher</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:37</td>
+<td>Phase 3.2: GitHub Environment</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:40</td>
+<td><strong>Phase 3 完成</strong></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:41</td>
+<td>Phase 4.1: commit &amp; push</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:42</td>
+<td>Phase 4.2: git tag</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:43</td>
+<td>Phase 4.3: GitHub Release</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:45</td>
+<td>Phase 4.4: 验证</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:50</td>
+<td>Phase 4.5: 公告 (可选)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td><strong>0:55</strong></td>
+<td><strong>🎉 v1.0.0 正式发布!</strong></td>
+<td>☐</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="_3">🆘 常见问题</h1>
+<h3 id="q1-pypi-finai-research-workflow">Q1: PyPI 名字 "finai-research-workflow" 被占怎么办?</h3>
+<p><strong>A</strong>:
+1. 打开 https://pypi.org/project/finai-research-workflow/
+2. 如果被占,在 <code>pyproject.toml</code> 改 name:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">[project]</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;finai-research-workflow&quot;</span><span class="w">  </span><span class="c1"># 改为不同名字</span>
+</code></pre></div>
+3. 重新 release</p>
+<h3 id="q2-trusted-publishing">Q2: Trusted Publishing 第一次失败?</h3>
+<p><strong>A</strong>:
+1. 检查 PyPI account 邮箱是否已验证
+2. 检查环境名拼写 (PyPI: <code>pypi</code> 必须全小写)
+3. 检查 workflow filename (必须是 <code>publish-pypi.yml</code>)
+4. 第一次失败可手动重试:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span>twine
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>python<span class="w"> </span>-m<span class="w"> </span>build
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>twine<span class="w"> </span>upload<span class="w"> </span>dist/*
+</code></pre></div></p>
+<h3 id="q3-tag-publish-pypiyml">Q3: 推 tag 后没自动触发 publish-pypi.yml?</h3>
+<p><strong>A</strong>:
+1. 检查 <code>on: release: types: [published]</code> 触发器
+2. 必须先在 GitHub UI 创建 Release (不是只 push tag)
+3. 检查 Secrets/Environment 名称</p>
+<h3 id="q4-sigstore">Q4: sigstore 签名失败?</h3>
+<p><strong>A</strong>:
+1. 检查 <code>permissions: id-token: write</code> 是否给
+2. 检查 sigstore-action 是否最新版本
+3. 第一次可能需联网下载 cosign binary,等待 2-3 分钟</p>
+<h3 id="q5-ci">Q5: 测试太慢导致 CI 超时?</h3>
+<p><strong>A</strong>:
+1. CI 已分 3 个 batch 并行跑
+2. 单个 job 超时可调 <code>actions/setup-python@v5</code> 的 <code>python-version</code>
+3. 可选: 移到 self-hosted runner (macOS 跑 Python 测试更快)</p>
+<hr />
+<h1 id="_4">✅ 完成检查</h1>
+<ul>
+<li>[ ] Phase 1 全部完成</li>
+<li>[ ] Phase 2 全部完成 (Container 可选)</li>
+<li>[ ] Phase 3 全部完成</li>
+<li>[ ] v1.0.0 在 PyPI 可安装</li>
+<li>[ ] GitHub Release 显示完整 changelog</li>
+<li>[ ] Zenodo DOI 已生成</li>
+<li>[ ] Codecov badge 已激活</li>
+<li>[ ] GitHub Pages 文档已部署</li>
+<li>[ ] 公告已发 (可选)</li>
+</ul>
+<p><strong>全部勾选后, v1.0.0 正式发布! 🎉</strong></p>
+<hr />
+<h1 id="_5">📞 需要帮助?</h1>
+<ul>
+<li><strong>Issue</strong>: https://github.com/csmar432/finai-research-workflow/issues</li>
+<li><strong>Discussion</strong>: https://github.com/csmar432/finai-research-workflow/discussions</li>
+<li><strong>Email</strong>: xuzheyi@users.noreply.github.com</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "toc.follow", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

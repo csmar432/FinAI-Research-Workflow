@@ -1,0 +1,1526 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="经济金融领域 AI 学术研究工作流文档">
+      
+      
+        <meta name="author" content="FinAI Research Workflow Contributors">
+      
+      
+        <link rel="canonical" href="https://csmar432.github.io/finai-research-workflow/YOUR_SPECIFIC_FIX/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>🚨 关键发现 + 完整修复方案 (针对你的情况) - FinResearch Agent 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="FinResearch Agent 文档" class="md-header__button md-logo" aria-label="FinResearch Agent 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FinResearch Agent 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              🚨 关键发现 + 完整修复方案 (针对你的情况)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/csmar432/finai-research-workflow" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    csmar432/finai-research-workflow
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../tutorials/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/01-quickstart/" class="md-tabs__link">
+          
+  
+  
+  快速入门
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/04-mcp-marketplace/" class="md-tabs__link">
+          
+  
+  
+  MCP 工具
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/05-event-driven-research/" class="md-tabs__link">
+          
+  
+  
+  进阶
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../ARCHITECTURE/" class="md-tabs__link">
+          
+  
+  
+  项目
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="FinResearch Agent 文档" class="md-nav__button md-logo" aria-label="FinResearch Agent 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FinResearch Agent 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/csmar432/finai-research-workflow" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    csmar432/finai-research-workflow
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速入门
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    快速入门
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/01-quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/02-financial-report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    金融研究报告
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/03-research-directions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    研究方向设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP 工具
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MCP 工具
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/04-mcp-marketplace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP 市场
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../external_data_sources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据源参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    进阶
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    进阶
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/05-event-driven-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事件驱动研究
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    项目
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#push-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚨 最严重问题: 仓库从未 push 到 GitHub
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#github-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 你的 GitHub 个人信息 (API 抓取)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 三步走方案 (从最紧急到最细致)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 三步走方案 (从最紧急到最细致)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-5-min-github-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 (5 min): 在 GitHub 修复个人 profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-5-min-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 (5 min): 在 GitHub 创建仓库
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-15-min-push" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 (15 min): 修邮箱 + push
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-10-min-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 (10 min): 修 commit 作者信息
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-1-min-commit-hash" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 (1 min): 强制推送 (因为改了 commit hash)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-5-min-github-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6 (5 min): 在 GitHub UI 验证
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-5-min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7 (5 min): 邮箱隐私设置
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gmail-vs-noreply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Gmail 路线 vs noreply 路线 (我重新评估)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Gmail 路线 vs noreply 路线 (我重新评估)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-gmail-yi1353370501gmailcom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        路线 A: Gmail (yi1353370501@gmail.com) ⭐⭐⭐⭐⭐
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-noreply-206827197csmar432usersnoreplygithubcom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        路线 B: noreply (206827197+csmar432@users.noreply.github.com) ⭐⭐⭐⭐
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-qq-1353370501qqcom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        路线 C: QQ (1353370501@qq.com) ⭐⭐
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-gmail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 我的最终建议: 路线 A (Gmail)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 完整操作时间表 (重做版)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🆘 常见问题
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🆘 常见问题">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q1: 为什么我之前以为仓库已存在?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q2-commit-15-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q2: 修复 commit 后, 之前看到的 15 个 commit 会变吗?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q3-push" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q3: 如果我 push 失败了, 怎么撤销?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q4-commit-github-ui-display-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q4: 我能不能不改 commit, 只改 GitHub UI display name?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q5-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Q5: 修完 commit 邮箱后, 之前可能的协作者会怎样?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✅ 决策时刻 (你只需要回答 1 个问题)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="_1">🚨 关键发现 + 完整修复方案 (针对你的情况)</h1>
+<blockquote>
+<p>基于你提供的截图: 已识别 2 个 Verified 邮箱 + 1 个未 push 的本地仓库</p>
+</blockquote>
+<hr />
+<h2 id="push-github">🚨 <strong>最严重问题: 仓库从未 push 到 GitHub</strong></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>检测结果:
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  • git remote -v  →  空
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  • GitHub API     →  csmar432 有 0 个 public repos
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  • csmar432/finai-research-workflow  →  404 Not Found
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  • 本地           →  200+ 文件未提交
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>含义: 
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  你之前所有的 &quot;发布准备&quot; 都是基于本地仓库。
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  GitHub 上根本看不到这个项目。
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  任何&quot;PyPI 发布&quot;或&quot;GitHub Release&quot;都做不了。
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  必须先 push!
+</code></pre></div>
+<h2 id="github-api">📊 你的 GitHub 个人信息 (API 抓取)</h2>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>当前值</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>yi</code></td>
+<td>改为 <code>Xu Zheyí</code> 或 <code>许哲逸</code></td>
+</tr>
+<tr>
+<td><code>bio</code></td>
+<td><code>nothing</code></td>
+<td>改为学术方向介绍</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>(公开未设)</td>
+<td>设为 <code>yi1353370501@gmail.com</code> 或 noreply</td>
+</tr>
+<tr>
+<td><code>location</code></td>
+<td><code>BeiJing</code></td>
+<td>✅ 保留</td>
+</tr>
+<tr>
+<td><code>public_repos</code></td>
+<td><code>0</code></td>
+<td><strong>修复后</strong> → 1</td>
+</tr>
+<tr>
+<td><code>followers/following</code></td>
+<td><code>0/0</code></td>
+<td>修复后项目有人 star 会增长</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>2025-04-09</td>
+<td>账号 14 个月, 一直未推项目</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">🎯 三步走方案 (从最紧急到最细致)</h2>
+<h3 id="step-1-5-min-github-profile">Step 1 (5 min): 在 GitHub 修复个人 profile</h3>
+<ol>
+<li>打开 https://github.com/csmar432 → Edit profile</li>
+<li>改名: <code>yi</code> → <code>Xu Zheyí</code> (或中文 <code>许哲逸</code>)</li>
+<li>Bio 填入:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>📊 经济金融 × AI 学术研究 · PhD/Master
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>🛠 FinAI Research Workflow 作者
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>🌏 Beijing, China
+</code></pre></div></li>
+<li>URL: 留空</li>
+<li>Twitter: 留空</li>
+<li>Company: 留空</li>
+<li>Save</li>
+</ol>
+<h3 id="step-2-5-min-github">Step 2 (5 min): 在 GitHub 创建仓库</h3>
+<p>⚠️ <strong>重要</strong>: 由于仓库从未 push，你需要:
+1. 打开 https://github.com/new
+2. 填写:
+   - <strong>Repository name</strong>: <code>finai-research-workflow</code>
+   - <strong>Description</strong>: 英文短描述
+     <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>End-to-end AI agent pipeline for economic and financial research. 
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>43 MCP data sources, 49 econometric methods, 17 AI skills.
+</code></pre></div>
+   - <strong>Public</strong> ✅ (必须)
+   - ❌ 不要勾选 "Initialize with README" (会冲突本地)
+   - ❌ 不要选 .gitignore / License (会冲突本地)
+3. Create repository
+4. <strong>复制 SSH/HTTPS URL</strong> (下一步用)</p>
+<h3 id="step-3-15-min-push">Step 3 (15 min): 修邮箱 + push</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span><span class="nv">$REPO_ROOT</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># 1. 第一次 push: 用 .local 邮箱没关系, GitHub 仍会接受</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>git<span class="w"> </span>add<span class="w"> </span>-A
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: initial release v1.0.0 - 86 tests, 39 MCPs, 49 methods, 17 skills, 34 templates&quot;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>git<span class="w"> </span>branch<span class="w"> </span>-M<span class="w"> </span>main
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># 2. 设置 remote (替换 &lt;URL&gt; 为你刚才复制的)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>origin<span class="w"> </span>https://github.com/csmar432/finai-research-workflow.git
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>git<span class="w"> </span>remote<span class="w"> </span>-v<span class="w">   </span><span class="c1"># 验证</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># 3. 第一次 push (无需 -f, 因为远端空)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>main
+</code></pre></div>
+<p><strong>此时 GitHub 上应该能看到所有文件了！</strong></p>
+<h3 id="step-4-10-min-commit">Step 4 (10 min): 修 commit 作者信息</h3>
+<p>第一次 push 后, 跑修复脚本:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># 干跑: 预览</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python<span class="w"> </span>scripts/fix_git_authorship.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--new-email<span class="w"> </span><span class="s2">&quot;yi1353370501@gmail.com&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--new-name<span class="w"> </span><span class="s2">&quot;Xu Zheyí&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--dry-run
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># 实际执行 (会要求你输入 &quot;yes&quot; 确认)</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>python<span class="w"> </span>scripts/fix_git_authorship.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>--new-email<span class="w"> </span><span class="s2">&quot;yi1353370501@gmail.com&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>--new-name<span class="w"> </span><span class="s2">&quot;Xu Zheyí&quot;</span>
+</code></pre></div>
+<p>脚本会改 15 个 commit 的 author + committer。</p>
+<h3 id="step-5-1-min-commit-hash">Step 5 (1 min): 强制推送 (因为改了 commit hash)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># ⚠️ 强制推送 (因为 commit hash 已变)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>push<span class="w"> </span>-f<span class="w"> </span>origin<span class="w"> </span>main
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>push<span class="w"> </span>-f<span class="w"> </span>origin<span class="w"> </span>--tags<span class="w">   </span><span class="c1"># 如果有 tag</span>
+</code></pre></div>
+<h3 id="step-6-5-min-github-ui">Step 6 (5 min): 在 GitHub UI 验证</h3>
+<ol>
+<li>打开 https://github.com/csmar432/finai-research-workflow</li>
+<li>commits 页面: 应该看到 "Xu Zheyí <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#121;&#105;&#49;&#51;&#53;&#51;&#51;&#55;&#48;&#53;&#48;&#49;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#121;&#105;&#49;&#51;&#53;&#51;&#51;&#55;&#48;&#53;&#48;&#49;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a>"</li>
+<li><strong>关键</strong>: https://github.com/csmar432 contribution graph 应该<strong>亮起</strong> 🎉</li>
+<li>Settings → Emails: 你的 Gmail 应该标 "auto-detected from commit"</li>
+</ol>
+<h3 id="step-7-5-min">Step 7 (5 min): 邮箱隐私设置</h3>
+<ol>
+<li>打开 https://github.com/settings/emails</li>
+<li>✅ 勾选 "Keep my email addresses private"</li>
+<li>✅ 勾选 "Block commits that expose my email"</li>
+</ol>
+<p><strong>注意</strong>: 如果你选 Gmail 路线, 勾 "Keep private" 后, GitHub commit 会自动转为 noreply 显示。
+但<strong>真实 commit author 仍是你的 Gmail</strong> (用于通知)。</p>
+<hr />
+<h2 id="gmail-vs-noreply">🎯 Gmail 路线 vs noreply 路线 (我重新评估)</h2>
+<h3 id="a-gmail-yi1353370501gmailcom">路线 A: Gmail (yi1353370501@gmail.com) ⭐⭐⭐⭐⭐</h3>
+<p><strong>优点</strong>:
+- ✅ 你已 Verified (截图确认)
+- ✅ 真实可达, 可收 PR/issue 通知
+- ✅ 跟 GitHub 验证流程无缝
+- ✅ 未来切换邮箱很容易</p>
+<p><strong>缺点</strong>:
+- ⚠️ commit 历史暴露真实邮箱
+- ⚠️ 任何人可搜此邮箱找到你
+- ⚠️ 学术圈若想半匿名, 不合适</p>
+<p><strong>适用</strong>:
+- 学术圈公开身份 (PhD)
+- 想接收 issue 通知
+- 不在意邮箱被看到</p>
+<h3 id="b-noreply-206827197csmar432usersnoreplygithubcom">路线 B: noreply (206827197+csmar432@users.noreply.github.com) ⭐⭐⭐⭐</h3>
+<p><strong>优点</strong>:
+- ✅ 完全匿名, 邮箱无意义
+- ✅ 不暴露 Gmail
+- ✅ 适合工业界 + 副业</p>
+<p><strong>缺点</strong>:
+- ⚠️ 收不到外部邮件
+- ⚠️ 部分 CI 工具可能拒收 (罕见)</p>
+<p><strong>适用</strong>:
+- 工业界 + 副业
+- 不想暴露真实邮箱
+- 完全匿名</p>
+<h3 id="c-qq-1353370501qqcom">路线 C: QQ (1353370501@qq.com) ⭐⭐</h3>
+<p><strong>优点</strong>:
+- ✅ 你已 Verified (截图确认)
+- ✅ 国内友好</p>
+<p><strong>缺点</strong>:
+- ⚠️ QQ 邮箱国际访问偶有延迟
+- ⚠️ commit author 是数字开头, 不优雅</p>
+<p><strong>不推荐</strong>: 除非你强烈想用 QQ</p>
+<h2 id="a-gmail">💡 我的最终建议: <strong>路线 A (Gmail)</strong></h2>
+<p>理由:
+1. 你的截图显示 Gmail 已 Verified, <strong>无需任何额外配置</strong>
+2. 学术圈, 暴露 Gmail 完全没问题
+3. 简单粗暴, 不需要管 noreply ID
+4. 收 PR 通知方便 (工业界友好)</p>
+<p><strong>如果你将来想切换到 noreply</strong>:
+- 设置 "Keep my email private" 即可
+- GitHub 自动用 noreply 显示
+- 但 commit author 仍是 Gmail</p>
+<hr />
+<h2 id="_3">📋 完整操作时间表 (重做版)</h2>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>任务</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0:00</td>
+<td>Step 1: GitHub 个人 profile 改名+bio</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:05</td>
+<td>Step 2: GitHub 创建 finai-research-workflow 仓库</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:10</td>
+<td>Step 3: 本地 add + commit + push (第一次)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:15</td>
+<td>Step 4: 跑修复脚本 (改 author 信息)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:20</td>
+<td>Step 5: 强制推送 (git push -f)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:22</td>
+<td>Step 6: 验证 GitHub 端 (绿点亮 + 邮箱显示)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:25</td>
+<td>Step 7: 邮箱隐私设置</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:30</td>
+<td><strong>🎉 基础 GitHub 形象完成</strong></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:31</td>
+<td>可选: 改仓库 Display Name (英文)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:32</td>
+<td>可选: 创建 Profile README 仓库</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>0:35</td>
+<td>可选: 注册 Codecov + Zenodo</td>
+<td>☐</td>
+</tr>
+<tr>
+<td><strong>0:40</strong></td>
+<td><strong>🚀 可以开始 Phase 1-3 真正发布 v1.0.0</strong></td>
+<td>☐</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">🆘 常见问题</h2>
+<h3 id="q1">Q1: 为什么我之前以为仓库已存在?</h3>
+<p><strong>A</strong>: 你看到的 <code>public_repos: 0</code> + <code>csmar432/finai-research-workflow 404</code> = 仓库不存在。
+可能原因:
+- 之前在另一个账号下
+- 误删了
+- 只在本地, 从未 push</p>
+<h3 id="q2-commit-15-commit">Q2: 修复 commit 后, 之前看到的 15 个 commit 会变吗?</h3>
+<p><strong>A</strong>: 全部 15 个 commit 的 hash 会变, 因为 author 信息变了。
+- 本地: commit hash 全变
+- GitHub: 你要 <code>git push -f</code> 才能覆盖远端</p>
+<h3 id="q3-push">Q3: 如果我 push 失败了, 怎么撤销?</h3>
+<p><strong>A</strong>: 
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 查看旧 commit hash</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>git<span class="w"> </span>reflog
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># 回滚到旧版本</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>git<span class="w"> </span>reset<span class="w"> </span>--hard<span class="w"> </span>&lt;旧<span class="w"> </span>commit<span class="w"> </span>hash&gt;
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>git<span class="w"> </span>push<span class="w"> </span>-f<span class="w"> </span>origin<span class="w"> </span>main
+</code></pre></div></p>
+<h3 id="q4-commit-github-ui-display-name">Q4: 我能不能不改 commit, 只改 GitHub UI display name?</h3>
+<p><strong>A</strong>: 不行。绿点计算是用 <strong>commit author email</strong>, 不是 UI name。
+- 改 UI name: 只影响仓库顶部显示
+- 改 commit email: 才影响绿点 + 验证状态</p>
+<h3 id="q5-commit">Q5: 修完 commit 邮箱后, 之前可能的协作者会怎样?</h3>
+<p><strong>A</strong>: 
+- PR/Issue: <strong>不受影响</strong> (它们是 GitHub 独立对象)
+- 旧 commit 中你的 author 显示会被更新 (GitHub 自动)
+- 其他 contributor 信息不变</p>
+<hr />
+<h2 id="1">✅ 决策时刻 (你只需要回答 1 个问题)</h2>
+<p><strong>Q: commit author 邮箱用哪个?</strong>
+- (A) yi1353370501@gmail.com (推荐, 学术圈)
+- (B) 206827197+csmar432@users.noreply.github.com (推荐, 工业界/匿名)
+- (C) 1353370501@qq.com (不推荐)
+- (D) 其他</p>
+<p>告诉我答案, 我会:
+1. 更新修复脚本默认值
+2. 调整 Profile README
+3. 写一份针对你最终选择的一键脚本</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "toc.follow", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
