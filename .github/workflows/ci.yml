@@ -78,8 +78,8 @@ jobs:
       - name: Verify coverage data exists
         if: success()
         run: |
-          echo "=== ls .coverage* ==="
-          ls -la .coverage* || echo "NO .coverage FOUND"
+          echo "=== ls -la .coverage .coverage.* ==="
+          ls -la .coverage .coverage.* 2>&1 || true
           echo "=== ls -la . ==="
           ls -la
           echo "=== coverage data_file ==="
@@ -212,8 +212,8 @@ jobs:
       - name: Verify coverage data exists
         if: success()
         run: |
-          echo "=== ls .coverage* ==="
-          ls -la .coverage* || echo "NO .coverage FOUND"
+          echo "=== ls -la .coverage .coverage.* ==="
+          ls -la .coverage .coverage.* 2>&1 || true
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
@@ -335,8 +335,8 @@ jobs:
       - name: Verify coverage data exists
         if: success()
         run: |
-          echo "=== ls .coverage* ==="
-          ls -la .coverage* || echo "NO .coverage FOUND"
+          echo "=== ls -la .coverage .coverage.* ==="
+          ls -la .coverage .coverage.* 2>&1 || true
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
