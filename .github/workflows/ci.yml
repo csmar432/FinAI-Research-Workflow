@@ -75,6 +75,13 @@ jobs:
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
+      - name: Verify coverage data exists
+        if: success()
+        run: |
+          echo "=== ls .coverage* ==="
+          ls -la .coverage* || echo "NO .coverage FOUND"
+          echo "=== ls -la . ==="
+          ls -la
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
@@ -196,6 +203,11 @@ jobs:
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
+      - name: Verify coverage data exists
+        if: success()
+        run: |
+          echo "=== ls .coverage* ==="
+          ls -la .coverage* || echo "NO .coverage FOUND"
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
@@ -314,6 +326,11 @@ jobs:
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
+      - name: Verify coverage data exists
+        if: success()
+        run: |
+          echo "=== ls .coverage* ==="
+          ls -la .coverage* || echo "NO .coverage FOUND"
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v4
