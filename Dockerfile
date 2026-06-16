@@ -19,7 +19,9 @@ COPY pyproject.toml ./
 COPY scripts/ ./scripts/
 COPY mcp_servers/ ./mcp_servers/
 COPY config/ ./config/
-COPY data/ ./data/
+# data/ is in .gitignore; create placeholder so COPY does not fail.
+# Mount real data at runtime: docker run -v "$PWD/data:/app/data" ...
+COPY data/.gitkeep ./data/.gitkeep
 COPY docs/ ./docs/
 COPY knowledge/ ./knowledge/
 
