@@ -268,3 +268,6 @@ scripts/core/mock_data_governance.py
 scripts/deprecated/research_workflow.py
 scripts/entity_list_data_fetcher.py
 mcp_servers/user_chinese_literature/Dockerfile
+
+# ── Disabled / skipped test variants (internal) ────────────────────────────────
+*.disabled
