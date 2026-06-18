@@ -72,3 +72,21 @@ When using this project, be aware of the following:
   pip-audit
   ```
 - Use Dependabot (enabled in `.github/dependabot.yml`) to keep dependencies updated.
+
+## Legal Disclaimer for Web Scraping MCP Servers
+
+### CNKI (`mcp_servers/user_cnki/`) and 万方 Wanfang (`mcp_servers/user_wanfang/`)
+
+> **WARNING — LEGAL DISCLAIMER**
+>
+> The CNKI and Wanfang web scraping servers are provided for **research and educational purposes only**. By using these servers you acknowledge and agree to the following:
+>
+> 1. **No warranty**: This software is provided "as is", without warranty of any kind.
+> 2. **Compliance required**: You are solely responsible for ensuring your use complies with all applicable laws, regulations, and the terms of service of CNKI (cnki.net) and 万方数据 (wanfangdata.com.cn).
+> 3. **robots.txt**: These servers respect `robots.txt` where possible. However, respecting `robots.txt` does not constitute legal permission to scrape any site.
+> 4. **Rate limiting**: These servers implement rate limiting and request delays. Exceeding reasonable access frequencies may violate local laws or platform terms and may result in IP blocking.
+> 5. **Licensed access preferred**: For production use, obtain proper institutional licenses from CNKI and 万方数据 directly. Many universities have campus licenses that provide API access.
+> 6. **No liability**: The authors and maintainers of this project accept no liability for any legal consequences arising from the use of these scraping servers.
+> 7. **Copyright**: Downloaded academic papers remain copyrighted by their respective authors and publishers. Users are responsible for complying with copyright law when using downloaded materials.
+>
+> If you do not agree to these terms, do not use these MCP servers.

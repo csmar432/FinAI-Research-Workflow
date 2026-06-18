@@ -437,7 +437,22 @@ def _generate_word_doc(args: argparse.Namespace, df: pd.DataFrame,
         print("  ⚠ python-docx not installed — Word document skipped")
 
 
-def main(args: argparse.Namespace | None = None) -> int:
+def _run_full_pipeline(args: argparse.Namespace) -> int:
+    """Full end-to-end pipeline (called by _main_dispatch when --mode=full)."""
+    OUTPUT = Path(args.output)
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    (OUTPUT/"latex").mkdir(exist_ok=True)
+    (OUTPUT/"tables").mkdir(exist_ok=True)
+    (OUTPUT/"figures").mkdir(exist_ok=True)
+
+    print(f"\n{'='*60}")
+    print("  Research Framework Pipeline")
+    print(f"  Topic: {args.topic}")
+    print(f"  Language: {args.language}")
+    print(f"  Output: {OUTPUT}")
+    print(f"{'='*60}\n")
+
+    tracker = ProvenanceTracker()
 
     # Step 1: Load / build panel
     panel_path = OUTPUT/"panel_data.csv"
@@ -658,6 +673,8 @@ def _main_dispatch() -> int:
         }
         handler = dispatch.get(args.mode)
         if handler is None:
+            if args.mode == "full":
+                return _run_full_pipeline(args)
             print(
                 f"ERROR: --mode {args.mode} is not yet implemented as a stand-alone stage. "
                 "Use --mode design or --mode review, or omit --mode for the full pipeline.",
@@ -665,28 +682,9 @@ def _main_dispatch() -> int:
             )
             return 1
         return handler(args)
-    return main(args)
 
 
-def main(args: argparse.Namespace | None = None) -> int:
-    """Original end-to-end pipeline (now also accepts a pre-parsed Namespace)."""
-    if args is None:
-        args = _parse_args()
-    OUTPUT = Path(args.output)
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    (OUTPUT/"latex").mkdir(exist_ok=True)
-    (OUTPUT/"tables").mkdir(exist_ok=True)
-    (OUTPUT/"figures").mkdir(exist_ok=True)
-
-    print(f"\n{'='*60}")
-    print("  Research Framework Pipeline")
-    print(f"  Topic: {args.topic}")
-    print(f"  Language: {args.language}")
-    print(f"  Output: {OUTPUT}")
-    print(f"{'='*60}\n")
-
-    tracker = ProvenanceTracker()
-
-
+# Public CLI entry point: alias so `python pipeline.py` and `from pipeline import main` work
+main = _run_full_pipeline
 if __name__ == "__main__":
     raise SystemExit(_main_dispatch())
