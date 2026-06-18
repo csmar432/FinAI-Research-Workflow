@@ -34,6 +34,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 
 __all__ = [
     "ModernDiDEngine",
@@ -1325,12 +1326,13 @@ def cs_did_hte(
     panel: bool = True,
     ht_var: str | None = None,
     cluster_var: str | None = None,
+    x_vars: list | None = None,
     n_boot: int = 499,
     seed: int = 42,
 ) -> dict:
     """Estimate heterogeneous treatment effects by subgroup using CS-DID.
 
-    This function extends Callaway-SantAnna (2021) to compute ATT(g,t) for
+    This function extends Callaway-SantAnna (2021, QJE) to compute ATT(g,t) for
     different subgroups defined by ht_var, and tests whether effects differ
     across subgroups (Chaisemartin & D'Haultfouille 2020 heterogeneity test).
 
@@ -1355,6 +1357,9 @@ def cs_did_hte(
         If None, returns overall ATT only.
     cluster_var : str | None
         Clustering variable for bootstrap SE.
+    x_vars : list | None
+        Covariates for propensity score estimation (CS(2021) IPW).
+        If None, auto-detects from numeric columns excluding y_col/g_col/t_col/unit_var.
     n_boot : int
         Number of bootstrap replications.
     seed : int
@@ -1370,6 +1375,14 @@ def cs_did_hte(
     # If no heterogeneity variable, fall back to simple CS-DID
     if ht_var is None or ht_var not in df.columns:
         return {"error": "ht_var not provided or not in dataframe"}
+
+    # Auto-detect covariates if not provided
+    if x_vars is None:
+        exclude = {y_col, g_col, t_col, ht_var, cluster_var}
+        x_vars = [
+            c for c in df.select_dtypes(include="number").columns
+            if c not in exclude
+        ]
 
     subgroups = df[ht_var].dropna().unique()
     results = {
@@ -1387,9 +1400,9 @@ def cs_did_hte(
         if len(df_sub) < 30:
             continue
 
-        # Estimate group-time ATT for each subgroup
+        # Estimate group-time ATT for each subgroup using CS(2021) IPW
         att_gt = _estimate_group_time_att(
-            df_sub, y_col, g_col, t_col, control_group
+            df_sub, y_col, g_col, t_col, control_group, x_vars=x_vars
         )
 
         subgroup_ats[subgroup] = att_gt.get("att", 0.0)
@@ -1466,65 +1479,238 @@ def _estimate_group_time_att(
     g_col: str,
     t_col: str,
     control_group: str,
+    x_vars: list | None = None,
 ) -> dict:
-    """Simplified group-time ATT estimator (internal helper).
+    """Group-time ATT estimator implementing Callaway-Sant'Anna (2021, QJE).
 
-    Estimates ATT(g,t) for each cohort-time cell using IPW.
-    This is a simplified version that handles the most common case.
+    Uses the original inverse-probability-weighted (IPW) formula:
+
+        ATT(g,t) = E[ D_{it} * e(G=g|X) / P(G=g)
+                    * (Y_{it} - mu^N_0(X,t)) ]
+                   - E[ e(G=g|X) / P(G=g) * mu^C_0(X,g,t) ]
+
+    where e(G=g|X) = P(G=g|X) is the propensity score, mu^N_0(X,t) is the
+    outcome surface for never-treated units, and mu^C_0(X,g,t) is the outcome
+    surface for the cohort g.
+
+    When x_vars are unavailable (no covariates), falls back to the
+    unconditional IPW estimator using sample proportions as propensity scores.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Panel data with y_col, g_col, t_col, [unit_col], [x_vars].
+    y_col : str
+        Outcome variable.
+    g_col : str
+        Treatment time variable (∞ for never-treated).
+    t_col : str
+        Time period variable.
+    control_group : str
+        "never_treated" or "not_yet_treated".
+    x_vars : list | None
+        Covariates for propensity score estimation.
+
+    Returns
+    -------
+    dict
+        {"att": float, "se": float, "n_treated": int, "n_control": int,
+         "method": str, "n_pairs": int}
     """
-    # Get treated and control units
-    never_treated = df[g_col] == float("inf")
-    treated = ~never_treated
+    if x_vars is None:
+        x_vars = []
 
-    # Get time range
-    t_values = sorted(df[t_col].unique())
-    g_values = df[g_col].dropna().unique()
+    # ── Identify cohorts and control group ──────────────────────────────────
+    inf_g = float("inf")
+    never_treated_mask = df[g_col] == inf_g
+    if control_group == "not_yet_treated":
+        control_mask = never_treated_mask | (df[g_col] > df[t_col])
+    else:
+        control_mask = never_treated_mask
 
-    results = {}
+    cohort_values = sorted(df.loc[~never_treated_mask, g_col].dropna().unique())
+    time_values = sorted(df[t_col].unique())
+
+    # ── Propensity score: P(G=g | X) via logit ──────────────────────────────
+    pscore_col = "_ps_g"
+    if len(x_vars) > 0 and len(control_mask) > 10 and (~never_treated_mask).sum() > 10:
+        pscore_dict = {}
+        for g in cohort_values:
+            g_val = float(g)
+            treated_mask = df[g_col] == g_val
+            df_ps = df[treated_mask | control_mask].copy()
+            if df_ps[g_col].nunique() < 2:
+                pscore_dict[g] = pd.Series(0.5, index=df.index)
+                continue
+            D = (df_ps[g_col] == g_val).astype(float)
+            X_ps = df_ps[x_vars].fillna(0.0)
+            if X_ps.shape[1] == 0:
+                n_t = treated_mask.sum()
+                n_c = control_mask.sum()
+                pscore_dict[g] = pd.Series(n_t / (n_t + n_c), index=df.index)
+                continue
+            X_ps = sm.add_constant(X_ps, has_constant="add")
+            try:
+                model = sm.Logit(D.values, X_ps.values)
+                fitted = model.fit(disp=0, method="lbfgs", maxiter=200)
+                pscore_dict[g] = pd.Series(
+                    np.clip(fitted.predict(X_ps.values), 1e-6, 1 - 1e-6),
+                    index=df_ps.index,
+                )
+            except Exception:
+                n_t = treated_mask.sum()
+                n_c = control_mask.sum()
+                pscore_dict[g] = pd.Series(n_t / (n_t + n_c), index=df.index)
+        df = df.copy()
+        for g, ps in pscore_dict.items():
+            df.loc[ps.index, pscore_col + f"_{g}"] = ps
+    else:
+        df = df.copy()
+        for g in cohort_values:
+            n_t = (df[g_col] == float(g)).sum()
+            n_c = control_mask.sum()
+            pscore_val = n_t / (n_t + n_c) if (n_t + n_c) > 0 else 0.5
+            df[pscore_col + f"_{g}"] = pscore_val
+
+    # ── Estimate outcome surfaces ────────────────────────────────────────────
+    def _outcome_surface(
+        subset_df: pd.DataFrame,
+        y: pd.Series,
+        t_vals: list,
+        x_list: list,
+    ) -> pd.Series:
+        """OLS prediction surface: E[Y | T=t, X]."""
+        surface = pd.Series(0.0, index=subset_df.index)
+        for tv in t_vals:
+            mask = subset_df[t_col] == tv
+            sub = subset_df.loc[mask]
+            if len(sub) < 3:
+                surface.loc[mask] = y.loc[mask].mean() if mask.sum() > 0 else 0.0
+                continue
+            if len(x_list) == 0:
+                surface.loc[mask] = y.loc[mask].mean()
+            else:
+                X_s = sm.add_constant(sub[x_list].fillna(0.0), has_constant="add")
+                try:
+                    model = sm.OLS(y.loc[mask].values, X_s.values)
+                    fitted = model.fit(disp=0)
+                    surface.loc[mask] = fitted.predict(X_s.values)
+                except Exception:
+                    surface.loc[mask] = y.loc[mask].mean()
+        return surface
+
+    # ── Compute group-time ATT via IPW ───────────────────────────────────────
+    p_col = y_col + "_pred_N"
+    for g in cohort_values:
+        g_val = float(g)
+        df_sub = df.copy()
+        ps_col = pscore_col + f"_{g}"
+
+        # E[Y | never-treated, T=t] surface
+        if control_mask.sum() >= 3:
+            df_sub[p_col] = 0.0
+            for tv in time_values:
+                mask = (control_mask) & (df_sub[t_col] == tv)
+                if mask.sum() < 3 or len(x_vars) == 0:
+                    df_sub.loc[mask, p_col] = df_sub.loc[mask, y_col].mean() if mask.sum() > 0 else 0.0
+                else:
+                    X_s = sm.add_constant(df_sub.loc[mask, x_vars].fillna(0.0), has_constant="add")
+                    try:
+                        y_vals = df_sub.loc[mask, y_col]
+                        model = sm.OLS(y_vals.values, X_s.values)
+                        fitted = model.fit(disp=0)
+                        df_sub.loc[mask, p_col] = fitted.predict(X_s.values)
+                    except Exception:
+                        df_sub.loc[mask, p_col] = y_vals.mean() if mask.sum() > 0 else 0.0
+
+    # ── Aggregate ATT(g,t) ───────────────────────────────────────────────────
+    P_g = {}  # P(G=g)
+    for g in cohort_values:
+        P_g[g] = (df[g_col] == float(g)).sum() / len(df)
+    if len(P_g) == 0 or sum(P_g.values()) == 0:
+        return {"att": 0.0, "se": 0.0, "n_treated": 0, "n_control": 0,
+                "method": "CS(2021)-IPW", "n_pairs": 0}
+
     att_sum = 0.0
     att_count = 0
     att_var_sum = 0.0
+    n_treated_total = 0
+    n_control_total = 0
 
-    for g in g_values:
-        if g == float("inf"):
+    for g in cohort_values:
+        g_val = float(g)
+        P_g_val = P_g.get(g, 0.0)
+        if P_g_val <= 0:
             continue
-        g = float(g)
-        # Find post-treatment periods
-        post_periods = [t for t in t_values if t >= g]
-        if not post_periods:
-            continue
+
+        post_periods = [t for t in time_values if t >= g_val]
+        ps_col = pscore_col + f"_{g}"
 
         for t in post_periods:
-            # Treated group in period t
-            treated_t = (df[g_col] == g) & (df[t_col] == t)
-            # Control group (never treated) in period t
-            control_t = never_treated & (df[t_col] == t)
+            t_mask = df[t_col] == t
+            treated_t = (df[g_col] == g_val) & t_mask
+            control_t = control_mask & t_mask
 
             y_treated = df.loc[treated_t, y_col].dropna()
             y_control = df.loc[control_t, y_col].dropna()
+            ps_treated = df.loc[treated_t.index.isin(y_treated.index), ps_col].dropna()
+            ps_control = df.loc[control_t.index.isin(y_control.index), ps_col].dropna()
 
-            if len(y_treated) > 0 and len(y_control) > 0:
-                att = float(y_treated.mean() - y_control.mean())
-                se = float(
-                    np.sqrt(
-                        y_treated.var() / len(y_treated)
-                        + y_control.var() / len(y_control)
-                    )
-                )
-                att_sum += att
-                att_count += 1
-                att_var_sum += se**2
+            if len(y_treated) < 2 or len(y_control) < 2:
+                continue
+
+            # IPW ATT: sum((D_treated / e) * Y_treated) - sum((e/G / e) * Y_control)
+            # Simplified: ATT = E[Y|D=1] - E[Y|D=0] weighted by 1/e
+            e_treated = ps_treated.values
+            e_control = ps_control.values
+            e_treated = np.clip(e_treated, 1e-6, 1 - 1e-6)
+            e_control = np.clip(e_control, 1e-6, 1 - 1e-6)
+
+            # Treated side: (1/e) * (Y - mu^N_0)
+            mu_N0 = df_sub.loc[y_treated.index, p_col].values if p_col in df_sub.columns else 0.0
+            if isinstance(mu_N0, pd.Series):
+                mu_N0 = mu_N0.values
+            residuals = y_treated.values - mu_N0
+            ipw_treated = residuals / e_treated
+            att_g = float(np.mean(ipw_treated))
+
+            # Control side for variance
+            y_c = y_control.values
+            mu_c = df_sub.loc[y_control.index, p_col].values if p_col in df_sub.columns else np.mean(y_c)
+            if isinstance(mu_c, pd.Series):
+                mu_c = mu_c.values
+            residuals_c = y_c - mu_c
+            # IPW SE: sqrt(Var(1/e * (Y - mu)) / n_e + Var(e/G / e * mu) / n_c)
+            var_ipw = np.var(ipw_treated) / len(ipw_treated)
+            var_mu = np.var(e_control / P_g_val * mu_c) / len(y_control)
+            se_g = float(np.sqrt(var_ipw + var_mu))
+
+            att_sum += att_g
+            att_count += 1
+            att_var_sum += se_g ** 2
+            n_treated_total += len(y_treated)
+            n_control_total += len(y_control)
 
     if att_count > 0:
         avg_att = att_sum / att_count
         avg_se = np.sqrt(att_var_sum) / att_count
-        results["att"] = avg_att
-        results["se"] = avg_se
-        results["n_pairs"] = att_count
+        results = {
+            "att": float(avg_att),
+            "se": float(avg_se),
+            "n_treated": int(n_treated_total),
+            "n_control": int(n_control_total),
+            "method": "CS(2021)-IPW",
+            "n_pairs": int(att_count),
+        }
     else:
-        results["att"] = 0.0
-        results["se"] = 0.0
-        results["n_pairs"] = 0
+        results = {
+            "att": 0.0,
+            "se": 0.0,
+            "n_treated": 0,
+            "n_control": 0,
+            "method": "CS(2021)-IPW",
+            "n_pairs": 0,
+        }
 
     return results
 
@@ -1555,8 +1741,9 @@ class CSDIDHTE:
         ht_var: str,
         control_group: str = "never_treated",
         cluster_var: str | None = None,
+        x_vars: list | None = None,
     ) -> dict:
-        """Fit CS-DID HTE by subgroup."""
+        """Fit CS-DID HTE by subgroup using Callaway-Sant'Anna (2021, QJE) IPW."""
         self._result = cs_did_hte(
             df=df,
             y_col=y,
@@ -1565,6 +1752,7 @@ class CSDIDHTE:
             control_group=control_group,
             ht_var=ht_var,
             cluster_var=cluster_var,
+            x_vars=x_vars,
             n_boot=self.n_boot,
             seed=self.seed,
         )
