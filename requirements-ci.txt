@@ -45,4 +45,4 @@ pytest-cov>=4.1.0
 pytest-timeout>=2.2.0
 
 # Lint
-ruff>=0.1.0
+ruff>=0.4.0
