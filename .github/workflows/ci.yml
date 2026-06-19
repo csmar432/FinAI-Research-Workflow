@@ -40,6 +40,9 @@ jobs:
 
       - name: Ruff lint
         run: ruff check scripts/ --ignore E501 --line-length 100
+      - name: Ruff S110 scan (informational)
+        run: ruff check scripts/ --ignore E501 --line-length 100 --select S110 2>&1 | tee ruff-s110.log || true
+        continue-on-error: true
 
       - name: MCP schema check
         run: python scripts/mcp_schema_check.py
