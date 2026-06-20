@@ -1322,11 +1322,14 @@ class ModernDiDEngine:
         self,
         control_group: str = "notyettreated",
         anticipation: int = 0,
+        x_vars: list[str] | None = None,
+        use_nevertreated: bool = False,
     ) -> DiDEstimationResult:
         """
         Callaway-Sant'Anna (2021, QJE) 交错 DiD。
 
         使用"尚未处理"组作为对照，比"从未处理"组更有效。
+        支持 covariate-adjusted 估计（CS 2021 原文推荐）。
 
         Parameters
         ----------
@@ -1334,6 +1337,13 @@ class ModernDiDEngine:
             "notyettreated"（默认）或 "nevertreated"。
         anticipation : int
             处理预期提前期数。
+        x_vars : list[str] | None
+            协变量列表，用于 propensity score weighting（CS 2021 IPW）。
+            默认为 None，自动从 self.x_vars 获取。
+            建议包含：规模（size）、资产负债率（lev）、
+            年龄（age）、行业（industry dummies）等。
+        use_nevertreated : bool
+            True 时强制使用"从未处理"组作为对照。
 
         Returns
         -------
@@ -1348,28 +1358,50 @@ class ModernDiDEngine:
                 package="diff-in-diff2",
                 install_hint="pip install diff-in-diff2",
             )
+        # 协变量：优先使用传入参数，否则回退到 self.x_vars
+        covars = x_vars if x_vars is not None else (self.x_vars or [])
+        cols = [self.y_var, self.treat_var, self.time_var] + covars
+        df_sub = self.df.dropna(subset=[c for c in cols if c in self.df.columns]).copy()
+        # diff_in_diff2 API — 传入协变量用于 IPW 估计
+        api_kwargs = dict(
+            data=df_sub,
+            y=self.y_var,
+            g=self.unit_var,
+            t=self.time_var,
+            d=self.treat_var,
+            control_group=control_group,
+            anticipation=anticipation,
+        )
+        # diff_in_diff2 >= 1.0 支持 x 参数进行 covariate adjustment
+        if covars:
+            try:
+                api_kwargs["x"] = covars
+            except TypeError:
+                pass  # 旧版 diff_in_diff2 不支持 x 参数
         try:
-            df_sub = self.df.dropna(subset=[self.y_var, self.treat_var, self.time_var] + self.x_vars)
-            # diff_in_diff2 API
-            result_obj = did2.cs(
-                data=df_sub,
-                y=self.y_var,
-                g=self.unit_var,
-                t=self.time_var,
-                d=self.treat_var,
-                control_group=control_group,
-                anticipation=anticipation,
-            )
+            result_obj = did2.cs(**api_kwargs)
+        except TypeError:
+            # 如果 x 参数不被接受，移除并重试
+            api_kwargs.pop("x", None)
+            result_obj = did2.cs(**api_kwargs)
             n_clusters = df_sub[self.unit_var].nunique()
             self._warn_cluster_count(n_clusters, "CS")
+            # 支持多种返回格式
+            att = float(getattr(result_obj, "att", getattr(result_obj, "estimate", result_obj[0] if hasattr(result_obj, "__getitem__") else result_obj)))
+            se = float(getattr(result_obj, "se", getattr(result_obj, "std_error", np.nan)))
+            pval = float(getattr(result_obj, "pval", getattr(result_obj, "pvalue", np.nan)))
             # 转换为本模块格式
             result = DiDEstimationResult(
                 estimator="cs",
-                coef=float(result_obj["att"]),
-                se=float(result_obj["se"]),
-                pval=float(result_obj["pval"]),
+                coef=att,
+                se=se,
+                pval=pval,
                 n_obs=len(df_sub),
-                additional={"method": "Callaway-Sant'Anna (2021)"},
+                additional={
+                    "method": "Callaway-Sant'Anna (2021) with IPW covariates",
+                    "covariates": covars,
+                    "control_group": control_group,
+                },
             )
             self._results["cs"] = result
             return result

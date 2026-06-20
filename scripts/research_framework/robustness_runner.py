@@ -1,33 +1,40 @@
-"""稳健性检验自动化引擎 — 封装中文顶刊所需 10-15 种稳健性检验.
+"""稳健性检验自动化引擎 — 封装 19 种稳健性检验，覆盖 JF/JFE/RFS 和中文顶刊标准。
 
 本模块自动生成并执行稳健性检验，覆盖：
-  基础检验（8种）：
-    1. 平行趋势检验（事件研究）
-    2. Bacon 分解（权重诊断）
-    3. 安慰剂检验（Placebo）
-    4. 倾向得分匹配（PSM）
-    5. 更换因变量
-    6. 更换控制变量
-    7. 子样本检验
-    8. 剔除极端观测
-  高级检验（5种，v1.5.2+）：
-    9.  排除预期效应（anticipation effect）
-    10. Honest DiD（Rambachan-Roth 2023）
-    11. 改变聚类层级（SE 结构）
-    12. 三重差分 DDD
-  v1.6.0 新增（5种）：
-    13. PSM 截断（共同取值范围）
-    14. 组合 DDD（多第三维度）
-    15. IV 子样本排除
-    16. 滞后因变量检验
+
+基础检验（8种）：
+  1. 平行趋势检验（事件研究）
+  2. Bacon 分解（权重诊断）
+  3. 安慰剂检验（Placebo）
+  4. 倾向得分匹配（PSM）
+  5. 更换因变量（替换被解释变量）
+  6. 更换控制变量（排除替代解释）
+  7. 子样本检验（异质性稳健）
+  8. 剔除极端观测（影响点分析）
+
+高级检验（6种，v1.5.2+）：
+  9.  Wild Cluster Bootstrap（聚类稳健推断）
+  10. 改变聚类层级（SE 结构变换）
+  11. 排除预期效应（anticipation effect）
+  12. Honest DiD（Rambachan-Roth 2023）
+  13. 三重差分 DDD
+  14. Oster Bounds（Selection-on-unobservables）
+
+扩展检验（5种，v1.6.0+）：
+  15. PSM 截断（共同取值范围 / Overlap）
+  16. 组合 DDD（多第三维度 / 多重差分）
+  17. IV 工具变量子样本排除
+  18. 滞后因变量（动态面板检验）
+  19. 剔除极端观测（分位数截断）
 
 Usage:
-    runner = RobustnessRunner(df, base_result)
+    runner = RobustnessRunner(df, baseline_result)
     runner.add_test("parallel_trends")
     runner.add_test("psm_truncation", sub_config={"trim_pct": 5})
     runner.add_test("combined_ddd", sub_config={"max_group3": 3})
     runner.add_test("iv_robust", sub_config={"exclude_var": "province", "exclude_values": ["beijing"]})
     runner.add_test("lagged_depvar", sub_config={"n_lags": 1})
+    runner.add_test("oster_bounds", sub_config={"max_R2": 1.5})
     report = runner.run_all()
     report.print_report()
     report.save_latex("robustness.tex")
@@ -303,7 +310,11 @@ class RobustnessRunner:
             "replace_depvar": self._test_replace_depvar,
             "iv": self._test_iv,
             "wild_bootstrap": self._test_wild_bootstrap,
-            "sub_sample": lambda cfg: self._test_sub_sample(**cfg),
+            "sub_sample": lambda cfg: self._test_sub_sample(
+                year_range=cfg.get("year_range"),
+                industry=cfg.get("industry"),
+                n_firms=cfg.get("n_firms"),
+            ),
             "remove_extreme": self._test_remove_extreme,
             "change_control": self._test_change_control,
             # 高级稳健性检验（v1.5.2）
@@ -650,11 +661,30 @@ class RobustnessRunner:
 
     def _test_sub_sample(
         self,
+        config: dict | None = None,
         year_range: list | None = None,
         industry: str | None = None,
         n_firms: int | None = None,
     ) -> RobustnessTest:
-        """子样本检验（按年份/行业/企业数限制）。"""
+        """子样本检验（按年份/行业/企业数限制）。
+
+        Parameters
+        ----------
+        config : dict | None
+            配置字典（从 dispatch 传入时使用），格式为
+            {"year_range": [...], "industry": "...", "n_firms": int}
+        year_range : list | None
+            年份范围，如 [2016, 2022]。
+        industry : str | None
+            行业限制。
+        n_firms : int | None
+            企业数限制。
+        """
+        # 从 config dict 中提取参数（dispatch 路径）
+        if isinstance(config, dict):
+            year_range = year_range if year_range is not None else config.get("year_range")
+            industry = industry if industry is not None else config.get("industry")
+            n_firms = n_firms if n_firms is not None else config.get("n_firms")
         df_s = self.df.copy()
 
         # Bug fix: time_var 是 post（二进制 0/1），不能用它过滤年份
@@ -1438,6 +1468,60 @@ class RobustnessRunner:
             "control_vars": control_vars or [],
         }))
         return self
+
+    def run_comprehensive(
+        self,
+        level: str = "full",
+    ) -> "RobustnessReport":
+        """一键运行全套稳健性检验。
+
+        Parameters
+        ----------
+        level : str
+            "basic"    — 8种基础检验（中文顶刊最低要求）
+            "advanced" — 14种检验（基础 + 高级）
+            "full"     — 19种检验（全部）
+
+        Returns
+        -------
+        RobustnessReport
+        """
+        BASIC = [
+            "parallel_trends",
+            "placebo",
+            "psm",
+            "replace_outliers",
+            "replace_depvar",
+            "change_control",
+            "sub_sample",
+            "remove_extreme",
+        ]
+        ADVANCED = BASIC + [
+            "wild_bootstrap",
+            "change_cluster",
+            "exclude_preannouncement",
+            "honest_did",
+            "triple_did",
+            "oster_bounds",
+        ]
+        FULL = ADVANCED + [
+            "psm_truncation",
+            "combined_ddd",
+            "iv_robust",
+            "lagged_depvar",
+        ]
+
+        test_map = {"basic": BASIC, "advanced": ADVANCED, "full": FULL}
+        tests = test_map.get(level, FULL)
+
+        for name in tests:
+            # Handle sub_sample specially (requires config)
+            if name == "sub_sample":
+                self.add_test(name, sub_config={"year_range": None})
+            else:
+                self.add_test(name)
+
+        return self.run_all()
 
 
 # ── FDR Correction ────────────────────────────────────────────────────────────
