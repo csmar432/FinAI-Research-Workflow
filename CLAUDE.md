@@ -118,13 +118,15 @@ pytest tests/ -v
 - 🔗 **IV/2SLS**: 面板 IV、Jackknife IV — 依赖 `linearmodels`
 - 🔗 **Panel GMM**: Arellano-Bond、Blundell-Bond — 依赖 `linearmodels`
 - ⭐ **三重差分**: Triple-DiD（处理效应异质性稳健）
-- ⭐ **面板分位数**: 固定效应分位数回归
+- ⭐ **面板分位数**: 固定效应分位数回归（Canay 2011）、QTE（分位数处理效应）
 - ⭐ **交互固定效应**: Bai (2009) 交互固定效应
 - ⭐ **局部投影 DID**: Jordà (2005) 局部投影
 - ⭐ **空间回归**: SAR/SEM/SDM/SLX — 部分依赖 `libpysal`
 - ⭐ **敏感性分析**: Wild Cluster Bootstrap、Leamer 边界、异质性分析
   - Honest DiD (Rambachan-Roth 2023)：需 `pip install honestdid`；Rambachan & Roth (2023) REStud 的 Python 实现，提供 DeltaSD 和 DeltaRM 两种敏感性框架；旧版 homebrew 近似公式已移除（不正确）
-- 🔗 **其他**: 面板门槛回归（Hansen 2000）、TVP-VAR、离散选择、因果森林 — 依赖 `linearmodels`/`sklearn`
+  - Oster Bounds (2019)：Selection-on-unobservables 敏感性分析
+- 🔗 **其他**: 面板门槛回归（Hansen 2000，含 Bootstrap CI）、TVP-VAR、离散选择、因果森林、面板协整 — 依赖 `linearmodels`/`sklearn`
+- ⭐ **稳健性检验**: 19种自动化检验（`RobustnessRunner.run_comprehensive("full")`），覆盖 JF/JFE/RFS 和中文顶刊标准
 
 ### 论文写作
 
