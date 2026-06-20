@@ -29,7 +29,7 @@
 | **One-line publish script** | `python scripts/release.py` |
 | **API reference** | [scripts/](scripts/) modules with type hints and docstrings |
 | **Architecture overview** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| **18 AI skills** | [knowledge/skills/](knowledge/skills/) |
+| **17 AI skills** | [knowledge/skills/](knowledge/skills/) |
 | **Architecture overview** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | **Troubleshooting FAQ** | [FAQ.md](FAQ.md) |
 | **Chinese comprehensive guide** | [使用指南.md](使用指南.md) (1049 lines, 13 chapters) |
@@ -90,7 +90,7 @@
 - **Chinese top**: 经济研究 · 金融研究 · 管理世界 · 会计研究 · 中国工业经济
 - LaTeX compilation · Figures ≥300 DPI · BibTeX · PRISMA compliance
 
-### 🤖 18 AI Skills (Claude Code / Cursor / Copilot)
+### 🤖 17 AI Skills (Claude Code / Cursor / Copilot)
 
 - **Discovery**: `fin-idea-discovery` · `fin-generate-idea` · `fin-novelty-check` · `fin-lit-review`
 - **Design**: `fin-experiment-design` · `fin-data-acquisition`
