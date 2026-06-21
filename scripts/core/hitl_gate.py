@@ -509,7 +509,7 @@ class HITLGate:
             try:
                 listener(event, record)
             except Exception as exc:
-                print(f"[HITLGate] Listener error in '{event}': {exc}", flush=True)
+                logger.warning("[HITLGate] Listener error in '%s': %s", event, exc)
 
     def get_state(self) -> dict[str, Any]:
         """
