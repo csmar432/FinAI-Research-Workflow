@@ -68,8 +68,7 @@ jobs:
           pip install pip-audit bandit
 
       - name: pip-audit (dependency vulnerabilities)
-        run: pip-audit --disable-file-found --fail requirements-ci.txt 2>&1 || true
-        continue-on-error: true
+        run: pip-audit --disable-file-found --fail requirements-ci.txt 2>&1
 
       - name: bandit (code security patterns)
         run: bandit -r scripts/ -x scripts/core/agents/,scripts/on_enter.py -f json 2>&1 | python3 -c "
@@ -82,8 +81,7 @@ if issues:
         print(f'  [{i[\"severity\"]}] {i[\"filename\"]}:{i[\"line\"]} {i[\"test_name\"]}: {i[\"issue_text\"][:80]}')
 else:
     print('Bandit: No issues found')
-" 2>&1 || true
-        continue-on-error: true
+"
 
   # ── 测试分组 ─────────────────────────────────────────────────────────
   test-batch-1:
@@ -272,7 +270,7 @@ else:
           path: pytest-batch2.log
           retention-days: 7
       - name: Upload coverage data
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coverage-batch2
@@ -402,7 +400,7 @@ else:
           path: pytest-batch3.log
           retention-days: 7
       - name: Upload coverage data
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coverage-batch3
@@ -488,9 +486,11 @@ else:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   cross-platform:
-    name: Cross-platform smoke test
+    name: Cross-platform smoke test (Linux + macOS; no Windows)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    # Note: Windows is not included in the CI matrix. Windows users should run
+    # tests locally: pip install -e ".[test]" && pytest tests/ -x
     strategy:
       fail-fast: false
       matrix:

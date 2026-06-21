@@ -40,6 +40,7 @@ _bootstrap.bootstrap()
 from scripts.research_framework.base import DataSource, ProvenanceTracker
 
 import logging
+import warnings
 logger = logging.getLogger(__name__)
 
 
@@ -52,7 +53,14 @@ def check_dof(df, x_vars, firm_col, year_col, use_firm_fe, use_year_fe):
     n_params = n_reg + n_fe; res_df = max(0, n_obs - n_params)
     is_valid = res_df >= 10
     if not is_valid:
-        print(f"  ⚠ DOF WARNING: {n_obs} obs, {n_params} params, {res_df} residual df")
+        warnings.warn(
+            f"[DOF CRITICAL] Insufficient residual degrees of freedom for the requested "
+            f"specification: {n_obs} obs, {n_params} params, only {res_df} residual df. "
+            f"The pipeline will AUTOMATICALLY fall back to Pooled OLS (no firm FE), "
+            f"which changes the identification strategy. Researcher review is required "
+            f"before submitting results generated under this fallback.",
+            UserWarning, stacklevel=2
+        )
     return dict(n_obs=n_obs, n_params=n_params, residual_df=res_df, is_valid=is_valid,
                 fallback_triggered=not is_valid)
 

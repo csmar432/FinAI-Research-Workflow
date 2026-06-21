@@ -443,6 +443,11 @@ class ReportGenerator:
             "\\begin{abstract}",
             abstract,
             "\\end{abstract}",
+            "\\begin{center}",
+            "\\small\\textit{[This manuscript was drafted with AI assistance. "
+            "All empirical results require independent verification before submission. "
+            "See Appendix B for data provenance and Appendix C for methodology details.]}",
+            "\\end{center}",
             "\\newpage",
         ])
 
