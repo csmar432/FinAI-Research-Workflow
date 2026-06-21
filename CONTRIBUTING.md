@@ -41,6 +41,47 @@ finai test --cov
 .venv/bin/python -m pytest tests/test_event_monitor.py -v
 ```
 
+### 测试标准
+
+**覆盖目标**：核心模块（`core/`、`research_framework/`）→ 优先达到 60% 覆盖率。
+
+**测试质量原则**：
+
+| 要求 | 说明 |
+|---|---|
+| 真实断言 | 每个测试必须有 `assert` 语句；禁止 `assert True` 或空测试 |
+| 有意义的数据 | 使用合成数据（`numpy`/`pandas` 生成）时注明参数和随机种子 |
+| 独立性 | 测试之间无顺序依赖；使用 fixture 或 `setup`/`teardown` 管理状态 |
+| 命名 | `test_<method>_<scenario>` 格式，例如 `test_cs_two_way_clustered_se` |
+
+**异常处理规范**：
+
+| 模式 | 是否允许 | 说明 |
+|---|---|---|
+| `except: pass`（静默吞异常） | **禁止** | 改为 `except: logger.warning(...)` |
+| `except: return False/None` | **禁止** | 改为 `except: logger.debug(...)` + 有意义返回值 |
+| `except` + 记录 + 继续 | ✅ 允许 | 对可选组件的优雅降级 |
+| `except` + re-raise | ✅ 允许 | 传播真实错误 |
+
+**新增 S110（try-except-pass）规则**：
+- 在 `pyproject.toml` 的 `per-file-ignores` 中添加文件时，必须同时在代码行注释中写明原因：
+  ```python
+  try:
+      ...
+  except Exception:  # noqa: S110 — intentional: optional feature degrade gracefully
+      pass
+  ```
+
+**新增计量方法**（`research_framework/`）：
+- 必须附上参考文献（APA 格式）
+- 在模块 docstring 中注明假设和已知限制
+- 在 `README.md` 或对应计量方法文档中注册
+
+**CI 门禁**：
+- `ruff check` 必须通过（无新增规则忽略）
+- 所有测试批次必须通过（`--maxfail=10`）
+- 覆盖率阈值当前为 6%，目标为 60%（参见 `pyproject.toml`）
+
 ## 模块说明
 
 | 目录 | 说明 |
