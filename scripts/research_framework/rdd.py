@@ -432,11 +432,17 @@ def _bandwidth_ik(
         f_c = 1.0 / np.std(x_c)
         r2 = 0.0
 
-    # IK 2012 闭式带宽（简化版）
-    c = abs(cutoff) if abs(cutoff) > 0 else 1.0
-    kern_const = {"triangular": 1.0, "uniform": 0.5, "epanechnikov": 0.75, "gaussian": 1.0}.get(
-        kernel, 1.0
-    )
+    # IK 2012 Table 1 kernel constants (optimal for MSE of LLR):
+    #   triangular:     c_T = 2/3 ≈ 0.667
+    #   uniform:       c_U = 1/2   = 0.500
+    #   epanechnikov:  c_E = 3/5   = 0.600
+    #   gaussian:      c_G = 1/√π ≈ 0.564 (compact-kernel extension)
+    kern_const = {
+        "triangular": 2.0 / 3.0,
+        "uniform": 0.5,
+        "epanechnikov": 3.0 / 5.0,
+        "gaussian": 1.0 / (2.0 * np.pi) ** 0.5,
+    }.get(kernel, 2.0 / 3.0)
 
     # r2 的惩罚项（曲率越大，带宽越小）
     penalty = 1.0 / (1.0 + abs(r2))
