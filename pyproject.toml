@@ -393,9 +393,8 @@ omit = [
 ]
 
 [tool.coverage.report]
-# NOTE: Target is to reach 60% test coverage by v1.0. CI currently uses --cov-fail-under=10
-# (effective minimum: ~7% current + 3pp buffer). Coverage must stay above 10% to pass CI.
-# fail_under = 60  # Staged target: raise to 20 at v0.5, 40 at v0.8, 60 at v1.0
+# NOTE: Target is 60% test coverage. CI enforces --cov-fail-under=60 (updated from 10%).
+# All 3 test batches and cross-platform smoke test use this threshold.
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
