@@ -57,10 +57,10 @@ $ python scripts/agent_pipeline.py --topic "Carbon trading and green innovation"
 
 ## Why FinAI Research Workflow?
 
-- **Built for economists, not generic AI demos** — every default is calibrated for the *Journal of Finance* / *经济研究* standard (DID with heterogeneous treatment effects, cluster-robust SEs at the firm level, 18 robustness checks, parallel-trend plots).
+- **Built for economists, not generic AI demos** — every default is calibrated for the *Journal of Finance* / *经济研究* standard (DID with heterogeneous treatment effects, cluster-robust SEs at the firm level, 19 robustness checks, parallel-trend plots).
 - **43 MCP data sources, zero manual data wrangling** — pull A-share financials (Tushare/akshare), US equities (yfinance), macro series (FRED/World Bank/IMF/OECD/BEA), and 200M+ academic papers (OpenAlex/ArXiv) directly from the agent. Note: Tushare Pro (paid), Wind (institutional), and CSMAR (institutional) require paid accounts; free alternatives are available via `user-financial` (akshare) and `user-yfinance`.
 - **~30 econometric methods, not just OLS** — standard DID, event study, Bacon decomposition, staggered DID (Callaway-Sant'Anna/Sun-Abraham/Borusyak/Goodman-Bacon, requires `pip install diff-in-diff2`), synthetic control, instrumental variables (requires `linearmodels`), panel GMM, RDD, event studies, mediation, and more. See CLAUDE.md for the full list with dependency notes.
-- **44 journal templates, both English and Chinese** — JF, JFE, RFS, JAE, Econometrica, 经济研究, 金融研究, 管理世界, 会计研究, 中国工业经济.
+- **49 journal templates, both English and Chinese** — JF, JFE, RFS, JAE, Econometrica, 经济研究, 金融研究, 管理世界, 会计研究, 中国工业经济.
 - **17 specialised AI skills** (Claude Code / Cursor / GitHub Copilot) — idea discovery, literature review, novelty check, experiment design, data acquisition, paper drafting, figure generation, LaTeX compilation, review loops.
 - **Human-in-the-loop, never autonomous fabrication** — every stage requires explicit checkpoint approval; data sources are verified before use; no synthetic data without user consent.
 
@@ -284,7 +284,7 @@ The system uses a **layered agent architecture** with an AI Agent (Claude Code /
 └─────────────────┘  └─────────────────┘  └──────────────────────────┘
 ```
 
-**Key numbers:** 43 MCP servers · ~30 econometric methods · 17 skills · 44 journal templates · 20 chart types · 19 robustness checks (17 real + 2 stubs documented) · 12 research directions
+**Key numbers:** 43 MCP servers · ~30 econometric methods · 17 skills · 49 journal templates · 20 chart types · 19 robustness checks · 12 research directions
 
 ---
 
@@ -572,7 +572,7 @@ flowchart TD
 |---|---|---|---|---|---|
 | **Focus** | Economic & financial research papers | Causal inference toolkit | Multi-agent paper writing | End-to-end empirical papers | Industrial causal inference |
 | **Data sources** | 43 MCP servers | None (data import only) | None | 3 (yfinance/FRED/Allium) | None |
-| **Econometric methods** | ~20 (modern DiD focus) | 550+ (general) | 0 | Limited | 0 (general framework) |
+| **Econometric methods** | ~30 (modern DiD focus) | 550+ (general) | 0 | Limited | 0 (general framework) |
 | **Journal templates** | 44 (incl. 6 Chinese top) | 0 | 1 (NeurIPS-style) | 1 (LaTeX generic) | 0 |
 | **Chinese data integration** | ✅ (Tushare/CSMAR/Wind/CNRDS) | ❌ | ❌ | ❌ | ❌ |
 | **Human-in-the-loop** | ✅ (4 checkpoints) | ❌ | Partial | ❌ | ❌ |

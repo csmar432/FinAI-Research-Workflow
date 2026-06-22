@@ -315,13 +315,18 @@ class ResearchPlanner:
         )
         return [task]
 
-    def _register_tasks(self, tasks: list[Task], parent: Task | None = None):
+    def _register_tasks(self, tasks: list[Task], parent: Task | None = None, _seen: set[str] | None = None):
         """Register all tasks (including subtasks) in the planner's registry."""
+        if _seen is None:
+            _seen = set()
         for task in tasks:
+            if task.id in _seen:
+                continue
+            _seen.add(task.id)
             self.tasks[task.id] = task
             if parent is not None:
                 parent.subtasks.append(task)
-            self._register_tasks(task.subtasks, parent=task)
+            self._register_tasks(task.subtasks, parent=task, _seen=_seen)
 
     def execute(self, task_graph: list[Task]) -> dict[str, Any]:
         """

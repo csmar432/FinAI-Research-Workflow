@@ -182,6 +182,9 @@ from .leamer_sensitivity import (
     DynamicPanelDiagnostics as LeamerDynamicPanelDiagnostics,
 )
 
+# Finance sensitivity (OLS-PLS sensitivity)
+from .finance_sensitivity import OLSPLSSensitivity
+
 # PRISMA compliance
 from .prisma_compliance import (
     PRISMAStage,
@@ -335,6 +338,18 @@ from .panel_threshold_regression import (
 # Mediation analysis
 from .mediation_test import MediationTest, MediationResult
 
+# Vuong non-nested hypothesis test + Clarke test
+from .vuong_test import (
+    VuongTest,
+    VuongResult,
+    vuong_did_vs_rdd,
+    ClarkeTest,
+    ClarkeTestEN,  # backward-compat alias
+    vuong_different_controls,
+    vuong_different_samples,
+    vuong_linear_vs_logit,
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 __all__ = [
     # Provenance
@@ -413,4 +428,10 @@ __all__ = [
     "GreenBondFactorModel", "GreenBondResult", "GreenBondESGModel",
     # ── v1.8.4 NEW: Options IV surface ──
     "IVSurfaceBuilder", "IVSurfaceResult", "IVSurfaceModel", "ImpliedVolatilityEngine",
+    # ── Vuong non-nested hypothesis test + Clarke test ──
+    "VuongTest", "VuongResult", "vuong_did_vs_rdd",
+    "ClarkeTest", "ClarkeTestEN",
+    "vuong_different_controls", "vuong_different_samples", "vuong_linear_vs_logit",
+    # ── Finance sensitivity ──
+    "OLSPLSSensitivity",
 ]
