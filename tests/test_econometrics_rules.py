@@ -116,7 +116,7 @@ def test_did_validator_parallel_trend_fail(np_rng):
     validator = DIDValidator()
     result = validator.check_parallel_trend(event_df, pre_periods=3, alpha=0.1)
 
-    assert result["passed"] == False
+    assert not result["passed"]
     assert result["p_value"] < 0.1 or result["joint_reject_null"]
 
 
@@ -204,7 +204,7 @@ def test_balance_test_pass(np_rng):
         threshold=0.1,
     )
 
-    assert result["passed"] == True
+    assert result["passed"] is True
     assert result["max_abs_bias"] < 0.1
     assert result["imbalance_vars"] == []
 
@@ -244,7 +244,7 @@ def test_balance_test_fail(np_rng):
         threshold=0.1,
     )
 
-    assert result["passed"] == False
+    assert not result["passed"]
     assert result["max_abs_bias"] > 0.2
     assert "size" in result["imbalance_vars"]
 

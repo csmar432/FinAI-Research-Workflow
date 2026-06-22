@@ -31,6 +31,7 @@ __all__ = [
     "VuongTest",
     "VuongResult",
     "ClarkeTest",
+    "ClarkeTestEN",
     "vuong_did_vs_rdd",
     "vuong_linear_vs_logit",
     "vuong_different_controls",
@@ -50,3 +51,6 @@ def vuong_different_samples(model_1, model_2, name_1: str = "Sample_1", name_2: 
 
 # Re-export ClarkeTest from vuong_kob (private helper, available for advanced use)
 from scripts.research_framework.vuong_kob import _clarke_test as ClarkeTest  # noqa: F401, E402
+
+# Backward-compat alias
+ClarkeTestEN = ClarkeTest  # type: ignore[misc, assignment]

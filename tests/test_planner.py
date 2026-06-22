@@ -271,16 +271,16 @@ class TestFallbackStrategy:
         assert "[跳过]" in result.description
 
     def test_fallback_aborts_critical_task(self, planner):
-        """WRITING task at max retries returns None (abort)."""
+        """ORCHESTRATE task at max retries is degraded to ANALYSIS (Level 2)."""
         task = planner._create_task("Writing task", TaskType.WRITING)
         task.retry_count = 3
-        # After two degradations, it would be skipped — test the abort path
-        # Mock as non-critical by changing type
+        # After max retries, Level 2 degrades to ANALYSIS
         task.task_type = TaskType.ORCHESTRATE
         result = planner._fallback(task)
-        # After retries and non-critical check, if still critical → abort
-        # The exact path depends on implementation; check it returns None or a failed task
-        assert result is None or result.status == TaskStatus.FAILED
+        # Level 2 degrades to ANALYSIS task (status PENDING by default)
+        assert result is not None
+        assert result.task_type == TaskType.ANALYSIS
+        assert result.description.startswith("[降级]")
 
 
 class TestGetStatus:
