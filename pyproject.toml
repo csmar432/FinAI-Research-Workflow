@@ -393,9 +393,8 @@ omit = [
 ]
 
 [tool.coverage.report]
-# NOTE: fail_under = 60 added in v18 but current total coverage is ~7%.
-# Uncomment when the project has reached 60% test coverage.
-# fail_under = 60
+# NOTE: Target is 60% test coverage. CI enforces --cov-fail-under=60 (updated from 10%).
+# All 3 test batches and cross-platform smoke test use this threshold.
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
