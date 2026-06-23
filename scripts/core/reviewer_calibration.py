@@ -91,6 +91,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "JFE",
         "year": 2022,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_002",
@@ -121,6 +123,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "RFS",
         "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_003",
@@ -150,6 +154,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "JFE",
         "year": 2021,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_004",
@@ -177,6 +183,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "经济研究",
         "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_005",
@@ -205,6 +213,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "RFS",
         "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_006",
@@ -233,6 +243,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "管理世界",
         "year": 2022,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_007",
@@ -258,6 +270,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "金融研究",
         "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "acc_008",
@@ -285,6 +299,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "accept",
         "venue": "RFS",
         "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     # ── REJECT (6) ───────────────────────────────────────────────────────────
     {
@@ -309,6 +325,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "reject",
         "venue": "JFE",
         "year": 2020,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "rej_002",
@@ -331,6 +349,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "reject",
         "venue": "RFS",
         "year": 2021,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "rej_003",
@@ -353,6 +373,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "reject",
         "venue": "经济研究",
         "year": 2020,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "rej_004",
@@ -377,6 +399,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "reject",
         "venue": "管理世界",
         "year": 2021,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "rej_005",
@@ -401,6 +425,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "reject",
         "venue": "金融研究",
         "year": 2022,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "rej_006",
@@ -425,6 +451,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "reject",
         "venue": "RFS",
         "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     # ── BORDERLINE (6) ───────────────────────────────────────────────────────
     {
@@ -451,6 +479,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "borderline",
         "venue": "JFE",
         "year": 2021,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "bl_002",
@@ -476,6 +506,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "borderline",
         "venue": "RFS",
         "year": 2022,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "bl_003",
@@ -501,6 +533,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "borderline",
         "venue": "管理世界",
         "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "bl_004",
@@ -527,6 +561,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "borderline",
         "venue": "JFE",
         "year": 2022,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "bl_005",
@@ -553,6 +589,8 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "borderline",
         "venue": "经济研究",
         "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
     {
         "sample_id": "bl_006",
@@ -578,6 +616,795 @@ _BUILTIN_SAMPLES: list[dict] = [
         "human_recommendation": "borderline",
         "venue": "金融研究",
         "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    # ── NEW ACCEPT SAMPLES (9) ────────────────────────────────────────────────
+    {
+        "sample_id": "acc_007",
+        "paper_abstract": (
+            "We examine whether ESG ratings affect corporate bond spreads using "
+            "a propensity-score-matched sample of 3,400 U.S. corporate bonds from 2010-2023. "
+            "We match on credit rating, maturity, coupon, and industry. "
+            "Our difference-in-differences analysis shows that firms upgrading to MSCI ESG Leaders "
+            "experience a 12bps reduction in bond spreads, controlling for credit risk and macro factors. "
+            "The effect is stronger for high-carbon emitters and firms with institutional ownership above 50%. "
+            "Placebo tests using false upgrade dates, alternative matching algorithms, and IV regression "
+            "using analyst ESG rating分歧 as an instrument confirm the findings. "
+            "We provide a replication package with full data and code on GitHub."
+        ),
+        "human_scores": {
+            "methodology_rigor": 8.5,
+            "novelty": 7.0,
+            "clarity": 8.0,
+            "reproducibility": 9.0,
+            "significance": 8.0,
+            "overall": 8.0,
+        },
+        "human_recommendation": "accept",
+        "venue": "RFS",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_008",
+        "paper_abstract": (
+            "This paper provides evidence that analyst forecast dispersion is a predictor of "
+            "stock return volatility using a panel of 8,000 firm-years from 2005 to 2022. "
+            "We document that analyst disagreement strongly forecasts realized volatility (R^2 = 18%), "
+            "even after controlling for analyst coverage, institutional ownership, and firm size. "
+            "A long-short portfolio sorted on disagreement earns 8.4% annually with a Sharpe ratio of 0.71, "
+            "which survives transaction cost adjustments of 50bps. "
+            "The mechanism is consistent with information asymmetry: firms with high disagreement "
+            "attract more attention from noise traders, increasing price discovery costs. "
+            "Results are robust to Fama-MacBeth regressions, double sorting, and instrumental variable approaches."
+        ),
+        "human_scores": {
+            "methodology_rigor": 7.5,
+            "novelty": 7.0,
+            "clarity": 8.0,
+            "reproducibility": 7.5,
+            "significance": 7.5,
+            "overall": 7.5,
+        },
+        "human_recommendation": "accept",
+        "venue": "JFE",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_009",
+        "paper_abstract": (
+            "Using a hand-collected dataset of 15,000 corporate venture capital rounds in China from "
+            "2010-2022, we study how state-owned limited partners (SOLPs) in venture capital funds "
+            "affect portfolio company innovation. We exploit the quasi-random assignment of "
+            "government-guided funds to VC managers based on application processing queues. "
+            "Our first stage is strong (F=42), and SOLP-backed startups produce 23% more patents "
+            "and 31% higher patent citations, driven primarily by government contract access rather than "
+            "cash infusion. "
+            "The paper clearly identifies the mechanism and provides extensive heterogeneity analysis "
+            "by industry, region, and firm age."
+        ),
+        "human_scores": {
+            "methodology_rigor": 8.5,
+            "novelty": 8.0,
+            "clarity": 8.0,
+            "reproducibility": 8.0,
+            "significance": 8.5,
+            "overall": 8.5,
+        },
+        "human_recommendation": "accept",
+        "venue": "JFE",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_010",
+        "paper_abstract": (
+            "We investigate whether personal carbon trading schemes affect household consumption "
+            "patterns using a randomized controlled trial in the UK (N=12,000 households). "
+            "Households randomized into the carbon budget scheme reduced carbon-intensive consumption "
+            "by 15% relative to control, with no significant income effect. "
+            "The mechanism is salience: households given real-time carbon budget tracking "
+            "via smartphone app reduced emissions more than those receiving monthly summaries. "
+            "Long-run effects (12-month follow-up) persist at 11%. "
+            "The paper is well-designed, clearly written, and provides important policy implications."
+        ),
+        "human_scores": {
+            "methodology_rigor": 9.0,
+            "novelty": 7.5,
+            "clarity": 9.0,
+            "reproducibility": 9.0,
+            "significance": 9.0,
+            "overall": 9.0,
+        },
+        "human_recommendation": "accept",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "economics",
+    },
+    {
+        "sample_id": "acc_011",
+        "paper_abstract": (
+            "We study the causal impact of mandatory climate risk disclosure on corporate green investment "
+            "using the staggered adoption of TCFD recommendations across 40 countries. "
+            "Using Borusyak-Jaravel-Spinks (2024) heterogeneous treatment effects DiD, "
+            "we estimate that mandatory disclosure increases green R&D spending by 18% and "
+            "reduces carbon emissions by 9% within three years. "
+            "The effects are concentrated in high-emission industries and countries with strong enforcement. "
+            "We document no significant effects on firm value, ruling out cost-channel concerns. "
+            "Our results survive falsification tests, alternative event windows, and IV using "
+            "media coverage intensity as an instrument."
+        ),
+        "human_scores": {
+            "methodology_rigor": 9.0,
+            "novelty": 8.0,
+            "clarity": 8.0,
+            "reproducibility": 8.5,
+            "significance": 9.0,
+            "overall": 8.5,
+        },
+        "human_recommendation": "accept",
+        "venue": "RFS",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_012",
+        "paper_abstract": (
+            "We identify the effect of foreign institutional ownership on corporate tax avoidance "
+            "using a novel instrumental variable: the staggered expansion of sovereign wealth fund "
+            "mandates across 60 countries. "
+            "Our cross-country panel of 25,000 firm-years shows that a 10 percentage point increase "
+            "in foreign institutional ownership reduces effective tax rates by 1.2 percentage points, "
+            "driven by home-country governance pressure. "
+            "Consistent with the monitoring hypothesis, this effect is stronger for firms with "
+            "weak governance and in countries with low corruption. "
+            "The paper is methodologically rigorous, clearly written, and has important policy implications."
+        ),
+        "human_scores": {
+            "methodology_rigor": 8.0,
+            "novelty": 7.5,
+            "clarity": 8.0,
+            "reproducibility": 7.5,
+            "significance": 8.0,
+            "overall": 7.5,
+        },
+        "human_recommendation": "accept",
+        "venue": "JFE",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_013",
+        "paper_abstract": (
+            "本文研究了数字金融发展对中小企业融资约束的影响——基于中国291个地级市面板数据和 "
+            "北京大学数字金融指数的实证研究。 "
+            "利用数字金融试点的准自然实验，采用双重差分方法（DID）识别因果效应。 "
+            "基准回归显示数字金融指数每增加1个标准差，中小企业融资约束指数下降0.32个标准差。 "
+            "机制分析表明，移动支付普及和信用评分应用是主要渠道。 "
+            "异质性分析表明，对民营企业和低信用等级企业的缓解作用更强。 "
+            "稳健性检验包括：平行趋势检验、安慰剂检验、PSM配对、工具变量法等。"
+        ),
+        "human_scores": {
+            "methodology_rigor": 8.0,
+            "novelty": 8.0,
+            "clarity": 7.5,
+            "reproducibility": 7.5,
+            "significance": 8.5,
+            "overall": 8.0,
+        },
+        "human_recommendation": "accept",
+        "venue": "经济研究",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_014",
+        "paper_abstract": (
+            "This paper studies whether corporate lobbying affects regulatory enforcement "
+            "using a novel dataset of SEC comment letters and lobbying disclosures. "
+            "Using a difference-in-differences design exploiting the 2008 financial crisis as an "
+            "exogenous shock to regulatory intensity, we find that firms with higher lobbying "
+            "expenditures receive 35% fewer SEC comment letters and resolve them 20% faster. "
+            "The effect is driven primarily by firms in the financial sector and during periods "
+            "of high political uncertainty. "
+            "Mechanism analysis confirms the information channel (lobbying as regulatory communication) "
+            "rather than corruption. "
+            "Placebo tests using false treatment periods and alternative control groups confirm findings."
+        ),
+        "human_scores": {
+            "methodology_rigor": 8.0,
+            "novelty": 8.0,
+            "clarity": 7.5,
+            "reproducibility": 7.5,
+            "significance": 8.0,
+            "overall": 8.0,
+        },
+        "human_recommendation": "accept",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "acc_015",
+        "paper_abstract": (
+            "We exploit the staggered rollout of mandatory IFRS adoption across 45 countries to "
+            "identify the effect of accounting standard harmonization on capital allocation efficiency. "
+            "Using Callaway-SantAnna (2021) heterogeneous treatment effects DiD, we find that "
+            "IFRS adoption increases investment efficiency (reducing both over- and under-investment) "
+            "by 12%, with stronger effects in countries with strong enforcement. "
+            "Cross-country heterogeneity shows that benefits are concentrated in countries with "
+            "strong legal systems and high analyst coverage. "
+            "The paper provides a novel mechanism: IFRS reduces information asymmetry, "
+            "enabling better capital allocation decisions by investors."
+        ),
+        "human_scores": {
+            "methodology_rigor": 8.5,
+            "novelty": 7.5,
+            "clarity": 8.0,
+            "reproducibility": 8.0,
+            "significance": 8.5,
+            "overall": 8.0,
+        },
+        "human_recommendation": "accept",
+        "venue": "RFS",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    # ── NEW REJECT SAMPLES (9) ───────────────────────────────────────────────
+    {
+        "sample_id": "rej_007",
+        "paper_abstract": (
+            "This paper examines the relationship between CEO overconfidence and firm risk. "
+            "We use CEO personal stock option exercise behavior as a measure of overconfidence, "
+            "based on the logic that overconfident CEOs hold options longer. "
+            "Our sample is 500 U.S. firms from 2005-2015. "
+            "We find that overconfident CEOs are associated with higher stock return volatility. "
+            "However, the overconfidence measure is endogenous and the instrument (CEO age) is weak. "
+            "The paper lacks robustness checks, and the R-squared is only 3%. "
+            "The writing is average and the contribution is incremental."
+        ),
+        "human_scores": {
+            "methodology_rigor": 4.0,
+            "novelty": 4.5,
+            "clarity": 5.5,
+            "reproducibility": 4.0,
+            "significance": 5.0,
+            "overall": 4.0,
+        },
+        "human_recommendation": "reject",
+        "venue": "JFE",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_008",
+        "paper_abstract": (
+            "We study the effect of social media sentiment on stock returns using Twitter data "
+            "from 2018-2022. "
+            "We construct a sentiment index using VADER and find that daily sentiment changes "
+            "predict next-day returns with a coefficient of 0.12 (t=2.1). "
+            "The sample is 200 large-cap stocks with high Twitter activity. "
+            "There is no discussion of data snooping, transaction costs, or how to handle "
+            "confounding events. "
+            "The mechanism is unclear and the economic significance is small. "
+            "No code or data is provided for reproducibility."
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.0,
+            "novelty": 4.0,
+            "clarity": 5.0,
+            "reproducibility": 2.0,
+            "significance": 4.0,
+            "overall": 3.5,
+        },
+        "human_recommendation": "reject",
+        "venue": "RFS",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_009",
+        "paper_abstract": (
+            "We examine whether ESG scores affect firm performance using OLS regression "
+            "with a sample of 500 firms from 2015-2022. "
+            "Our key explanatory variable is MSCI ESG rating, which is endogenous "
+            "and likely correlated with unobserved firm quality. "
+            "We do not address this endogeneity. "
+            "The coefficient on ESG is positive and significant (0.15, p<0.05), "
+            "but the R-squared is 2% and the specification is parsimonious. "
+            "No robustness checks are provided. "
+            "The paper is poorly organized and difficult to follow."
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.5,
+            "novelty": 4.0,
+            "clarity": 4.0,
+            "reproducibility": 3.0,
+            "significance": 4.5,
+            "overall": 3.5,
+        },
+        "human_recommendation": "reject",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_010",
+        "paper_abstract": (
+            "This paper claims that corporate culture affects stock price crash risk. "
+            "The measure of culture is based on the CEO's alma mater ranking. "
+            "There is no theoretical justification for why university ranking captures culture. "
+            "The endogeneity is severe: university ranking is correlated with many "
+            "unobserved firm characteristics. "
+            "Results are not robust to firm fixed effects or alternative specifications. "
+            "The paper is written in an unclear style and the literature review is incomplete."
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.0,
+            "novelty": 3.5,
+            "clarity": 4.0,
+            "reproducibility": 3.0,
+            "significance": 4.0,
+            "overall": 3.0,
+        },
+        "human_recommendation": "reject",
+        "venue": "JFE",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_011",
+        "paper_abstract": (
+            "本文研究高管薪酬对企业创新的影响。 "
+            "使用A股上市公司2005-2020年数据，采用OLS回归分析。 "
+            "但没有控制年份固定效应和行业固定效应，也没有处理内生性问题。 "
+            "薪酬差距变量的系数在加入更多控制变量后变得不显著。 "
+            "文章缺乏稳健性检验，创新变量的衡量方式单一，机制分析缺失。 "
+            "实证结果对模型设定过于敏感。"
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.0,
+            "novelty": 4.0,
+            "clarity": 4.5,
+            "reproducibility": 3.5,
+            "significance": 5.0,
+            "overall": 3.5,
+        },
+        "human_recommendation": "reject",
+        "venue": "金融研究",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_012",
+        "paper_abstract": (
+            "We use machine learning (random forest) to predict earnings management using "
+            "100 features from financial statements. "
+            "The model achieves 72% out-of-sample accuracy. "
+            "However, the training set and test set are not separated by time, "
+            "introducing look-ahead bias. "
+            "Feature importance is not interpretable and the economic mechanism is unclear. "
+            "No comparison to simpler linear models is provided to justify the complexity. "
+            "The paper reads like a technical report rather than an academic contribution."
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.5,
+            "novelty": 4.0,
+            "clarity": 4.5,
+            "reproducibility": 2.5,
+            "significance": 4.5,
+            "overall": 4.0,
+        },
+        "human_recommendation": "reject",
+        "venue": "RFS",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_013",
+        "paper_abstract": (
+            "We study the effect of board diversity on firm value using a cross-sectional OLS "
+            "regression with 300 firms in a single country. "
+            "There is no identification strategy — board diversity is endogenous to firm quality. "
+            "We do not address endogeneity, selection, or reverse causality. "
+            "The results are not robust to adding firm size and leverage as controls. "
+            "The sample is small and the results are not externally valid. "
+            "The paper's contribution is unclear and the writing needs significant improvement."
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.0,
+            "novelty": 4.0,
+            "clarity": 5.0,
+            "reproducibility": 3.5,
+            "significance": 4.5,
+            "overall": 3.5,
+        },
+        "human_recommendation": "reject",
+        "venue": "JFE",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_014",
+        "paper_abstract": (
+            "This paper studies the effect of dividend policy on firm value using "
+            "a sample of 400 firms from a single year (cross-sectional study). "
+            "There is no causal identification — the key assumption of the Lintner model "
+            "is not tested or discussed. "
+            "The instrument (past dividend yield) is likely invalid. "
+            "No robustness checks are provided and the results are not robust "
+            "to controlling for profitability. "
+            "The economic magnitude is trivial. "
+            "The writing is unclear and the paper lacks a coherent structure."
+        ),
+        "human_scores": {
+            "methodology_rigor": 2.5,
+            "novelty": 3.5,
+            "clarity": 4.0,
+            "reproducibility": 3.0,
+            "significance": 4.0,
+            "overall": 3.0,
+        },
+        "human_recommendation": "reject",
+        "venue": "RFS",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "rej_015",
+        "paper_abstract": (
+            "We claim that mutual fund manager skill affects corporate governance. "
+            "The measure of skill (past performance) is endogenous and correlated with "
+            "fund size and flows. "
+            "We use a weak instrument (average manager age) and do not test for weak IV. "
+            "The identification strategy is not credible. "
+            "Results are not robust to fund fixed effects or time FE. "
+            "The paper lacks any discussion of mechanism or economic channels. "
+            "The empirical results do not support the strong claims made in the introduction."
+        ),
+        "human_scores": {
+            "methodology_rigor": 3.0,
+            "novelty": 4.0,
+            "clarity": 4.5,
+            "reproducibility": 3.5,
+            "significance": 4.5,
+            "overall": 3.5,
+        },
+        "human_recommendation": "reject",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    # ── NEW BORDERLINE SAMPLES (12) ───────────────────────────────────────────
+    {
+        "sample_id": "bl_007",
+        "paper_abstract": (
+            "This paper examines whether hedge fund activism affects target firm innovation "
+            "using a sample of 800 activist campaigns from 2000-2020. "
+            "The identification relies on the timing of 13D filings as an exogenous shock, "
+            "but the instrument is weak (first-stage F=6.2). "
+            "Results show a positive effect on patent counts but not patent quality (citations). "
+            "Heterogeneity analysis by activist type is suggestive but underpowered. "
+            "The paper has good motivation and reasonable writing, but the weak instrument "
+            "raises concerns about the credibility of the causal estimates."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.0,
+            "novelty": 5.5,
+            "clarity": 6.0,
+            "reproducibility": 5.5,
+            "significance": 6.0,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "RFS",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_008",
+        "paper_abstract": (
+            "We study the effect of credit default swaps (CDS) introduction on corporate "
+            "investment using a sample of 1,200 firms across 20 countries. "
+            "The staggered difference-in-differences design is appropriate, but we do not test "
+            "the parallel trends assumption formally. "
+            "Results are positive and significant, but the effect size varies widely across "
+            "specifications. "
+            "The mechanism (information vs. risk transfer) is not clearly identified. "
+            "The paper is well-written but needs more robustness tests and mechanism analysis."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.5,
+            "novelty": 5.0,
+            "clarity": 6.5,
+            "reproducibility": 5.5,
+            "significance": 6.0,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "JFE",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_009",
+        "paper_abstract": (
+            "本文研究了绿色信贷政策对企业全要素生产率的影响。 "
+            "基于2008-2019年A股上市公司数据，采用双重差分（DID）方法。 "
+            "基准结果显著为正，但样本期间可能存在选择性偏误。 "
+            "机制分析较为表面，没有深入检验具体传导渠道。 "
+            "稳健性检验数量不足，缺少工具变量法和合成控制法验证。 "
+            "异质性分析有一定价值，但整体方法规范有待加强。"
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.0,
+            "novelty": 5.5,
+            "clarity": 6.0,
+            "reproducibility": 5.0,
+            "significance": 6.5,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "经济研究",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_010",
+        "paper_abstract": (
+            "We examine whether retail investor attention drives commodity futures returns "
+            "using Google Trends data from 2008-2022. "
+            "We find that attention predicts returns with a coefficient of 0.08 (t=2.3) "
+            "in a univariate portfolio sort. "
+            "However, after controlling for momentum and volatility factors, "
+            "the alpha is subsumed and only marginally significant. "
+            "The attention measure is noisy and the economic significance is small. "
+            "Transaction costs would likely eliminate the alpha. "
+            "The paper needs a more convincing identification strategy."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.0,
+            "novelty": 5.0,
+            "clarity": 6.0,
+            "reproducibility": 5.5,
+            "significance": 5.5,
+            "overall": 5.0,
+        },
+        "human_recommendation": "borderline",
+        "venue": "RFS",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_011",
+        "paper_abstract": (
+            "We identify the effect of trade openness on income inequality using "
+            "a cross-country panel with IV. "
+            "Our instrument (geographic distance from the equator) is standard in the literature "
+            "but may violate the exclusion restriction given climate-income relationships. "
+            "The first-stage F-statistic is 15.2, acceptable but not strong. "
+            "Results are consistent with the Stolper-Samuelson prediction for developing countries "
+            "but not for developed countries. "
+            "The paper is clearly structured but needs more discussion of the identifying assumptions."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.5,
+            "novelty": 5.5,
+            "clarity": 6.5,
+            "reproducibility": 6.0,
+            "significance": 6.0,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "经济研究",
+        "year": 2023,
+        "source": "synthetic_benchmark",
+        "domain": "economics",
+    },
+    {
+        "sample_id": "bl_012",
+        "paper_abstract": (
+            "We study whether ESG mutual funds perform better during market stress using "
+            "a matched sample of 600 ESG and conventional funds from 2015-2023. "
+            "We find that ESG funds have lower drawdowns during the COVID-19 crash (March 2020) "
+            "but not during the 2022 rate shock. "
+            "The matching is on observable characteristics but unobservable fund quality "
+            "may still confound the results. "
+            "The sample period is short and the mechanism is unclear. "
+            "The paper is written well but needs a longer out-of-sample test."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.0,
+            "novelty": 5.5,
+            "clarity": 6.5,
+            "reproducibility": 5.5,
+            "significance": 6.0,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "RFS",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_013",
+        "paper_abstract": (
+            "We investigate whether CEO compensation affects corporate social responsibility (CSR) "
+            "using a panel of 1,500 U.S. firms from 2010-2021. "
+            "We instrument for compensation using the exogenous variation from the 2008 financial crisis. "
+            "The instrument is only weakly exogenous (may affect CSR through channels other than compensation). "
+            "We find a positive effect that disappears when including firm fixed effects. "
+            "The contribution is incremental and the identification strategy is questionable. "
+            "The paper is adequately written but needs stronger empirical evidence."
+        ),
+        "human_scores": {
+            "methodology_rigor": 4.5,
+            "novelty": 5.0,
+            "clarity": 6.0,
+            "reproducibility": 5.0,
+            "significance": 5.5,
+            "overall": 5.0,
+        },
+        "human_recommendation": "borderline",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_014",
+        "paper_abstract": (
+            "This paper studies the effect of patent box regimes on corporate innovation "
+            "using staggered adoption across 15 OECD countries. "
+            "Using event study and DiD designs, we find that patent boxes increase patent filings "
+            "by 8% but do not increase R&D expenditure, suggesting quality-reducing strategic filing. "
+            "The parallel trends assumption is tested and satisfied. "
+            "However, the sample period is short (5 years) and the pre-trends are imprecisely estimated. "
+            "The mechanism analysis is interesting but speculative. "
+            "The paper is well-organized but needs more long-run evidence."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.5,
+            "novelty": 6.0,
+            "clarity": 6.5,
+            "reproducibility": 6.0,
+            "significance": 6.5,
+            "overall": 6.0,
+        },
+        "human_recommendation": "borderline",
+        "venue": "RFS",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "economics",
+    },
+    {
+        "sample_id": "bl_015",
+        "paper_abstract": (
+            "We examine whether bank competition affects SME lending using county-level "
+            "bank branch data and firm-level loan applications in China. "
+            "Our identification exploits the staggered removal of geographic branching restrictions. "
+            "We find that increased competition reduces SME loan approval rates and increases rates. "
+            "(The paper is unclear about the direction — results are contradictory across specifications.) "
+            "The HHI measure of competition is endogenous to local economic conditions. "
+            "The paper is reasonably written but needs to resolve the contradictory results "
+            "and address endogeneity more carefully."
+        ),
+        "human_scores": {
+            "methodology_rigor": 4.5,
+            "novelty": 5.0,
+            "clarity": 5.5,
+            "reproducibility": 5.0,
+            "significance": 5.5,
+            "overall": 5.0,
+        },
+        "human_recommendation": "borderline",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_016",
+        "paper_abstract": (
+            "We study the effect of supply chain concentration on firm performance using "
+            "a sample of 2,000 U.S. public firms from 2005-2020. "
+            "We use the Herfindahl index of supplier revenue concentration as the key variable. "
+            "Endogeneity is addressed with an IV using industry-level input cost volatility, "
+            "but the exclusion restriction is plausible but not proven. "
+            "Results are robust to firm FE and alternative concentration measures. "
+            "The mechanism (supplier power vs. relationship quality) is not clearly distinguished. "
+            "The paper is clearly written with good motivation but needs more mechanism evidence."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.5,
+            "novelty": 5.5,
+            "clarity": 6.5,
+            "reproducibility": 6.0,
+            "significance": 6.0,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "RFS",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_017",
+        "paper_abstract": (
+            "We examine whether corporate payout policy responds to tax incentives using "
+            "a quasi-natural experiment: the 2003 Jobs and Growth Tax Relief Act in the U.S. "
+            "The dividend tax cut provides a clean setting, but we do not account for the "
+            "concurrent increase in share buybacks. "
+            "Our DiD estimate shows that firms increased payouts by 28%, consistent with tax clienteles. "
+            "However, the parallel trends assumption is not formally tested. "
+            "The mechanism analysis is incomplete. "
+            "The paper is well-motivated but needs more empirical discipline."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.0,
+            "novelty": 5.5,
+            "clarity": 6.0,
+            "reproducibility": 5.5,
+            "significance": 6.5,
+            "overall": 5.5,
+        },
+        "human_recommendation": "borderline",
+        "venue": "JFE",
+        "year": 2024,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
+    },
+    {
+        "sample_id": "bl_018",
+        "paper_abstract": (
+            "We study whether corporate risk management affects firm value using "
+            "a sample of 1,800 non-financial firms from 2000-2020. "
+            "Risk management is measured by the use of financial derivatives. "
+            "Endogeneity is addressed using an IV based on industry-level commodity price volatility, "
+            "but the instrument may directly affect firm value through channels beyond derivatives use. "
+            "Results are sensitive to the inclusion of time-varying controls. "
+            "The paper has a clear research question but the empirical execution needs improvement. "
+            "The economic significance is modest."
+        ),
+        "human_scores": {
+            "methodology_rigor": 5.0,
+            "novelty": 5.0,
+            "clarity": 6.0,
+            "reproducibility": 5.5,
+            "significance": 5.5,
+            "overall": 5.0,
+        },
+        "human_recommendation": "borderline",
+        "venue": "JFE",
+        "year": 2025,
+        "source": "synthetic_benchmark",
+        "domain": "finance",
     },
 ]
 
@@ -620,8 +1447,8 @@ class CalibrationResult:
     per_dimension: dict  # {dim: {"mae": float, "acc_within_1": float, "corr": float}}
     confusion_matrix: dict  # {actual_class: {predicted_class: count}}
     recommendations: dict  # {sample_id: {"predicted": str, "actual": str, "correct": bool}}
-    benchmark_name: str = "builtin_20"
-    n_samples: int = 20
+    benchmark_name: str = "builtin_50"
+    n_samples: int = 50
 
     def to_dict(self) -> dict:
         return asdict(self)

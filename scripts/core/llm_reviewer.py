@@ -291,33 +291,69 @@ class ReviewResult:
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
 
+    # Schema: required fields, valid ranges, allowed values
+    REQUIRED_FIELDS = ["scores", "overall_recommendation"]
+    VALID_RECOMMENDATIONS = {
+        "Strong Accept", "Accept", "Borderline", "Weak Accept",
+        "Reject", "Strong Reject",
+        # Chinese equivalents
+        "强烈接收", "接收", "边缘", "弱接收", "拒绝", "强烈拒绝",
+    }
+    SCORE_MIN = 1.0
+    SCORE_MAX = 10.0
+    CONFIDENCE_MIN = 0.0
+    CONFIDENCE_MAX = 1.0
+    DIMENSION_KEYS = ["methodology_rigor", "novelty", "clarity",
+                      "reproducibility", "significance", "overall"]
+
+    def _validate_score(self, value: float, dim: str) -> tuple[float, list[str]]:
+        """Clamp score to [1,10] and collect warnings."""
+        warnings = []
+        if value < self.SCORE_MIN:
+            warnings.append(f"{dim}: {value:.2f} < {self.SCORE_MIN}, clamped")
+            value = self.SCORE_MIN
+        elif value > self.SCORE_MAX:
+            warnings.append(f"{dim}: {value:.2f} > {self.SCORE_MAX}, clamped")
+            value = self.SCORE_MAX
+        return value, warnings
+
+    def _validate_confidence(self, value: float) -> tuple[float, list[str]]:
+        """Clamp confidence to [0,1] and collect warnings."""
+        warnings = []
+        if value < self.CONFIDENCE_MIN:
+            warnings.append(f"confidence {value:.2f} < 0, clamped")
+            value = self.CONFIDENCE_MIN
+        elif value > self.CONFIDENCE_MAX:
+            warnings.append(f"confidence {value:.2f} > 1, clamped")
+            value = self.CONFIDENCE_MAX
+        return value, warnings
+
     @classmethod
     def from_llm_response(cls, raw_text: str) -> ReviewResult:
-        """Parse LLM's text output into structured ReviewResult."""
-        # Try to extract JSON from the response
+        """Parse LLM's text output into structured ReviewResult with schema validation."""
+        validation_warnings: list[str] = []
+
+        # ── JSON extraction ────────────────────────────────────────────────────
         raw_text = raw_text.strip()
 
-        # Handle markdown code blocks
         json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", raw_text, re.DOTALL)
         if json_match:
             raw_text = json_match.group(1)
 
-        # Try to find JSON object (may have leading/trailing text)
         json_start = raw_text.find("{")
         json_end = raw_text.rfind("}") + 1
         if json_start != -1 and json_end > json_start:
             raw_text = raw_text[json_start:json_end]
 
+        # ── JSON parse ────────────────────────────────────────────────────────────
         try:
             data = json.loads(raw_text)
         except json.JSONDecodeError as exc:
             logger.warning(f"Failed to parse LLM review JSON: {exc}")
-            # Return a fallback result
             return cls(
                 scores={
                     k: ReviewScore(score=0.0, confidence=0.0, reasoning="Parse failed")
-                    for k in ["methodology_rigor", "novelty", "clarity",
-                              "reproducibility", "significance", "overall"]
+                    for k in cls.DIMENSION_KEYS
                 },
                 overall_score=0.0,
                 overall_recommendation="Unknown (parse failed)",
@@ -329,37 +365,75 @@ class ReviewResult:
                 metadata={"parse_error": str(exc)},
             )
 
-        # Parse scores
+        # ── Schema validation ──────────────────────────────────────────────────
+        instance = cls.__new__(cls)
+
+        # Required fields
+        for field in cls.REQUIRED_FIELDS:
+            if field not in data:
+                validation_warnings.append(f"Missing required field: {field}")
+
+        # Overall recommendation
+        rec = data.get("overall_recommendation", "")
+        if rec and rec not in cls.VALID_RECOMMENDATIONS:
+            validation_warnings.append(
+                f"Unrecognized recommendation '{rec}', expected one of {cls.VALID_RECOMMENDATIONS}"
+            )
+
+        # ── Parse scores ────────────────────────────────────────────────────────
         parsed_scores = {}
         raw_scores = data.get("scores", {})
-        for dim in ["methodology_rigor", "novelty", "clarity",
-                    "reproducibility", "significance", "overall"]:
+        for dim in cls.DIMENSION_KEYS:
             s = raw_scores.get(dim, {})
             if isinstance(s, dict):
+                score_val = float(s.get("score", 0.0))
+                conf_val = float(s.get("confidence", 0.0))
+                score_val, score_warnings = instance._validate_score(score_val, dim)
+                conf_val, conf_warnings = instance._validate_confidence(conf_val)
+                validation_warnings.extend(score_warnings)
+                validation_warnings.extend(conf_warnings)
                 parsed_scores[dim] = ReviewScore(
-                    score=float(s.get("score", 0.0)),
-                    confidence=float(s.get("confidence", 0.0)),
+                    score=score_val,
+                    confidence=conf_val,
                     reasoning=str(s.get("reasoning", "")),
                 )
             elif isinstance(s, (int, float)):
+                score_val, score_warnings = instance._validate_score(float(s), dim)
+                validation_warnings.extend(score_warnings)
                 parsed_scores[dim] = ReviewScore(
-                    score=float(s), confidence=0.5, reasoning=""
+                    score=score_val, confidence=0.5, reasoning=""
                 )
             else:
                 parsed_scores[dim] = ReviewScore(
                     score=0.0, confidence=0.0, reasoning="Missing"
                 )
+                validation_warnings.append(f"Missing score for dimension: {dim}")
+
+        # Clamp overall_score
+        overall_score = float(data.get("overall_score", data.get("overall", {}).get("score", 0.0)))
+        os_warnings = instance._validate_score(overall_score, "overall_score")
+        overall_score = os_warnings[0]
+        validation_warnings.extend(os_warnings[1])
+
+        # Clamp confidence
+        conf = float(data.get("confidence", 0.5))
+        conf, conf_w = instance._validate_confidence(conf)
+        validation_warnings.extend(conf_w)
+
+        metadata = dict(data.get("metadata", {}))
+        if validation_warnings:
+            metadata["validation_warnings"] = validation_warnings
 
         return cls(
             scores=parsed_scores,
-            overall_score=float(data.get("overall_score", data.get("overall", {}).get("score", 0.0))),
+            overall_score=overall_score,
             overall_recommendation=str(data.get("overall_recommendation", "Unknown")),
             summary=str(data.get("summary", "")),
             strengths=list(data.get("strengths", [])),
             weaknesses=list(data.get("weaknesses", [])),
             detailed_feedback=str(data.get("detailed_feedback", "")),
-            confidence=float(data.get("confidence", 0.5)),
-            metadata=data.get("metadata", {}),
+            confidence=conf,
+            metadata=metadata,
         )
 
 
@@ -848,6 +922,8 @@ class LLMReviewer:
         default_venue: str = "ML",
         enable_cache: bool = True,
         cache_dir: str = "data/review_cache",
+        timeout: float = 120.0,
+        max_retries: int = 1,
     ):
         """
         Initialize the LLM reviewer.
@@ -862,12 +938,19 @@ class LLMReviewer:
             Cache review results to avoid re-judging the same paper.
         cache_dir : str
             Directory for review cache files.
+        timeout : float
+            Timeout for each LLM API call in seconds. Default 120s.
+        max_retries : int
+            Maximum number of retries on LLM call failure (before AIRouter's
+            own model fallback is exhausted). Default 1.
         """
         self.judge_model = judge_model
         self.default_venue = default_venue
         self.enable_cache = enable_cache
         self.cache_dir = Path(cache_dir)
         self._review_count = 0
+        self._timeout = timeout
+        self._max_retries = max_retries
 
         if self.enable_cache:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -1274,20 +1357,48 @@ class LLMReviewer:
     # ── Helper methods ───────────────────────────────────────────────────────
 
     def _call_llm(self, prompt: str, model: str, language: str) -> str:
-        """Call the LLM via AIRouter."""
-        try:
-            from scripts.ai_router import AIRouter
-            router = AIRouter()
-            result = router.chat(
-                user_input=prompt,
-                model=model,
-                temperature=0.3,  # Low temperature for structured output
-                max_tokens=4096,
-            )
-            return result.response
-        except Exception as exc:
-            logger.error(f"LLM call failed: {exc}")
-            raise RuntimeError(f"LLM review call failed: {exc}") from exc
+        """Call the LLM via AIRouter with timeout and retry support."""
+        import signal
+
+        class TimeoutError(Exception):
+            pass
+
+        def _timeout_handler(signum, frame):
+            raise TimeoutError(f"LLM call timed out after {self._timeout}s")
+
+        last_error = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                # Set timeout alarm (Unix only)
+                if hasattr(signal, "SIGALRM") and attempt == 0:
+                    signal.signal(signal.SIGALRM, _timeout_handler)
+                    signal.alarm(int(self._timeout))
+
+                try:
+                    from scripts.ai_router import AIRouter
+                    router = AIRouter()
+                    result = router.chat(
+                        user_input=prompt,
+                        model=model,
+                        temperature=0.3,
+                        max_tokens=4096,
+                    )
+                    return result.response
+                finally:
+                    if hasattr(signal, "SIGALRM") and attempt == 0:
+                        signal.alarm(0)  # Cancel alarm
+            except TimeoutError as exc:
+                last_error = exc
+                logger.warning(f"LLM call attempt {attempt + 1} timed out ({self._timeout}s)")
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                logger.warning(f"LLM call attempt {attempt + 1} failed: {exc}")
+
+        # All attempts exhausted
+        raise RuntimeError(
+            f"LLM review call failed after {self._max_retries + 1} attempts. "
+            f"Last error: {last_error}"
+        ) from last_error
 
     def _cache_key(self, content: str, venue: str) -> str:
         """Generate a cache key for a paper review."""

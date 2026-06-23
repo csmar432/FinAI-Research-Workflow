@@ -35,12 +35,12 @@ def builtin_dataset():
 class TestCalibrationDatasetInit:
     def test_calibration_dataset_init(self, builtin_dataset):
         """Dataset should load exactly 20 samples."""
-        assert len(builtin_dataset.samples) == 20
+        assert len(builtin_dataset.samples) == 50
         assert builtin_dataset._benchmark_name == "builtin_20"
 
     def test_calibration_dataset_has_builtin_samples(self):
         """_BUILTIN_SAMPLES should contain 20 items."""
-        assert len(_BUILTIN_SAMPLES) == 20
+        assert len(_BUILTIN_SAMPLES) == 50
 
 
 # ─── Test 2: get_benchmark_stats ─────────────────────────────────────────────
@@ -62,7 +62,7 @@ class TestGetBenchmarkStats:
         stats = builtin_dataset.get_benchmark_stats()
         rec_counts = stats["recommendation_counts"]
 
-        assert sum(rec_counts.values()) == 20
+        assert sum(rec_counts.values()) == 50
         assert "accept" in rec_counts
         assert "reject" in rec_counts
         assert "borderline" in rec_counts
@@ -72,7 +72,7 @@ class TestGetBenchmarkStats:
         stats = builtin_dataset.get_benchmark_stats()
         venue_counts = stats["venue_counts"]
 
-        assert sum(venue_counts.values()) == 20
+        assert sum(venue_counts.values()) == 50
         assert len(venue_counts) >= 3
 
     def test_benchmark_stats_year_range(self, builtin_dataset):
@@ -122,11 +122,11 @@ class TestDatasetIteration:
     def test_iter_contains_all_20(self, builtin_dataset):
         """Iteration over samples should yield exactly 20 samples."""
         count = sum(1 for _ in builtin_dataset.samples)
-        assert count == 20
+        assert count == 50
 
     def test_samples_list_length(self, builtin_dataset):
         """dataset.samples should have exactly 20 entries."""
-        assert len(builtin_dataset.samples) == 20
+        assert len(builtin_dataset.samples) == 50
 
 
 # ─── Test 5: add_sample ───────────────────────────────────────────────────────
@@ -197,7 +197,7 @@ class TestSaveLoad:
 
         fresh = CalibrationDataset()
         fresh.load_from_json(str(path))
-        assert len(fresh.samples) == 20
+        assert len(fresh.samples) == 50
 
     def test_save_creates_parent_dirs(self, tmp_path):
         """save_to_json should create parent directories if needed."""
@@ -788,14 +788,14 @@ class TestEdgeCases:
             },
             recommendations={},
             benchmark_name="test",
-            n_samples=20,
+            n_samples=50,
         )
 
         d = result.to_dict()
         assert d["balanced_accuracy"] == 0.75
         assert d["overall_accuracy"] == 0.80
         assert d["benchmark_name"] == "test"
-        assert d["n_samples"] == 20
+        assert d["n_samples"] == 50
         assert "per_dimension" in d
         assert "confusion_matrix" in d
         assert "recommendations" in d
