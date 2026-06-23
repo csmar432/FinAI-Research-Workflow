@@ -240,7 +240,6 @@ tests/test_auto_review_rules.py
 tests/test_autonomy_loop.py
 tests/test_autonomy_loop_comprehensive.py
 tests/test_collaboration.py
-tests/test_health_check.py
 tests/test_hitl_gate.py
 tests/test_hitl_gate_comprehensive.py
 tests/test_idea_data_checker.py

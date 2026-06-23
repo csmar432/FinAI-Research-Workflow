@@ -1,0 +1,355 @@
+# Halt Rules - 金融实证研究论文
+# ====================================
+# 金融实证研究特有质量规则
+# 适用于A股、美股、固定收益、衍生品等金融领域实证研究
+#
+# 与 empirical_paper.yaml 互补：通用规则已覆盖的部分不再重复
+# 本文件聚焦金融特有审查项
+
+domain: finance_empirical
+version: "1.0"
+description: |
+  金融实证研究论文质量检查规则集
+  适用于：
+    - A股市场实证（涨跌停、T+1、散户特征）
+    - 公司金融（融资约束、并购、股利政策）
+    - 资产定价（因子模型、收益率预测）
+    - 银行与监管
+    - 绿色金融、ESG
+    - 行为金融
+  与 empirical_paper.yaml 互补使用
+
+rules:
+  # ──────────────────────────────────────────────────────────────────────
+  # A股市场特征规则（仅当研究涉及A股时）
+  # ──────────────────────────────────────────────────────────────────────
+  - id: ashare_trading_constraints
+    description: A股特有交易制度说明（涨跌停、T+1）
+    category: finance_data
+    severity: error
+    validation:
+      type: finance_market_check
+      applicable_markets: ["A股", "中国上市公司", "China A-share"]
+      rules:
+        - description: 若研究涉及短期收益率，必须说明涨跌停制度对结果的影响
+          check: price_limit_discussed
+        - description: 若使用日度或更高频率数据，必须说明T+1交易制度
+          check: t_plus_1_discussed
+        - description: 金融类公司样本须说明ST/*ST处理方式
+          check: st_stock_handling
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: retail_investor_consideration
+    description: 散户比例与市场结构说明
+    category: finance_data
+    severity: warning
+    validation:
+      type: finance_market_check
+      applicable_markets: ["A股", "中国金融", "China"]
+      rules:
+        - description: 研究A股需讨论散户比例对结果的影响
+          check: retail_investor_discussed
+        - description: 换手率指标需说明是否为流通股换手率
+          check: free_float_turnover
+    auto_fix: false
+    halt_on_fail: false
+
+  - id: margin_trading_disclosure
+    description: 融资融券数据处理说明
+    category: finance_data
+    severity: warning
+    validation:
+      type: finance_data_check
+      applicable_variables: ["融资余额", "融券余额", "margin", "short_selling"]
+      rules:
+        - description: 使用融资融券数据需说明样本期间数据可得性
+          check: margin_data_availability
+        - description: 融资融券余额变化需说明事件（如大规模强制平仓）处理方式
+          check: margin_event_handling
+    auto_fix: false
+    halt_on_fail: false
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 金融数据质量规则
+  # ──────────────────────────────────────────────────────────────────────
+  - id: financial_data_source_quality
+    description: 金融数据来源与质量说明
+    category: finance_data
+    severity: error
+    validation:
+      type: finance_data_check
+      rules:
+        - description: 必须说明主要数据来源（CSMAR/Wind/RESSET/锐思）
+          required_fields: ["primary_data_source", "data_provider"]
+        - description: 使用多个数据库时必须说明数据一致性处理
+          check: multi_source_consistency
+        - description: 财务数据需说明是否使用经审计数据
+          check: audited_financial_data
+        - description: 必须说明缺失值处理方式
+          check: missing_value_handling
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: survivorship_bias
+    description: 生存者偏差控制
+    category: finance_data
+    severity: error
+    validation:
+      type: finance_data_check
+      applicable_samples: ["上市公司", "基金", "股票指数"]
+      rules:
+        - description: 样本期间退市公司必须纳入或说明剔除原因
+          check: delisting_handling
+        - description: 金融类公司（银行/保险/券商）需单独说明
+          check: financial_firm_treatment
+        - description: IPO后短期样本需说明上市首日数据处理
+          check: ipo_short_term
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: fiscal_year_alignment
+    description: 会计年度对齐
+    category: finance_data
+    severity: error
+    validation:
+      type: finance_data_check
+      applicable_countries: ["中国", "China"]
+      rules:
+        - description: 中国上市公司年报截止日（12月31日）需与日度数据对齐
+          check: fiscal_year_match
+        - description: 跨年报数据使用需说明窗口定义
+          check: window_definition
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 资产定价规则
+  # ──────────────────────────────────────────────────────────────────────
+  - id: factor_model_validity
+    description: 因子模型有效性说明
+    category: asset_pricing
+    severity: error
+    validation:
+      type: asset_pricing_check
+      applicable_methods: ["CAPM", "Fama-French", "因子模型", "factor model"]
+      rules:
+        - description: Fama-French因子使用必须说明因子构建方法
+          required_fields: ["factor_construction", "data_source"]
+        - description: 必须报告因子收益率描述性统计
+          check: factor_descriptive_stats
+        - description: 多因子模型必须说明因子共线性处理
+          check: multicollinearity_handling
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: return_measurement
+    description: 收益率衡量方式说明
+    category: asset_pricing
+    severity: error
+    validation:
+      type: asset_pricing_check
+      applicable_variables: ["收益率", "return", "超额收益"]
+      rules:
+        - description: 必须说明收益率是考虑分红的全收益还是价格收益
+          required_fields: ["return_type", "dividend_adjusted"]
+        - description: 超额收益基准必须明确（无风险利率来源）
+          check: risk_free_rate_source
+        - description: 使用异常收益率时必须说明事件窗口定义
+          check: event_window_definition
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: bootstrap_statistical_inference
+    description: 统计推断方法说明（bootstrap/block bootstrap）
+    category: asset_pricing
+    severity: error
+    validation:
+      type: statistical_inference_check
+      applicable_methods: ["bootstrap", "block bootstrap", "bootstrap标准误"]
+      rules:
+        - description: 必须说明bootstrap方法（参数/非参数）和重采样次数
+          required_fields: ["bootstrap_type", "n_replications"]
+        - description: 时间序列数据必须使用block bootstrap而非i.i.d. bootstrap
+          check: block_bootstrap_required
+        - description: 必须报告95%置信区间而非仅p值
+          check: confidence_interval_reported
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 公司金融特有规则
+  # ──────────────────────────────────────────────────────────────────────
+  - id: corporate_event_study
+    description: 事件研究法规范性
+    category: corporate_finance
+    severity: error
+    validation:
+      type: corporate_finance_check
+      applicable_methods: ["事件研究", "event study", "CAR", "abnormal return"]
+      rules:
+        - description: 必须说明预期收益率模型（市场模型/CAPM/Fama-French）
+          required_fields: ["expected_return_model"]
+        - description: 估计窗口与事件窗口必须不重叠
+          check: estimation_event_window_separation
+        - description: 必须报告稳健标准误（Patell/Boehmer）
+          check: patell_bohmer_std
+        - description: 样本量足够大（通常N>30）才能进行横截面回归
+          check: cross_section_sample_size
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: governance_variable_endogeneity
+    description: 公司治理变量内生性
+    category: corporate_finance
+    severity: error
+    validation:
+      type: corporate_finance_check
+      applicable_variables: ["公司治理", "股权结构", "董事会", "governance", "ownership"]
+      rules:
+        - description: 公司治理变量与公司业绩存在双向因果，必须讨论内生性
+          check: governance_endogeneity_discussed
+        - description: 必须尝试工具变量法或Heckman选择模型
+          required_methods: ["IV", "Heckman", "LSDV"]
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 异质性分析规则（金融特有）
+  # ──────────────────────────────────────────────────────────────────────
+  - id: financial_heterogeneity_groups
+    description: 金融特有分组标准
+    category: heterogeneity
+    severity: error
+    validation:
+      type: heterogeneity_check
+      rules:
+        - description: 按企业性质分组（国有/民营）需说明分类依据
+          check: ownership_classification
+        - description: 按行业分组时须说明行业分类标准（证监会/CSRC行业分类）
+          check: industry_classification_standard
+        - description: 按规模分组需说明大小盘划分标准（市值中位数/十分位）
+          check: size_portfolio_definition
+        - description: 组间系数差异检验不能仅看系数符号，必须报告统计显著性
+          check: heterogeneity_statistical_test
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 稳健性检验规则（金融特有）
+  # ──────────────────────────────────────────────────────────────────────
+  - id: finance_robustness_checks
+    description: 金融特有稳健性检验
+    category: robustness
+    severity: error
+    validation:
+      type: robustness_check
+      applicable_domain: "finance"
+      rules:
+        - description: A股研究必须包含排除重大市场异动期的稳健性检验
+          check: exclude_market_shock_periods
+        - description: 含金融行业样本必须单独报告剔除金融后的结果
+          check: exclude_financial_firms
+        - description: 资产定价研究必须包含不同估计窗口的稳健性检验
+          check: alternative_estimation_windows
+        - description: 必须包含调整聚类维度的稳健性检验（个股/行业/双向）
+          check: alternative_clustering
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 机制分析规则（金融特有）
+  # ──────────────────────────────────────────────────────────────────────
+  - id: financial_mechanism_channel
+    description: 金融特有机制渠道分析
+    category: mechanism
+    severity: error
+    validation:
+      type: mediation_check
+      rules:
+        - description: 机制变量（如R&D/融资约束/信息不对称）必须有金融学理论支撑
+          check: financial_mechanism_theory
+        - description: 必须报告Sobel检验或Bootstrap置信区间
+          required_tests: ["Sobel检验", "Bootstrap置信区间"]
+        - description: 机制分析不能仅凭系数符号变化就下结论
+          check: mediation_requires_statistical_test
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 特殊样本规则
+  # ──────────────────────────────────────────────────────────────────────
+  - id: financial_crisis_handling
+    description: 金融危机/重大事件处理
+    category: finance_data
+    severity: error
+    validation:
+      type: finance_data_check
+      rules:
+        - description: 样本包含2008金融危机/2015A股股灾/2020COVID时必须说明
+          check: crisis_period_documented
+        - description: 必须进行排除危机期的稳健性检验
+          check: exclude_crisis_robustness
+        - description: 事件研究在危机期间的标准误计算必须使用稳健方法
+          check: crisis_std_robust
+    auto_fix: false
+    halt_on_fail: true
+
+  - id: policy_event_timing
+    description: 政策事件时点识别
+    category: finance_policy
+    severity: error
+    validation:
+      type: finance_policy_check
+      applicable_methods: ["DID", "三重差分", "事件研究"]
+      rules:
+        - description: 政策实施日期必须来自官方文件，不能仅依赖媒体报道
+          check: policy_date_source
+        - description: 存在多个试点地区时必须说明控制组选择依据
+          check: control_group_rationale
+        - description: 政策存在渐进推行特征时必须使用Borusyak (2024)方法
+          check: staggered_adoption_method
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 绿色金融/ESG规则
+  # ──────────────────────────────────────────────────────────────────────
+  - id: esg_data_quality
+    description: ESG数据质量说明
+    category: esg
+    severity: error
+    validation:
+      type: esg_check
+      applicable_variables: ["ESG", "绿色创新", "碳排放", "green", "carbon"]
+      rules:
+        - description: ESG数据来源必须说明（彭博/商道融绿/华证）
+          required_fields: ["esg_data_source", "coverage_rate"]
+        - description: ESG评级存在选择偏差（表现好公司更愿意披露），必须讨论
+          check: esg_selection_bias
+        - description: 绿色专利数据必须说明来源（国家知识产权局/CSR报告）
+          check: green_patent_source
+    auto_fix: false
+    halt_on_fail: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # 模型诊断规则
+  # ──────────────────────────────────────────────────────────────────────
+  - id: panel_regression_diagnostics
+    description: 面板数据回归诊断
+    category: diagnostics
+    severity: error
+    validation:
+      type: diagnostic_check
+      applicable_methods: ["面板回归", "panel regression", "固定效应", "随机效应"]
+      rules:
+        - description: 面板数据必须进行单位根检验或说明为何不需要
+          check: unit_root_test
+        - description: 固定效应 vs 随机效应必须进行Hausman检验
+          check: hausman_test
+        - description: 双向固定效应必须说明时间和个体固定效应
+          check: twoway_fe_specification
+        - description: 标准误聚类维度必须有依据（公司层面聚类为A股标准做法）
+          check: cluster_dimension_justified
+    auto_fix: false
+    halt_on_fail: true

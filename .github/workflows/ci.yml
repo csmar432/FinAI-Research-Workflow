@@ -676,7 +676,7 @@ jobs:
           if [ -n "$COV_FILES" ]; then
             coverage combine --keep $COV_FILES
             # Aggregate coverage: scripts/ is 60K+ lines, tests cover targeted modules.
-            # Set fail-under=3 as a minimum quality bar.
+            # Set fail-under=10 as minimum quality gate; raise target to 30% via P1.
             coverage report -m --fail-under=10
           else
             echo "No coverage data available — skipping combine"
