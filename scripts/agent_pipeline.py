@@ -587,11 +587,18 @@ def _save_wf_json_fallback(payload: dict) -> None:
 
 def _print_canvas_hint(stage: str, detail: str = "") -> None:
     """
-    在终端打印 Canvas 链接横幅，并将状态写入缓存文件供 Agent 读取。
+    Terminal text fallback when Canvas is unavailable.
+
+    Always prints to terminal and writes state to .cache/wf_canvas_state.json
+    regardless of Canvas availability (audit fix 2026-06-24: Canvas was the
+    only output mechanism on non-Cursor platforms).
     """
     banner = _build_canvas_banner(stage, detail)
     print(banner)
 
+    # Text-based fallback: always write state to cache file even when Canvas
+    # is unavailable, so non-Cursor callers (CI, scripts, GitHub Actions) can
+    # read pipeline stage from a machine-readable file.
     try:
         state_file = Path(__file__).parent.parent / ".cache" / "wf_canvas_state.json"
         state_file.parent.mkdir(parents=True, exist_ok=True)
@@ -604,7 +611,7 @@ def _print_canvas_hint(stage: str, detail: str = "") -> None:
             }, ensure_ascii=False),
             encoding="utf-8",
         )
-    except Exception:  # noqa: S110  # pipeline must not crash on optional feature failures
+    except Exception:  # noqa: S110
         pass
 
 

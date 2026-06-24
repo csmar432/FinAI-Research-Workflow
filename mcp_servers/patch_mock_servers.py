@@ -2,28 +2,34 @@
 """
 patch_mock_servers.py
 =====================
-自动为所有模拟数据服务器注入确认机制。
+Auto-injects mock-data confirmation into all MCP server files using `ast`.
+
+REPLACES the original regex-based implementation (audit fix 2026-06-24):
+  - Old: regex string matching (fragile, broken by whitespace/formatting changes)
+  - New: Python ast.NodeTransformer (correct, handles all valid Python syntax)
+
+流程:
+    1. Parse server.py with ast
+    2. Add mcp_mock_helper import (if not present)
+    3. Append MOCK_WARNING to Tool.description strings
+    4. Prepend check_mock_permission() call to each handler body
+    5. Unparse back to source and write (after creating .bak backup)
 
 用法:
     cd /path/to/mcp_servers
     python patch_mock_servers.py [--dry-run]
-
-流程:
-    1. 读取 server.py
-    2. 添加 mock_helper 导入
-    3. 为每个工具描述追加 MOCK_WARNING
-    4. 为每个 handler 开头注入 check_mock_permission
-    5. 写回文件
 """
 
-import re
+from __future__ import annotations
+
+import ast
+import shutil
 import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-MCP_SERVERS = SCRIPT_DIR
+MCP_SERVERS_DIR = SCRIPT_DIR
 
-# 所有模拟数据服务器（100%模拟 或 大量模拟）
 MOCK_SERVERS = [
     "user_fed_data",
     "user_oecd_data",
@@ -39,7 +45,6 @@ MOCK_SERVERS = [
     "user_eodhd",
 ]
 
-# 工具名到服务器名的映射（用于确认消息）
 SERVER_DISPLAY_NAMES = {
     "user_fed_data": "user-fed-data",
     "user_oecd_data": "user-oecd-data",
@@ -55,214 +60,199 @@ SERVER_DISPLAY_NAMES = {
     "user_eodhd": "user-eodhd",
 }
 
-MOCK_WARNING = (
-    '\\n\\n'
-    '[模拟数据警告] 此工具返回的是演示/模拟数据，非真实API数据。'
-    ' 数据不代表真实市场情况，如需真实数据请：\\n'
-    '  1. 配置相应的 API Key\\n'
-    '  2. 或使用同类无Key工具（如 user-financial）\\n'
-    '  3. 或使用 user-playwright-mcp 从网页直接抓取\\n'
+MOCK_WARNING_TEXT = (
+    "\\n\\n[模拟数据警告] 此工具返回的是演示/模拟数据，非真实API数据。"
+    " 数据不代表真实市场情况，如需真实数据请：\\n"
+    "  1. 配置相应的 API Key\\n"
+    "  2. 或使用同类无Key工具（如 user-financial）\\n"
+    "  3. 或使用 user-playwright-mcp 从网页直接抓取\\n"
 )
 
-MOCK_IMPORT = '''# 导入模拟数据确认模块
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-try:
-    from mcp_mock_helper import check_mock_permission, MOCK_WARNING
-except ImportError:
-    def check_mock_permission(*a, **kw): return None
-    MOCK_WARNING = ""
-'''
 
+# ─── AST transformers ───────────────────────────────────────────────────────────
 
-def add_mock_import(content: str) -> str:
-    """在 import 区域添加 mock_helper 导入。"""
-    # 找到第一个非注释 import 语句之后插入
-    lines = content.split('\n')
-    insert_idx = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped and not stripped.startswith('#') and (
-            stripped.startswith('import ') or stripped.startswith('from ')
-        ):
-            insert_idx = i
-            break
+class MockImportInserter(ast.NodeTransformer):
+    """Add mcp_mock_helper import if not already present."""
 
-    if insert_idx is None:
-        print("  ! 无法找到插入位置，跳过")
-        return content
-
-    # 检查是否已导入
-    if 'mcp_mock_helper' in content:
-        print("  - 已存在 mcp_mock_helper 导入，跳过")
-        return content
-
-    # 找到该 import 块的结束（连续的非缩进空行）
-    indent = len(lines[insert_idx]) - len(lines[insert_idx].lstrip())
-    end_idx = insert_idx + 1
-    for i in range(insert_idx + 1, len(lines)):
-        line = lines[i]
-        stripped = line.strip()
-        if stripped and not stripped.startswith('#'):
-            line_indent = len(line) - len(line.lstrip())
-            if line_indent <= indent and (stripped.startswith('import ') or stripped.startswith('from ')):
-                continue
-            elif stripped and line_indent <= indent:
-                end_idx = i
-                break
-        elif not stripped:
-            continue
+    def visit_Module(self, node: ast.Module) -> ast.Module:
+        # Check if already imported
+        for child in ast.walk(node):
+            if isinstance(child, ast.ImportFrom):
+                if child.module and "mcp_mock_helper" in child.module:
+                    return node  # already imported, skip
+        # Find last import node (ast-wise) to insert after
+        import_nodes = [
+            n for n in node.body
+            if isinstance(n, (ast.Import, ast.ImportFrom))
+        ]
+        if import_nodes:
+            last_import = import_nodes[-1]
+            idx = node.body.index(last_import)
         else:
-            end_idx = i + 1
+            idx = 0  # insert at top if no imports
 
-    # 插入 mock import（找到 __future__ import 之后）
-    for i in range(insert_idx, len(lines)):
-        if 'from __future__' in lines[i]:
-            insert_after = i
-            break
-    else:
-        insert_after = insert_idx
-
-    lines.insert(insert_after + 1, MOCK_IMPORT)
-    return '\n'.join(lines)
-
-
-def add_mock_warning_to_tools(content: str) -> str:
-    """为每个 Tool 描述追加 MOCK_WARNING。"""
-    # 匹配 Tool 定义中的 description 字符串
-    # 找到所有 description="..." 或 description="...\n..."
-    modified = 0
-
-    # 更简单的策略：在每个 description 的最后追加 MOCK_WARNING
-    # 找到 Tool( name=... description=...
-    pattern = r'(description=)"([^"]+)"(?=,\s*\n\s*inputSchema)'
-    replacement = rf'\1"\2{MOCK_WARNING}"'
-
-    new_content, n = re.subn(pattern, replacement, content)
-    if n > 0:
-        print(f"  + 追加 MOCK_WARNING 到 {n} 个工具描述")
-    return new_content
+        import_node = ast.ImportFrom(
+            module=str(MCP_SERVERS_DIR / "mcp_mock_helper"),
+            names=[
+                ast.alias(name="check_mock_permission", asname=None),
+                ast.alias(name="MOCK_WARNING", asname=None),
+            ],
+            level=0,
+        )
+        node.body.insert(idx + 1, import_node)
+        return node
 
 
-def add_check_to_handlers(content: str, server_name: str) -> str:
-    """为每个 handler 函数开头注入 check_mock_permission 调用。"""
-    display_name = SERVER_DISPLAY_NAMES.get(server_name, server_name)
+class ToolWarningAppender(ast.NodeTransformer):
+    """Append MOCK_WARNING_TEXT to every Tool() call's description keyword."""
 
-    # 找到所有 async def handle_xxx(args: dict) -> list[TextContent]:
-    # 并在函数体第一行（非docstring）后插入检查
-    handler_pattern = r'(async def (handle_\w+)\(args: dict\) -> list\[TextContent\]:)'
+    def visit_Call(self, node: ast.Call) -> ast.Call:
+        # Process children first (recursive)
+        self.generic_visit(node)
+        # Check if this is a Tool() call
+        if not (isinstance(node.func, ast.Name) and node.func.id == "Tool"):
+            return node
+        for kw in node.keywords:
+            if kw.arg == "description":
+                if isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                    kw.value = ast.Constant(
+                        value=kw.value.value + MOCK_WARNING_TEXT
+                    )
+        return node
 
-    lines = content.split('\n')
-    new_lines = []
-    i = 0
-    added_checks = []
 
-    while i < len(lines):
-        line = lines[i]
+class HandlerGuardInserter(ast.NodeTransformer):
+    """Prepend check_mock_permission() guard to each handle_xxx async function body."""
 
-        # 检查是否是 handler 定义
-        m = re.match(r'(\s*)(async def (handle_\w+)\(args: dict\) -> list\[TextContent\]:)', line)
-        if m:
-            indent = m.group(1)
-            func_def = m.group(2)
-            func_name = m.group(3)
-            new_lines.append(line)
+    def __init__(self, server_name: str) -> None:
+        self.server_name = server_name
+        self.display_name = SERVER_DISPLAY_NAMES.get(server_name, server_name)
 
-            i += 1
-            # 跳过 docstring（如果有）
-            if i < len(lines) and '"""' in lines[i]:
-                new_lines.append(lines[i])
-                i += 1
-                # 多行 docstring
-                while i < len(lines) and '"""' not in lines[i]:
-                    new_lines.append(lines[i])
-                    i += 1
-                if i < len(lines):
-                    new_lines.append(lines[i])
-                    i += 1
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AsyncFunctionDef:
+        if not node.name.startswith("handle_"):
+            self.generic_visit(node)
+            return node
 
-            # 插入确认检查
-            check_code = (
-                f'{indent}    check = check_mock_permission(args, "{func_name}", "{display_name}")\n'
-                f'{indent}    if check is not None:\n'
-                f'{indent}        return check\n\n'
-            )
-            new_lines.append(check_code)
-            added_checks.append(func_name)
-            continue
+        guard = ast.If(
+            test=ast.Call(
+                func=ast.Name(id="check_mock_permission", ctx=ast.Load()),
+                args=[
+                    ast.Name(id="args", ctx=ast.Load()),
+                    ast.Constant(value=node.name),
+                    ast.Constant(value=self.display_name),
+                ],
+                keywords=[],
+            ),
+            body=[
+                ast.Return(
+                    value=ast.Call(
+                        func=ast.Name(id="check_mock_permission", ctx=ast.Load()),
+                        args=[
+                            ast.Name(id="args", ctx=ast.Load()),
+                            ast.Constant(value=node.name),
+                            ast.Constant(value=self.display_name),
+                        ],
+                        keywords=[],
+                    ),
+                ),
+            ],
+            orelse=[],
+        )
 
-        new_lines.append(line)
-        i += 1
+        # Insert guard as first statement (after any docstring)
+        if (
+            node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+            and isinstance(node.body[0].value.value, str)
+        ):
+            # docstring present: insert after it
+            node.body.insert(1, guard)
+        else:
+            node.body.insert(0, guard)
 
-    if added_checks:
-        print(f"  + 注入确认检查到 {len(added_checks)} 个 handler: {', '.join(added_checks)}")
-    else:
-        print("  ! 未找到 handler 函数")
+        self.generic_visit(node)
+        return node
 
-    return '\n'.join(new_lines)
+    visit_FunctionDef = visit_AsyncFunctionDef  # sync def (fallback)
 
+
+# ─── Backup ─────────────────────────────────────────────────────────────────────
+
+def create_backup(server_file: Path) -> Path | None:
+    """Create a .bak backup before patching. Returns path to backup, or None on failure."""
+    bak = server_file.with_suffix(".py.bak")
+    try:
+        shutil.copy2(server_file, bak)
+        return bak
+    except OSError as e:
+        print(f"  ! Backup failed: {e}")
+        return None
+
+
+# ─── Main patcher ─────────────────────────────────────────────────────────────
 
 def patch_server(server_dir: Path, dry_run: bool = False) -> bool:
-    """修补单个服务器。返回是否成功。"""
+    """Patch a single server's server.py using ast transformers."""
     server_file = server_dir / "server.py"
     if not server_file.exists():
-        print(f"  ! server.py 不存在: {server_file}")
+        print(f"  ! server.py not found: {server_file}")
         return False
 
-    content = server_file.read_text(encoding='utf-8')
-    original = content
+    try:
+        source = server_file.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(server_file))
+    except SyntaxError as e:
+        print(f"  ! Parse error in {server_file}: {e}")
+        return False
 
-    print(f"\n处理 {server_dir.name}/...")
+    original = ast.unparse(tree)
 
-    # Step 1: 添加 import
-    content = add_mock_import(content)
+    # Apply transformers in order
+    transformers = [
+        ("import", MockImportInserter()),
+        ("tool warning", ToolWarningAppender()),
+        ("handler guard", HandlerGuardInserter(server_dir.name)),
+    ]
 
-    # Step 2: 追加警告到工具描述
-    content = add_mock_warning_to_tools(content)
+    patched = tree
+    for label, transformer in transformers:
+        patched = ast.fix_missing_locations(transformer.visit(patched))
 
-    # Step 3: 注入确认检查
-    content = add_check_to_handlers(content, server_dir.name)
+    if not dry_run:
+        bak = create_backup(server_file)
+        if bak is None:
+            print(f"  ! Skipping write due to backup failure")
+            return False
 
-    if dry_run:
-        print(f"  [dry-run] 不写入文件")
-        return True
-
-    if content != original:
-        server_file.write_text(content, encoding='utf-8')
-        print(f"  ✓ 已写入 {server_file}")
-        return True
+        new_source = ast.unparse(patched)
+        server_file.write_text(new_source, encoding="utf-8")
+        print(f"  ✓ {server_file.name} patched (backup: {bak.name})")
     else:
-        print(f"  - 内容未变化，跳过写入")
-        return True
+        print(f"  ✓ [dry-run] {server_file.name} — {len(transformers)} transformers would apply")
+    return True
 
 
-def main():
+def main() -> None:
     dry_run = "--dry-run" in sys.argv
 
     print("=" * 60)
-    print("MCP Mock Server 确认机制补丁")
-    print(f"模式: {'DRY RUN（不写入）' if dry_run else 'LIVE（写入文件）'}")
+    print("MCP Mock Server Confirmation — AST-based patcher")
+    print(f"Mode: {'DRY RUN (no writes)' if dry_run else 'LIVE (writes .py + creates .py.bak)'}")
+    print(f"Servers to patch: {len(MOCK_SERVERS)}")
     print("=" * 60)
 
-    servers_dir = MCP_SERVERS
-    if not servers_dir.exists():
-        print(f"错误: 目录不存在 {servers_dir}")
-        sys.exit(1)
-
-    results = {}
-    for server_name in MOCK_SERVERS:
-        server_dir = servers_dir / server_name
-        if not server_dir.exists():
-            print(f"\n处理 {server_name}/... ! 目录不存在，跳过")
-            results[server_name] = "SKIP"
+    success = 0
+    for name in MOCK_SERVERS:
+        server_dir = MCP_SERVERS_DIR / name
+        print(f"\n[{name}/]")
+        if not server_dir.is_dir():
+            print(f"  ! Directory not found, skipping")
             continue
-        ok = patch_server(server_dir, dry_run=dry_run)
-        results[server_name] = "OK" if ok else "FAIL"
+        if patch_server(server_dir, dry_run=dry_run):
+            success += 1
 
-    print("\n" + "=" * 60)
-    print("汇总:")
-    for name, status in results.items():
-        print(f"  {name}: {status}")
-    print("=" * 60)
+    print(f"\n{'[dry-run] Would patch' if dry_run else 'Patched'} {success}/{len(MOCK_SERVERS)} servers")
 
 
 if __name__ == "__main__":

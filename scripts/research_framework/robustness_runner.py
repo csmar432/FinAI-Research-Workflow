@@ -186,7 +186,10 @@ class RobustnessReport:
         ]
 
         for _, row in df.iterrows():
-            # Bug fix: NaN 值不能放入 LaTeX 数学模式（\mathord），使用短破折号
+            # NaN values are rendered as "—" (em-dash) to avoid LaTeX math-mode
+            # errors.  This is intentional: unavailable tests have no p-value
+            # or coefficient, and the "—" signals "not computed" rather than
+            # "zero" or "missing in a confusing way".
             def fmt(val, is_math=False):
                 if pd.isna(val):
                     return "—"
@@ -397,7 +400,7 @@ class RobustnessRunner:
         """
         n_permutations = 500
 
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(SEED)
         df_p = self.df.copy()
         p_treat = float(df_p[self.treat_var].mean())
 
