@@ -354,7 +354,7 @@ def _build_demo_panel(args: argparse.Namespace, tracker: "ProvenanceTracker") ->
     """Build a demo panel from ticker/year arguments."""
     tickers = args.tickers.split(",")
     years = [int(y) for y in args.years.split(",")]
-    np.random.seed(42)
+    np.random.seed(SEED)
     sectors = {
         "XOM":"integrated","CVX":"integrated","COP":"e&p","DVN":"e&p","SLB":"equipment",
         "OXY":"e&p","HAL":"equipment","BKR":"equipment","MRO":"e&p","FANG":"e&p",

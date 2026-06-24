@@ -169,60 +169,45 @@ class RegressionEngine:
         self._warnings: list[str] = []
         self.strict_no_simulated = strict_no_simulated
 
-        # ── P2-QUAL-2: Simulated data integrity check ──────────────────────
-        # Scan df.attrs or columns metadata for is_simulated=True flags.
-        # If any simulated variable is present, log a clear warning so the
-        # user is aware that downstream regressions may use synthetic data.
-        # In strict_no_simulated mode, raise ValueError instead.
+        # ── P2-QUAL-2: DRY-consolidated simulated data integrity check ─────
+        # Extracted from duplicate blocks (audit fix 2026-06-24).
+        # Scans df.attrs / column metadata for is_simulated=True flags.
+        # In strict_no_simulated mode, raises ValueError to protect research integrity.
+        self._check_simulated_guard(df, context="__init__")
+
+    def _check_simulated_guard(self, df: pd.DataFrame, context: str = "") -> None:
+        """Research integrity guardrail: detect and warn about simulated data flags.
+
+        DRY extraction (audit fix 2026-06-24): replaces two duplicate blocks that
+        previously appeared in __init__.  Calling this with the data once is sufficient.
+        """
         try:
             df_meta = getattr(df, "attrs", {}) or {}
             is_simulated = bool(df_meta.get("is_simulated", False))
             simulated_vars = list(df_meta.get("simulated_vars", []))
             if is_simulated or simulated_vars:
                 msg = (
-                    "[RegressionEngine] WARNING: dataframe contains "
-                    f"{len(simulated_vars)} simulated variable(s): "
-                    f"{simulated_vars[:5]}"
+                    f"[OLSWrapper] WARNING (check {context!r}): dataframe contains "
+                    f"{len(simulated_vars)} simulated variable(s): {simulated_vars[:5]}"
                     + (" ..." if len(simulated_vars) > 5 else "")
-                    + ". Downstream regression results MUST NOT be reported "
-                    "as empirical findings. See DISCLAIMER in report_generator.py."
+                    + ". Downstream results MUST NOT be reported as empirical findings."
+                    " See DISCLAIMER in report_generator.py."
                 )
                 _log.warning(msg)
                 self._warnings.append(msg)
-                if strict_no_simulated:
+                if self.strict_no_simulated:
                     raise ValueError(
-                        f"RegressionEngine(strict_no_simulated=True): "
+                        f"OLSWrapper(strict_no_simulated=True): "
                         f"df contains simulated variables {simulated_vars}. "
                         "Refusing to run to protect research integrity."
                     )
         except ValueError:
             raise
         except Exception as exc:
-            _log.debug("[OLSWrapper] meta-check failed for %s (non-fatal): %s", self._depvar, exc)
-
-        # ── P2-QUAL-2: Simulated data integrity check ──────────────────────
-        # Scan df.attrs or columns metadata for is_simulated=True flags.
-        # If any simulated variable is present, log a clear warning so the
-        # user is aware that downstream regressions may use synthetic data.
-        # This is a research-integrity guardrail: simulated results should
-        # never be silently passed off as real empirical findings.
-        try:
-            df_meta = getattr(df, "attrs", {}) or {}
-            is_simulated = bool(df_meta.get("is_simulated", False))
-            simulated_vars = list(df_meta.get("simulated_vars", []))
-            if is_simulated or simulated_vars:
-                msg = (
-                    "[RegressionEngine] WARNING: dataframe contains "
-                    f"{len(simulated_vars)} simulated variable(s): "
-                    f"{simulated_vars[:5]}"
-                    + (" ..." if len(simulated_vars) > 5 else "")
-                    + ". Downstream regression results MUST NOT be reported "
-                    "as empirical findings. See DISCLAIMER in report_generator.py."
-                )
-                _log.warning(msg)
-                self._warnings.append(msg)
-        except Exception as exc:
-            _log.debug("[OLSWrapper] _validate_df meta-check failed (non-fatal): %s", exc)
+            _log.debug(
+                "[OLSWrapper] _check_simulated_guard(%s) failed (non-fatal): %s",
+                context, exc,
+            )
 
     # ─────────────────────────────────────
     # DEGREES OF FREEDOM CHECK
@@ -854,15 +839,20 @@ class RegressionEngine:
         did_name: str = "psm_did",
         use_firm_fe: bool = True,
         use_year_fe: bool = True,
+        strict_no_simulated: bool = False,
     ) -> dict:
         """
         Propensity Score Matching followed by DID on matched sample.
-        
+
         1. Estimate propensity scores via logit
         2. Match treated/control on nearest neighbor (caliper=0.05)
         3. Run DID on matched sample
-        
-        Returns DID results with PSM diagnostics.
+
+        Raises
+        ------
+        RuntimeError
+            When PSM Logit fitting fails and strict_no_simulated=True
+            (confirmed by user, 2026-06-24 audit).
         """
         df_sub = self.df.dropna(subset=[y_var] + [treat_var, time_var] + match_vars)
         df_sub = df_sub.copy()
@@ -874,15 +864,22 @@ class RegressionEngine:
             psm_model = sm.Logit(df_sub[treat_var].astype(float), X_psm).fit(disp=0)
             df_sub["prop_score"] = psm_model.predict(X_psm)
         except (AttributeError, ValueError) as exc:
+            if strict_no_simulated:
+                raise RuntimeError(
+                    f"PSM Logit failed (strict_no_simulated=True): {exc}. "
+                    f"Variables: {match_vars}.  "
+                    "Fix data issues: check for perfect separation, multicollinearity, "
+                    "or NaN values before re-running."
+                ) from exc
             # Expected data issues: perfect separation, convergence failure, NaN in features.
-            # Fall back to stratified random scores so matching still runs.
+            # Downgrade to stratified random scores — but this is non-scientific.
             _log.warning(
                 "PSM Logit fitting FAILED for vars=%s (%s: %s) — "
                 "using stratified random scores (non-scientific). "
                 "Review data for perfect separation or multicollinearity.",
                 match_vars, type(exc).__name__, exc
             )
-            rng = np.random.default_rng(42)
+            rng = np.random.default_rng(SEED)
             df_sub["prop_score"] = np.nan
             treat_mask = df_sub[treat_var] == 1
             n_treat = treat_mask.sum()
@@ -890,7 +887,6 @@ class RegressionEngine:
             df_sub.loc[treat_mask, "prop_score"] = rng.uniform(0.4, 0.9, size=n_treat)
             df_sub.loc[~treat_mask, "prop_score"] = rng.uniform(0.1, 0.6, size=n_ctrl)
         except Exception as exc:
-            # Unexpected code bug — re-raise so it surfaces rather than silently continuing.
             _log.error("PSM Logit failed unexpectedly — re-raising", exc_info=True)
             raise
 

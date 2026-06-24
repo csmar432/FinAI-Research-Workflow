@@ -199,8 +199,9 @@ def _beta_inc(a: float, b: float, x: float) -> float:
     """Regularized incomplete beta function via continued fraction (Numerical Recipes).
 
     Falls back to scipy.special.betainc if available.
-    Returns 0.5 with a warning when no scipy and approximation also fails —
-    this is statistically incorrect but is the least bad option without scipy.
+    Raises RuntimeError when neither scipy nor the hand-coded approximation succeeds —
+    returning 0.5 would produce statistically meaningless CDF values (p ≈ 0.5 for
+    all extreme t-statistics).  See audit report C1 (2026-06-24).
     """
     if x <= 0:
         return 0.0
@@ -213,8 +214,8 @@ def _beta_inc(a: float, b: float, x: float) -> float:
         import math
         import warnings
         warnings.warn(
-            "scipy not available; _beta_inc using hand-coded continued fraction. "
-            "Results may be inaccurate. Install scipy: pip install scipy",
+            "scipy not available; _beta_inc falling back to hand-coded continued "
+            "fraction. Results may be inaccurate. Install scipy: pip install scipy",
             RuntimeWarning,
             stacklevel=3,
         )
@@ -248,9 +249,13 @@ def _beta_inc(a: float, b: float, x: float) -> float:
                     break
             result = (x ** a * (1 - x) ** b) / (a * B(a, b)) * C
             return max(0.0, min(1.0, result))
-        except Exception:
-            return 0.5
-        return 0.5
+        except Exception as _cf_exc:
+            raise RuntimeError(
+                "Neither scipy nor the hand-coded continued fraction succeeded in "
+                f"_beta_inc(a={a}, b={b}, x={x}).  Original error: {_cf_exc}.  "
+                "Statistical inference is impossible without scipy.  "
+                "Install it: pip install scipy"
+            ) from _cf_exc
 
 
 def B(a: float, b: float) -> float:
@@ -261,6 +266,16 @@ def B(a: float, b: float) -> float:
         return math.exp(gammaln(a) + gammaln(b) - gammaln(a + b))
     except Exception:
         return 1.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SHARED CONSTANTS
+# ─────────────────────────────────────────────────────────────────────────────
+# Standard random seed used across the research framework for reproducibility.
+# All np.random.default_rng(SEED) / np.random.seed(SEED) calls in research_framework/
+# modules use this value for demo/synthetic data generation.
+# Individual functions may override with a parameter (e.g., seed=42 or seed=None).
+SEED: int = 42
 
 
 # ─────────────────────────────────────────────────────────────────────────────
