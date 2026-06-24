@@ -229,6 +229,55 @@ This project is maintained by **[@csmar432](https://github.com/csmar432)**.
 
 ---
 
+## 🛠 8-Step Research Workflow
+
+```
+Step 0  System self-check  → python scripts/health_check.py
+Step 1  Idea generation    → 8-12 ranked ideas for your topic
+Step 1.5 Idea-data check   → Verify data availability BEFORE commitment
+Step 2  Literature review  → Semantic Scholar + ArXiv + OpenAlex + NBER
+Step 3  Novelty check      → JF/JFE/RFS/arXiv dedup → novelty score
+Step 4  Experiment design  → DID/IV/RDD identification strategy
+Step 5  Data acquisition   → 43 MCP servers (free fallback chain)
+Step 6  Paper writing      → Outline → sections → figures → LaTeX
+Step 7  Adversarial review → Multi-round LLM + human review
+```
+
+Each step is independently executable and produces a Markdown artifact
+you can review before proceeding.
+
+---
+
+## 🧪 Quality Gates (defense against bad research)
+
+This project maintains **3 layers of defense** against LLM-generated
+audit reports that contain hallucinated claims:
+
+| Layer | Mechanism | Catches |
+|-------|-----------|---------|
+| 1 | `scripts/audit_guard.py` (8 deterministic checks) | Fake badges, stale metrics, missing tests |
+| 2 | pre-commit hook (5 cheap checks <3s) | Regression on critical state |
+| 3 | Manual verification protocol | Anything that survives layers 1–2 |
+
+See [docs/audit-workflow.md](docs/audit-workflow.md) for full details
+on why this exists and how to use it.
+
+---
+
+## 📐 Numerical Correctness Tests
+
+Beyond interface tests, we verify that our econometric estimators
+recover known coefficients from synthetic data with known DGP:
+
+- **OLS** (n=500, σ=0.5): β recovered within 0.2 of truth
+- **DID** (n=400, β_true=1.5): estimator within 0.3 of true effect
+- **IV/2SLS** (n=2000, strong instrument): β within 0.2 of structural
+- **Kleibergen-Paap F** > 10 (instrument strength)
+
+Run with: `pytest tests/test_numerical_correctness.py -v`
+
+---
+
 <p align="center">
   <sub>Built with ❤️ by the open-source financial AI community · MIT License · 2026</sub>
 </p>
