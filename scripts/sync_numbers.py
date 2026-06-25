@@ -7,10 +7,10 @@ manually maintained in 5+ docs drift out of sync with each other.
 
 Usage:
     python scripts/sync_numbers.py              # dry run (show changes)
-    python scripts/sync_numbers.py --apply      # actually write changes
+    python scripts/sync_numbers.py --apply     # actually write changes
     python scripts/sync_numbers.py --verify    # check current docs vs SSOT
 
-The SSOT is docs/PROJECT_NUMBERS.json. All numeric claims in docs must be
+The SSOT is scripts/PROJECT_NUMBERS.json. All numeric claims in docs must be
 derived from it, not maintained independently.
 """
 
@@ -25,7 +25,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-SSOT_PATH = ROOT / "docs" / "PROJECT_NUMBERS.json"
+SSOT_PATH = ROOT / "scripts" / "PROJECT_NUMBERS.json"
 
 
 def load_ssot() -> dict:
