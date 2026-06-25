@@ -1,0 +1,35 @@
+{
+  "name": "get_customs_export",
+  "description": "查询中国海关出口数据。按HS编码、商品名称、贸易伙伴、月份等维度检索出口金额和数量。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "hs_code": {
+        "type": "string",
+        "description": "HS商品编码"
+      },
+      "country": {
+        "type": "string",
+        "description": "贸易伙伴国家/地区代码"
+      },
+      "province": {
+        "type": "string",
+        "description": "省份名称"
+      },
+      "month_from": {
+        "type": "string",
+        "description": "起始月份（YYYY-MM）"
+      },
+      "month_to": {
+        "type": "string",
+        "description": "结束月份（YYYY-MM）"
+      },
+      "unit": {
+        "type": "string",
+        "default": "USD",
+        "description": "金额单位"
+      }
+    },
+    "description": "查询中国海关出口数据"
+  }
+}

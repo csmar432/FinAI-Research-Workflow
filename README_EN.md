@@ -55,9 +55,9 @@
 
 ## ✨ Core Capabilities
 
-### 📊 Data Acquisition (50 MCP server directories, mixed free/stub)
+### 📊 Data Acquisition (43 MCP server directories, mixed free/stub)
 
-> **Note**: ~15 servers are fully free (no API key). Others require institutional/paid accounts (Tushare Pro, Wind, CSMAR, CEIC, EODHD). Stub servers (SIPO, ESG, Chinese Customs, CNRD) have no tools/ implementation yet. See `docs/MCP_STATUS.md` for per-server availability.
+> **Note**: ~15 servers are fully free (no API key). Others require institutional/paid accounts (Tushare Pro, Wind, CSMAR, CEIC, EODHD). Some have stub implementations (SIPO, ESG, Chinese Customs, CNRD). See `docs/MCP_STATUS.md` for per-server availability.
 
 | What you need | MCP server |
 |---|---|
@@ -163,7 +163,7 @@ Each step is **independently callable** and **has its own output file** as a sta
 
 | Metric | Value | Note |
 |---|-------|------|
-| MCP data servers | **50** | 50 directories; ~15 fully free, rest require paid/institutional accounts; stubs exist. See `docs/MCP_STATUS.md` |
+| MCP data servers | **43** | 43 directories; ~15 fully free, rest require paid/institutional accounts; some stubs. See `docs/MCP_STATUS.md` |
 | Econometric methods | **~30** | ⭐ self-contained, 🔗 requires linearmodels/diff-in-diff2 |
 | Journal templates | **44** | 44 EN/ZH |
 | AI skills | **17** | .cursor/skills/ (operational source) |

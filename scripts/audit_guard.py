@@ -353,6 +353,96 @@ def check_8_validate_econometrics_exists() -> CheckResult:
         passed=False,
         actual="neither",
         expected="≥1 cross-validation",
+            evidence=evidence,
+        )
+
+
+def check_9_ssot_numbers_match_docs() -> CheckResult:
+    """Verify that PROJECT_NUMBERS.json (SSOT) matches the actual state.
+
+    This is the root-cause fix for repeated number-hallucination audits:
+    numbers drift when maintained in 5+ docs independently. The SSOT
+    (docs/PROJECT_NUMBERS.json) is the single source of truth; docs must
+    be updated from it via sync_numbers.py --apply, not manually.
+    """
+    ssot_path = PROJECT_ROOT / "docs" / "PROJECT_NUMBERS.json"
+    if not ssot_path.exists():
+        return CheckResult(
+            passed=False,
+            actual="SSOT file missing",
+            expected="docs/PROJECT_NUMBERS.json exists",
+            evidence=[],
+        )
+    import json as _json
+    ssot = _json.loads(ssot_path.read_text())
+
+    # Verify MCP directory count
+    import subprocess as _sub
+    res = _sub.run(
+        ["sh", "-c", f"ls {PROJECT_ROOT}/mcp_servers/ | grep '^user_' | wc -l"],
+        capture_output=True, text=True,
+    )
+    actual_mcp = int(res.stdout.strip())
+    ssot_mcp = ssot["mcp"]["total_directories"]
+    mcp_ok = actual_mcp == ssot_mcp
+
+    # Verify stub servers have tools/
+    stub_issues = []
+    for stub_name in ssot["mcp"].get("stub_servers", []):
+        tools_dir = PROJECT_ROOT / "mcp_servers" / stub_name / "tools"
+        if not tools_dir.exists():
+            stub_issues.append(f"  {stub_name}: no tools/ directory")
+        elif not list(tools_dir.glob("*.json")):
+            stub_issues.append(f"  {stub_name}: tools/ is empty")
+    stub_ok = len(stub_issues) == 0
+
+    evidence = [
+        f"  SSOT MCP directories: {ssot_mcp}, actual: {actual_mcp} → {'OK' if mcp_ok else 'MISMATCH'}",
+        f"  SSOT stubs: {len(ssot['mcp'].get('stub_servers', []))}, actual stub issues: {len(stub_issues)}",
+    ]
+    if stub_issues:
+        evidence.extend(stub_issues[:5])
+
+    all_ok = mcp_ok and stub_ok
+    return CheckResult(
+        passed=all_ok,
+        actual=f"MCP match={mcp_ok}, stubs={len(stub_issues)} issues",
+        expected="SSOT matches actual state",
+        evidence=evidence,
+    )
+
+
+def check_10_llm_reviewer_stable_model() -> CheckResult:
+    """Verify LLMReviewer doesn't default to a non-existent model name.
+
+    gpt5 is NOT a real model. Default should be gpt-4o or similar.
+    """
+    reviewer = PROJECT_ROOT / "scripts" / "core" / "llm_reviewer.py"
+    if not reviewer.exists():
+        return CheckResult(
+            passed=False,
+            actual="llm_reviewer.py missing",
+            expected="llm_reviewer.py exists",
+            evidence=[],
+        )
+    text = reviewer.read_text()
+    # Find the default value in __init__
+    import re as _re
+    defaults = _re.findall(r'judge_model:\s*str\s*=\s*"([^"]+)"', text)
+    evidence = [f"  judge_model defaults found: {defaults}"]
+    # Check if any default is gpt5
+    bad_defaults = [d for d in defaults if d in ("gpt5", "gpt-5", "gpt5.4-mini")]
+    if bad_defaults:
+        return CheckResult(
+            passed=False,
+            actual=f"Non-existent model defaults: {bad_defaults}",
+            expected='gpt-4o or similar stable model',
+            evidence=evidence,
+        )
+    return CheckResult(
+        passed=True,
+        actual=f"All defaults stable: {defaults}",
+        expected="No gpt5/gpt-5 defaults",
         evidence=evidence,
     )
 
@@ -410,6 +500,18 @@ CHECKS: list[AuditCheck] = [
         "Cross-language validation present",
         "Verify R/Stata validation framework exists",
         check_8_validate_econometrics_exists,
+    ),
+    AuditCheck(
+        9,
+        "SSOT numbers match actual state",
+        "Verify docs/PROJECT_NUMBERS.json matches reality (root-cause fix for number hallucinations)",
+        check_9_ssot_numbers_match_docs,
+    ),
+    AuditCheck(
+        10,
+        "LLMReviewer stable model",
+        "Verify default judge_model is not gpt5 (non-existent)",
+        check_10_llm_reviewer_stable_model,
     ),
 ]
 

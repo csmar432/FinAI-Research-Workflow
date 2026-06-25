@@ -1,0 +1,38 @@
+{
+  "name": "search_cnrd_papers",
+  "description": "检索CNRDS学术论文数据库。覆盖中文核心期刊、学位论文、会议论文。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "论文标题关键词"
+      },
+      "author": {
+        "type": "string",
+        "description": "作者"
+      },
+      "journal": {
+        "type": "string",
+        "description": "期刊名称"
+      },
+      "year_from": {
+        "type": "integer",
+        "description": "发表年份起"
+      },
+      "year_to": {
+        "type": "integer",
+        "description": "发表年份止"
+      },
+      "page": {
+        "type": "integer",
+        "default": 1
+      },
+      "page_size": {
+        "type": "integer",
+        "default": 20
+      }
+    },
+    "description": "检索CNRDS学术论文数据库"
+  }
+}

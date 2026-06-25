@@ -1,0 +1,34 @@
+{
+  "name": "get_esg_controversy",
+  "description": "查询企业ESG相关争议事件。覆盖环境处罚、劳动纠纷、治理违规、财务造假等负面事件。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "stock_code": {
+        "type": "string",
+        "description": "股票代码"
+      },
+      "event_type": {
+        "type": "string",
+        "enum": ["environmental", "social", "governance", "financial", "all"],
+        "default": "all",
+        "description": "事件类型"
+      },
+      "severity": {
+        "type": "string",
+        "enum": ["high", "medium", "low", "all"],
+        "default": "all",
+        "description": "严重程度"
+      },
+      "start_date": {
+        "type": "string",
+        "description": "事件日期起（YYYY-MM-DD）"
+      },
+      "end_date": {
+        "type": "string",
+        "description": "事件日期止（YYYY-MM-DD）"
+      }
+    },
+    "description": "查询企业ESG相关争议事件"
+  }
+}

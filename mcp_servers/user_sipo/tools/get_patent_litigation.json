@@ -1,0 +1,21 @@
+{
+  "name": "get_patent_litigation",
+  "description": "查询专利相关的诉讼案件、质押记录、许可记录、转让记录。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "patent_number": {
+        "type": "string",
+        "description": "专利号"
+      },
+      "record_type": {
+        "type": "string",
+        "enum": ["诉讼", "质押", "许可", "转让", "all"],
+        "default": "all",
+        "description": "记录类型"
+      }
+    },
+    "required": ["patent_number"],
+    "description": "查询专利相关的诉讼、质押、许可、转让记录"
+  }
+}

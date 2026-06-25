@@ -1,0 +1,82 @@
+{
+  "$schema": "./project_numbers.schema.json",
+  "_comment": "Single Source of Truth for all project metric numbers. All documentation MUST reference these values. Update this file, not individual docs.",
+  "last_verified": "2026-06-25",
+  "verified_by": "audit_guard.py",
+
+  "mcp": {
+    "total_directories": 43,
+    "breakdown": {
+      "fully_free": 15,
+      "requires_paid_account": 10,
+      "stub_no_tools": 0,
+      "legal_risk": 3
+    },
+    "stub_servers": [
+      "user_sipo",
+      "user_third_party_esg",
+      "user_chinese_customs",
+      "user_cnrd"
+    ],
+    "legal_risk_servers": [
+      "user_cnki",
+      "user_wanfang",
+      "user_chinese_literature"
+    ],
+    "recommended_academic_servers": [
+      "openalex", "context7", "nber-wp", "semantic-scholar",
+      "fed-data", "wb-data", "imf-data", "oecd-data", "bea-data",
+      "yfinance", "sec-edgar", "eastmoney-reports", "financial",
+      "province-stats", "hubei-stats", "wuhan-stats",
+      "pandas-mcp", "latex-mcp", "filesystem-mcp", "enhanced-finance"
+    ]
+  },
+
+  "econometrics": {
+    "total_independent_implementations": 20,
+    "total_individual_estimators": 33,
+    "total_method_families": 13,
+    "methods_with_numerical_tests": ["OLS", "DID", "IV", "Synthetic Control", "Spatial Regression"],
+    "methods_without_tests": [
+      "Triple Diff", "Panel Quantile", "Interactive FE", "Local Projections",
+      "Panel Cointegration", "Panel Threshold", "TVP-VAR", "Discrete Choice",
+      "Survival Analysis", "Causal Forest", "RDD", "GARCH", "Volatility"
+    ]
+  },
+
+  "skills": {
+    "total": 18,
+    "with_automated_impl": ["fin-full-pipeline", "fin-data-acquisition", "fin-review-loop"],
+    "prompt_only": [
+      "fin-paper-figure", "fin-paper-convert", "fin-submit-check",
+      "fin-paper-plan", "fin-paper-draft", "fin-paper-writing"
+    ]
+  },
+
+  "journal_templates": {
+    "total": 44,
+    "english_top": ["JF", "JFE", "RFS", "JAE", "JFQA", "JPE", "Econometrica"],
+    "chinese_top": ["经济研究", "金融研究", "管理世界", "会计研究", "中国工业经济"]
+  },
+
+  "testing": {
+    "test_files": 89,
+    "numerical_correctness_tests": 9,
+    "ci_coverage_gate": 15,
+    "ci_coverage_target": 30,
+    "ci_jobs": 7
+  },
+
+  "documentation": {
+    "readme_lines_cn": 634,
+    "readme_lines_en": 283,
+    "claude_md_lines": 349,
+    "chinese_guide_lines": 1049
+  },
+
+  "version": {
+    "pyproject": "0.1.0",
+    "github_release": "v0.1.0",
+    "pypi": "not published"
+  }
+}
