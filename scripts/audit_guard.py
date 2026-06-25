@@ -362,15 +362,15 @@ def check_9_ssot_numbers_match_docs() -> CheckResult:
 
     This is the root-cause fix for repeated number-hallucination audits:
     numbers drift when maintained in 5+ docs independently. The SSOT
-    (docs/PROJECT_NUMBERS.json) is the single source of truth; docs must
+    (scripts/PROJECT_NUMBERS.json) is the single source of truth; docs must
     be updated from it via sync_numbers.py --apply, not manually.
     """
-    ssot_path = PROJECT_ROOT / "docs" / "PROJECT_NUMBERS.json"
+    ssot_path = PROJECT_ROOT / "scripts" / "PROJECT_NUMBERS.json"
     if not ssot_path.exists():
         return CheckResult(
             passed=False,
             actual="SSOT file missing",
-            expected="docs/PROJECT_NUMBERS.json exists",
+            expected="scripts/PROJECT_NUMBERS.json exists",
             evidence=[],
         )
     import json as _json
@@ -504,7 +504,7 @@ CHECKS: list[AuditCheck] = [
     AuditCheck(
         9,
         "SSOT numbers match actual state",
-        "Verify docs/PROJECT_NUMBERS.json matches reality (root-cause fix for number hallucinations)",
+        "Verify scripts/PROJECT_NUMBERS.json matches reality (root-cause fix for number hallucinations)",
         check_9_ssot_numbers_match_docs,
     ),
     AuditCheck(
