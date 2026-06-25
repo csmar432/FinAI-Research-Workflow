@@ -1,0 +1,23 @@
+{
+  "name": "get_esg_trend",
+  "description": "获取企业ESG评分历史趋势数据。展示近5年ESG得分变化，支持与行业均值对比。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "stock_code": {
+        "type": "string",
+        "description": "股票代码"
+      },
+      "company_name": {
+        "type": "string",
+        "description": "公司名称"
+      },
+      "years": {
+        "type": "integer",
+        "default": 5,
+        "description": "返回年份数"
+      }
+    },
+    "description": "获取企业ESG评分历史趋势数据"
+  }
+}

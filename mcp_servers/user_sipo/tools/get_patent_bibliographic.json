@@ -1,0 +1,15 @@
+{
+  "name": "get_patent_bibliographic",
+  "description": "获取专利著录项目信息（申请人、发明人、IPC分类、申请日期、优先权等）。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "patent_number": {
+        "type": "string",
+        "description": "专利号"
+      }
+    },
+    "required": ["patent_number"],
+    "description": "获取专利著录项目信息"
+  }
+}

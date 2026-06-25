@@ -1,0 +1,22 @@
+{
+  "name": "get_cnrd_financial",
+  "description": "查询CNRDS上市公司财务数据库。获取资产负债、利润表、现金流量数据。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "stock_code": {
+        "type": "string",
+        "description": "股票代码"
+      },
+      "year": {
+        "type": "integer",
+        "description": "年份"
+      },
+      "quarter": {
+        "type": "integer",
+        "description": "季度（1-4），不填则返回年度"
+      }
+    },
+    "description": "查询CNRDS上市公司财务数据库"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "get_customs_by_country",
+  "description": "查询与特定国家/地区的双边贸易数据。包括进出口总额、贸易差额、主要商品构成。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "country": {
+        "type": "string",
+        "description": "国家/地区代码（如USA、DEU、KOR）"
+      },
+      "year": {
+        "type": "integer",
+        "description": "年份"
+      },
+      "top_hs_codes": {
+        "type": "integer",
+        "default": 10,
+        "description": "返回前N大商品"
+      }
+    },
+    "required": ["country"],
+    "description": "查询与特定国家/地区的双边贸易数据"
+  }
+}

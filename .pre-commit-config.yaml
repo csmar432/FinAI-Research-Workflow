@@ -60,13 +60,14 @@ repos:
 
   # ── Audit guard: prevent LLM-generated audit hallucinations from being
   #    accepted as factual without verification (see scripts/audit_guard.py).
-  #    Runs 8 deterministic checks (file existence, grep counts, test pass)
+  #    Runs 10 deterministic checks (grep counts, test pass, SSOT verification)
   #    on every commit to catch hallucinated audit claims early.
+  #    Check 9 (SSOT) is the most critical — it prevents number drift.
   - repo: local
     hooks:
       - id: audit-guard
         name: audit-guard (defense vs hallucinated audits)
-        entry: python scripts/audit_guard.py --check 2,3,4,5,7
+        entry: python scripts/audit_guard.py --check 2,3,4,5,7,9,10
         language: system
         pass_filenames: false
         stages: [pre-commit]

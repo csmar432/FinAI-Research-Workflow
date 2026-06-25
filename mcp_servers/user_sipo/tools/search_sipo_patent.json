@@ -1,0 +1,50 @@
+{
+  "name": "search_sipo_patent",
+  "description": "按关键词、申请人、发明人检索中国专利数据库。覆盖发明专利、实用新型、外观设计。支持IPC分类号过滤。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "keyword": {
+        "type": "string",
+        "description": "关键词（专利名称/摘要中的词）"
+      },
+      "applicant": {
+        "type": "string",
+        "description": "申请人/权利人名称"
+      },
+      "inventor": {
+        "type": "string",
+        "description": "发明人"
+      },
+      "ipc_code": {
+        "type": "string",
+        "description": "IPC国际专利分类号（如H01M）"
+      },
+      "patent_type": {
+        "type": "string",
+        "enum": ["发明", "实用新型", "外观设计", "all"],
+        "default": "all",
+        "description": "专利类型"
+      },
+      "date_from": {
+        "type": "string",
+        "description": "申请日期起（YYYY-MM-DD）"
+      },
+      "date_to": {
+        "type": "string",
+        "description": "申请日期止（YYYY-MM-DD）"
+      },
+      "page": {
+        "type": "integer",
+        "default": 1,
+        "description": "页码"
+      },
+      "page_size": {
+        "type": "integer",
+        "default": 20,
+        "description": "每页条数"
+      }
+    },
+    "description": "按关键词、申请人、发明人检索中国专利数据库"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "get_esg_rating",
+  "description": "获取企业ESG综合评分和评级。支持商道融绿、华证、中证、富时等多家评级机构。返回E/S/G分项得分及综合评级。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "stock_code": {
+        "type": "string",
+        "description": "股票代码（如000001.SZ）"
+      },
+      "company_name": {
+        "type": "string",
+        "description": "公司名称（与股票代码二选一）"
+      },
+      "provider": {
+        "type": "string",
+        "enum": ["syntao", "csi", "csi_esg", "ftse", "all"],
+        "default": "all",
+        "description": "评级机构"
+      },
+      "year": {
+        "type": "integer",
+        "description": "评级年份（默认最新）"
+      },
+      "include_subscores": {
+        "type": "boolean",
+        "default": true,
+        "description": "是否包含E/S/G分项得分"
+      }
+    },
+    "description": "获取企业ESG综合评分和评级"
+  }
+}
