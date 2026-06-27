@@ -212,7 +212,6 @@ exclude = [
 "templates" = "finai_research_workflow/templates"
 "knowledge" = "finai_research_workflow/knowledge"
 "mcp_servers" = "finai_research_workflow/mcp_servers"
-"examples" = "finai_research_workflow/examples"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -221,8 +220,7 @@ include = [
     "templates",
     "knowledge",
     "mcp_servers",
-    "examples",
-    "releases",
+    "papers",
     "tests",
     "docs",
     "README.md",

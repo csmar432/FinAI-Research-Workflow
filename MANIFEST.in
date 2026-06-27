@@ -23,8 +23,7 @@ recursive-include config *.json *.yaml *.yml *.example
 recursive-include templates *.tex *.cls *.bst
 recursive-include knowledge *.md
 recursive-include mcp_servers *.py *.json *.yaml *.yml
-recursive-include examples *.py *.md *.ipynb
-recursive-include releases *.md
+recursive-include papers *.tex *.md *.pdf *.docx
 
 # ── 构建/部署配置 ─────────────────────────────────────────────────────
 include Dockerfile
