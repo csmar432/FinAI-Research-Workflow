@@ -135,10 +135,6 @@ python scripts/health_check.py
 
 # 4. Run a research pipeline
 python scripts/agent_pipeline.py --topic "Carbon trading policy and corporate green innovation"
-
-# 5. Browse examples
-ls examples/
-python examples/01-quickstart-pipeline.py
 ```
 
 ---
