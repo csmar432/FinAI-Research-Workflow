@@ -89,8 +89,8 @@ def check_mcp_servers() -> list[CheckItem]:
             data = json.loads(mcp_config.read_text())
             if "mcpServers" in data:
                 configured_servers = set(data["mcpServers"].keys())
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError, KeyError, TypeError) as exc:
+            print(f"  ⚠️  无法解析 .cursor/mcp.json: {exc}")
 
     for server, desc in critical_mcp:
         is_configured = server in configured_servers
