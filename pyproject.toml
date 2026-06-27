@@ -110,10 +110,13 @@ jupyter = [
 ]
 
 deep-learning = [
-    # torch>=2.12.0 and accelerate>=1.14.0 are listed here as
-    # heavyweight optional dependencies for future deep learning modules.
-    # They are NOT currently imported by any scripts/ or tests/ file.
-    # Uncomment when needed: "torch>=2.2.0", "accelerate>=0.30.0",
+    # Optional deep-learning dependencies. None of these are required by the
+    # current codebase, but they are listed here so users who want to extend
+    # the framework with neural-network-based methods (e.g. CausalForest,
+    # transformer-based sentiment analysis) can install them via:
+    #     pip install finai-research-workflow[deep-learning]
+    "scikit-learn>=1.3",   # baseline ML (always useful, lightweight)
+    "torch>=2.2.0",        # neural networks (large download, opt-in)
 ]
 
 econometrics = [
