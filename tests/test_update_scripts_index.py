@@ -43,11 +43,9 @@ def test_top_level_count_consistent():
     """顶级脚本数应与文件系统一致。"""
     from scripts.update_scripts_index import count_py
 
-    actual = sum(
-        1 for f in (PROJECT_ROOT / "scripts").glob("*.py")
-        if not f.name.startswith("_")
-    )
-    assert count_py(PROJECT_ROOT / "scripts") == actual
+    # P0 修复 2026-06-28: scripts/__init__.py 是真实的包入口，Entry Points 应包含
+    actual = sum(1 for f in (PROJECT_ROOT / "scripts").glob("*.py"))
+    assert count_py(PROJECT_ROOT / "scripts", recursive=False) == actual
 
 
 def test_index_md_has_overview():

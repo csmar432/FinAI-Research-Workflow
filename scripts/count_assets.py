@@ -121,12 +121,30 @@ def count_research_directions() -> int:
 
 
 def count_test_files() -> dict[str, int]:
-    """统计 tests/ 下文件 + test_ 函数数。"""
+    """统计 tests/ 下文件 + test_ 函数数。
+
+    P0 修复 2026-06-28: 同时统计 module-level def test_* 和
+    class TestXxx: 内的 def test_* 方法（与 pytest --collect 一致）。
+    之前只数 def test_，导致 SSOT 报 448，实测 2874，差 6.4x。
+    """
     tests = PROJECT_ROOT / "tests"
     test_files = sum(1 for f in tests.glob("test_*.py"))
     test_funcs = 0
+    func_pattern = re.compile(r"^\s+(?:async\s+)?def test_", re.MULTILINE)
+    module_pattern = re.compile(r"^(?:async\s+)?def test_", re.MULTILINE)
+    class_pattern = re.compile(r"^class\s+Test\w+", re.MULTILINE)
     for tf in tests.glob("test_*.py"):
-        test_funcs += len(re.findall(r"^def test_", tf.read_text(), re.MULTILINE))
+        text = tf.read_text()
+        # 统计 module-level def test_*
+        test_funcs += len(module_pattern.findall(text))
+        # 统计 class TestXxx: 内的 def test_*
+        for m in class_pattern.finditer(text):
+            class_start = m.end()
+            # 找下一个 class 或 EOF
+            next_class = class_pattern.search(text, class_start)
+            class_end = next_class.start() if next_class else len(text)
+            class_body = text[class_start:class_end]
+            test_funcs += len(func_pattern.findall(class_body))
     return {"files": test_files, "test_functions": test_funcs}
 
 

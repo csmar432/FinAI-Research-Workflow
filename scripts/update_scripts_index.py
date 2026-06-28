@@ -22,11 +22,25 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INDEX_MD = PROJECT_ROOT / "scripts" / "SCRIPTS_INDEX.md"
 
 
-def count_py(dir_: Path) -> int:
-    """Count .py files in dir_, excluding __pycache__."""
+def count_py(dir_: Path, *, recursive: bool = True) -> int:
+    """Count .py files in dir_.
+
+    Args:
+        dir_: Directory to count
+        recursive: If True, count recursively (default). If False, only count top-level.
+
+    P0 修复 2026-06-28: 之前 dir_.glob("*.py") 只数顶层，且忽略 _* 文件，
+    导致 scripts/core/ 报 95 但实际 100（差 5）。rglob 递归 + 不过滤 _* 修复。
+    """
     if not dir_.exists():
         return 0
-    return sum(1 for f in dir_.glob("*.py") if not f.name.startswith("_"))
+    pattern = "**/*.py" if recursive else "*.py"
+    count = 0
+    for f in dir_.glob(pattern):
+        if "__pycache__" in f.parts:
+            continue
+        count += 1
+    return count
 
 
 def count_dirs(parent: Path, prefix: str) -> int:
@@ -39,7 +53,9 @@ def count_dirs(parent: Path, prefix: str) -> int:
 def compute_stats() -> dict[str, int]:
     scripts = PROJECT_ROOT / "scripts"
     return {
-        "top_level_scripts": count_py(scripts),
+        # P0 修复 2026-06-28: Entry Points 只数顶层 *.py（recursive=False），
+        # 其他目录递归数（recursive=True 默认）
+        "top_level_scripts": count_py(scripts, recursive=False),
         "core_modules": count_py(scripts / "core"),
         "research_framework": count_py(scripts / "research_framework"),
         "research_directions": count_py(scripts / "research_directions"),

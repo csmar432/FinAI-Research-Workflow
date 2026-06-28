@@ -1871,8 +1871,12 @@ def get_template(name: str) -> JournalTemplate | None:
 
 
 def list_templates(category: str | None = None) -> list[JournalTemplate]:
-    """列出所有模板"""
-    templates = list(TEMPLATES.values())
+    """列出所有模板。
+
+    P1-3 修复 2026-06-28: 使用 get_all_templates() 而非直接 TEMPLATES.values()，
+    确保 multilang 模板（JP/DE: JPE/RES/JoMa/ZWiSt/JNS）也被列出。
+    """
+    templates = list(get_all_templates().values())
     if category:
         templates = [t for t in templates if t.category == category]
     return templates

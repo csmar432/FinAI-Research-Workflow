@@ -177,7 +177,9 @@ class ReviewerPipeline:
         """Run LLMReviewer to score the paper."""
         start = time.perf_counter()
         try:
-            from scripts.core.reviewer import LLMReviewer
+            # P0-2 修复 2026-06-28: 与测试 mock 路径一致（scripts.core.llm_reviewer）
+            # 之前 import scripts.core.reviewer 导致 mock.patch 路径不匹配
+            from scripts.core.llm_reviewer import LLMReviewer
             reviewer = LLMReviewer(
                 default_venue=venue,
                 enable_cache=False,
@@ -238,7 +240,9 @@ class ReviewerPipeline:
 
         start = time.perf_counter()
         try:
-            from scripts.core.reviewer import AutoReviewRules
+            # P0-2 修复 2026-06-28: 与测试 mock 路径一致（scripts.core.auto_review_rules）
+            # 之前 import scripts.core.reviewer 导致 mock.patch 路径不匹配
+            from scripts.core.auto_review_rules import AutoReviewRules
             arr = AutoReviewRules(domain="empirical_paper")
 
             # Split paper into chapters for rule-based scoring
