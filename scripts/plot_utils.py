@@ -57,10 +57,12 @@ def setup_chinese_font(verbose: bool = False) -> str | None:
     Returns:
         找到的字体名称，未找到返回 None
     """
-    # 强制重建字体缓存（防止 fontManager 未扫描新装字体）
+    # 强制重建字体缓存（防止 fontManager 未扫描新装字体）。
+    # S110 (try-except-pass): 字体缓存重建是 best-effort, 即使失败
+    # 也不影响主流程 (会落到 _find_cjk_font 的文件搜索路径).
     try:
         fm._load_fontmanager(try_read_cache=False)
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
     cjk_font = _find_cjk_font()
