@@ -482,11 +482,15 @@ jobs:
   cross-platform:
     name: Cross-platform smoke test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # P0-7 修复 2026-06-28: 加入 windows-latest 以兑现 README 跨平台承诺
+        # 已知 Windows 降级项：
+        #   - signal.pause() 不支持 → event_monitor.py 使用 polling loop
+        #   - os.fork 不支持 → sandbox.py 使用 subprocess
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.12"]
     steps:
       - uses: actions/checkout@v6
@@ -671,8 +675,8 @@ jobs:
           if [ -n "$COV_FILES" ]; then
             coverage combine --keep $COV_FILES
             # Aggregate coverage: scripts/ is 60K+ lines, tests cover targeted modules.
-            # fail_under=15 (raised from 10 in v3 audit fix); target 30% in next phase.
-            coverage report -m --fail-under=15
+            # P0-4 修复 2026-06-28: 从 15% 提升到 30%（渐进式提高，目标 80%）
+            coverage report -m --fail-under=30
           else
             echo "No coverage data available — skipping combine"
           fi
@@ -732,3 +736,75 @@ jobs:
                 labels: ['ci-fail-log'],
               });
             }
+
+  # P3-8 修复 2026-06-28: 添加 mypy 类型检查 CI job
+  # 注意：本项目大量使用 # type: ignore 和 Any，预期会有错误。
+  # 本 job 仅收集错误数并写到 GITHUB_STEP_SUMMARY，不 fail 阻断流程（渐进式收严）。
+  mypy:
+    name: mypy type check (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true  # 渐进式收严：先报告问题，不立即阻断 CI
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install mypy and deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy==1.13.0
+          pip install -r requirements-ci.txt
+          pip install --no-deps -e .
+      - name: Run mypy on scripts/
+        id: mypy_run
+        run: |
+          echo "## mypy output" >> $GITHUB_STEP_SUMMARY
+          mypy scripts/ \
+            --ignore-missing-imports \
+            --no-strict-optional \
+            --disable-error-code=no-untyped-def \
+            --disable-error-code=no-untyped-call \
+            --disable-error-code=import-untyped \
+            --disable-error-code=attr-defined \
+            --disable-error-code=arg-type \
+            --disable-error-code=call-arg \
+            --disable-error-code=assignment \
+            --disable-error-code=return-value \
+            --disable-error-code=operator \
+            --disable-error-code=union-attr \
+            --disable-error-code=index \
+            --disable-error-code=var-annotated \
+            --follow-imports=silent \
+            --no-incremental \
+            --warn-unused-ignores \
+            2>&1 | tee mypy.log | tail -100
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          TOTAL=$(grep -c "error:" mypy.log || echo 0)
+          echo "Found $TOTAL mypy errors (advisory, not failing CI)"
+      - name: Summarize mypy errors
+        if: always()
+        run: |
+          if [ -f mypy.log ]; then
+            TOTAL=$(grep -c "error:" mypy.log || echo 0)
+            UNIQUE_FILES=$(grep "error:" mypy.log | sed 's/:.*//' | sort -u | wc -l | tr -d ' ')
+            echo "## mypy: $TOTAL errors across $UNIQUE_FILES files" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Top 20 files with errors:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep "error:" mypy.log | sed 's/:.*//' | sort | uniq -c | sort -rn | head -20 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full log: see mypy.log artifact." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "mypy.log not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+      - name: Upload mypy log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mypy-log
+          path: mypy.log
+          if-no-files-found: ignore

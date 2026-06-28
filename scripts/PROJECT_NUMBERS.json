@@ -45,7 +45,7 @@
   "econometrics": {
     "total_method_modules": 47,
     "test_coverage": {
-      "modules_with_tests": 31,
+      "modules_with_tests": 32,
       "modules_total": 47,
       "percent": 66.0
     },
@@ -53,7 +53,6 @@
       "a_share_firm_controls",
       "a_share_variables",
       "base",
-      "causal_ml",
       "china_carbon_events",
       "china_policy_events",
       "data_validator",
@@ -114,8 +113,8 @@
     "note": "30 = unique keys in JOURNAL_METADATA dict. TEMPLATES dict has 44 entries with legacy aliases merged into 30 unique templates (see scripts/journal_template.py)."
   },
   "testing": {
-    "test_files": 118,
-    "test_functions": 393,
+    "test_files": 126,
+    "test_functions": 2786,
     "numerical_correctness_tests": 9,
     "ci_coverage_gate": 15,
     "ci_coverage_target": 30,

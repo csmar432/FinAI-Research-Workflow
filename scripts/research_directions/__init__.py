@@ -3228,6 +3228,137 @@ class DirectionFactory:
 
         return out_path
 
+    @classmethod
+    def _load_from_yaml(cls, yaml_path: "str | Path") -> int:
+        """从 YAML 加载 direction 定义到 _registry。
+
+        P0-6 修复 2026-06-28: 实现 YAML 加载器，让 directions.yaml 可作为
+        内联 dataclass 的等价替代。当 YAML 迁移完成（40 个方向都搬过去），
+        可以让 _init_registry 默认调用本方法替换 2,300+ 行内联 dataclass。
+
+        Args:
+            yaml_path: YAML 文件路径
+
+        Returns:
+            成功加载的方向数量
+        """
+        try:
+            import yaml  # type: ignore[import-untyped]
+        except ImportError:
+            _log.warning(
+                "PyYAML not installed; cannot load directions from YAML. "
+                "Install with: pip install pyyaml"
+            )
+            return 0
+
+        yaml_path = Path(yaml_path)
+        if not yaml_path.exists():
+            _log.warning("directions.yaml not found at %s", yaml_path)
+            return 0
+
+        try:
+            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            _log.warning("Failed to parse directions.yaml: %s", exc)
+            return 0
+
+        if not isinstance(data, dict):
+            _log.warning("directions.yaml top-level must be a mapping")
+            return 0
+
+        loaded = 0
+        for slug, cfg in data.items():
+            if not isinstance(cfg, dict):
+                continue
+            try:
+                # 构建 methodology_chain（如果 YAML 含）
+                chain = None
+                if "methodology_chain" in cfg and isinstance(cfg["methodology_chain"], dict):
+                    mc = cfg["methodology_chain"]
+                    steps_cfg = mc.get("steps", [])
+                    steps = [
+                        MethodologyStep(
+                            step_name=s.get("step_name", ""),
+                            econometric_class=s.get("econometric_class", ""),
+                            notes=s.get("notes", ""),
+                            data_needed=s.get("data_needed", []) or [],
+                            packages=s.get("packages", []) or [],
+                        )
+                        for s in steps_cfg
+                        if isinstance(s, dict)
+                    ]
+                    chain = MethodologyChain(steps=steps)
+
+                direction = ResearchDirection(
+                    direction_name=cfg.get("direction_name", slug),
+                    display_name=cfg.get("display_name", slug),
+                    literature_theme=cfg.get("literature_theme", ""),
+                    methodology_chain=chain,
+                    data_requirements=cfg.get("data_requirements", {}) or {},
+                    expected_output=cfg.get("expected_output", ""),
+                    keywords=cfg.get("keywords", []) or [],
+                    sub_topics=cfg.get("sub_topics", []) or [],
+                )
+                cls._registry[slug] = direction
+                loaded += 1
+            except Exception as exc:
+                _log.warning("Failed to load direction %r from YAML: %s", slug, exc)
+
+        _log.info("Loaded %d directions from %s", loaded, yaml_path)
+        return loaded
+
+    @classmethod
+    def _export_yaml(cls, yaml_path: "str | Path") -> int:
+        """将当前 _registry 导出为 YAML 格式。
+
+        P0-6 修复 2026-06-28: 用于一次性把内联 dataclass 迁移到 YAML。
+        迁移完成后可以让 _init_registry 直接调 _load_from_yaml。
+
+        Args:
+            yaml_path: 输出 YAML 文件路径
+
+        Returns:
+            导出的方向数量
+        """
+        try:
+            import yaml  # type: ignore[import-untyped]
+        except ImportError:
+            _log.warning("PyYAML not installed; cannot export YAML")
+            return 0
+
+        yaml_path = Path(yaml_path)
+        out: dict = {}
+        for slug, d in cls._registry.items():
+            chain_steps = []
+            if d.methodology_chain and d.methodology_chain.steps:
+                chain_steps = [
+                    {
+                        "step_name": s.step_name,
+                        "econometric_class": s.econometric_class,
+                        "notes": s.notes,
+                        "data_needed": list(s.data_needed or []),
+                        "packages": list(s.packages or []),
+                    }
+                    for s in d.methodology_chain.steps
+                ]
+            out[slug] = {
+                "direction_name": d.direction_name,
+                "display_name": d.display_name,
+                "literature_theme": d.literature_theme,
+                "methodology_chain": {"steps": chain_steps} if chain_steps else None,
+                "data_requirements": d.data_requirements,
+                "expected_output": d.expected_output,
+                "keywords": list(d.keywords or []),
+                "sub_topics": list(d.sub_topics or []),
+            }
+
+        yaml_path.write_text(
+            yaml.safe_dump(out, allow_unicode=True, sort_keys=False, default_flow_style=False),
+            encoding="utf-8",
+        )
+        _log.info("Exported %d directions to %s", len(out), yaml_path)
+        return len(out)
+
 
 # ─── Direction Recommender ───────────────────────────────────────────────────
 
