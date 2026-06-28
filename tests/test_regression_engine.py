@@ -180,7 +180,7 @@ class TestRegressionEngineDID:
         """did() logs warning when DOF insufficient."""
         from scripts.research_framework.regression_engine import RegressionEngine
 
-        engine = RegressionEngine(mock_did_df, firm_col="firm_id", year_col="year")
+        _ = RegressionEngine(mock_did_df, firm_col="firm_id", year_col="year")  # noqa: F841 (side-effect only, original var= removed by ruff)
 
         # Create tiny dataset that triggers fallback
         tiny_df = mock_did_df.head(5).copy()
@@ -463,7 +463,7 @@ class TestRegressionEngineHelpers:
         """get_warnings() returns all logged warnings."""
         from scripts.research_framework.regression_engine import RegressionEngine
 
-        engine = RegressionEngine(mock_did_df, firm_col="firm_id", year_col="year")
+        _ = RegressionEngine(mock_did_df, firm_col="firm_id", year_col="year")  # noqa: F841 (side-effect only, original var= removed by ruff)
 
         # Trigger warnings via tiny dataset
         tiny = mock_did_df.head(3).copy()

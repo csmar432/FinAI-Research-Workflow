@@ -320,7 +320,7 @@ class TestTimeseries:
 class TestEventStudy:
     def test_event_study(self):
 
-        rng = np.random.default_rng(42)
+        _ = np.random.default_rng(42)  # noqa: F841 (side-effect only, original var= removed by ruff)
         df = pd.DataFrame({
             "period": list(range(-5, 6)),
             "coef": [0.01, 0.02, -0.01, 0.0, 0.0,

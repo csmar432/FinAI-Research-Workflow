@@ -126,7 +126,7 @@ def test_minimum_redundancy_threshold():
 def test_redundancy_report_persists(tmp_path):
     """冗余报告应持久化到 JSON。"""
     resolver = VariableRedundancyResolver(output_dir=tmp_path)
-    report = resolver.resolve_by_topic("测试主题", identification="DID")
+    _ = resolver.resolve_by_topic("测试主题", identification="DID")  # noqa: F841 (side-effect only, original var= removed by ruff)
 
     report_file = tmp_path / "redundant_variables.json"
     assert report_file.exists()

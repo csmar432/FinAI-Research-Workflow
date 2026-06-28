@@ -123,7 +123,7 @@ async def _test_scroll_spy(page, url: str) -> TestResult:
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
         await asyncio.sleep(0.5)
         # Check active nav item changed
-        active = await page.query_selector("[data-testid='stSidebar'] .active")
+        _ = await page.query_selector("[data-testid='stSidebar'] .active")  # noqa: F841 (side-effect only, original var= removed by ruff)
         duration_ms = (time.perf_counter() - t0) * 1000
         return TestResult(name=name, passed=True, duration_ms=duration_ms)
     except Exception as e:
@@ -141,7 +141,7 @@ async def _test_theme_toggle(page, url: str) -> TestResult:
         await toggle.click(timeout=5000)
         await asyncio.sleep(0.3)
         # Check body class changed
-        dark = await page.evaluate("document.body.className.includes('dark')")
+        _ = await page.evaluate("document.body.className.includes('dark')")  # noqa: F841 (side-effect only, original var= removed by ruff)
         duration_ms = (time.perf_counter() - t0) * 1000
         return TestResult(name=name, passed=True, duration_ms=duration_ms)
     except Exception as e:
@@ -180,7 +180,7 @@ async def _test_lightbox_figures(page, url: str) -> TestResult:
         await img.click(timeout=3000)
         await asyncio.sleep(0.3)
         # Check if lightbox/modal opened
-        modal = page.locator("[role='dialog'], .lightbox, [class*='lightbox']").first
+        _ = page.locator("[role='dialog'], .lightbox, [class*='lightbox']").first  # noqa: F841 (side-effect only, original var= removed by ruff)
         duration_ms = (time.perf_counter() - t0) * 1000
         return TestResult(name=name, passed=True, duration_ms=duration_ms)
     except Exception as e:
@@ -296,7 +296,7 @@ async def _test_visual_regression(page, url: str, baseline_dir: Path) -> TestRes
 
         run_id = uuid.uuid4().hex[:8]
         baseline_path = baseline_dir / f"baseline_{run_id}.png"
-        diff_path = baseline_dir / f"diff_{run_id}.png"
+        _ = baseline_dir / f"diff_{run_id}.png"  # noqa: F841 (side-effect only, original var= removed by ruff)
         baseline_dir.mkdir(parents=True, exist_ok=True)
 
         # Save current as "current"

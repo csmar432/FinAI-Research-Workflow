@@ -57,7 +57,7 @@ class TestTaskDecompose:
     def test_decompose_literature_request(self, planner):
         """'检索文献' should decompose into search→download→review."""
         tasks = planner.decompose("检索碳排放权相关文献")
-        task_ids = [t.id for t in tasks]
+        _ = [t.id for t in tasks]  # noqa: F841 (side-effect only, original var= removed by ruff)
         # Should produce literature tasks
         assert len(tasks) >= 3
         types = [t.task_type for t in tasks]

@@ -24,7 +24,7 @@ class TestMultiLangTemplates:
         from scripts.research_framework.journal_templates_multilang import get_template
         t1 = get_template("jpe")
         t2 = get_template("JPE")
-        t3 = get_template("Jpe")
+        _ = get_template("Jpe")  # noqa: F841 (side-effect only, original var= removed by ruff)
         assert t1 is not None and t2 is not None
         assert t1.journal_code == t2.journal_code
 

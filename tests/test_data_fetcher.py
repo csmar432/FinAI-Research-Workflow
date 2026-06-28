@@ -105,7 +105,7 @@ class TestDataFetcherSmoke:
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
         csv_path = str(tmp_path / "test_output.csv")
-        result = save_df(df, csv_path)
+        _ = save_df(df, csv_path)  # noqa: F841 (side-effect only, original var= removed by ruff)
         # save_df may return None or the path — check the file exists
         assert os.path.exists(csv_path), f"File not written: {csv_path}"
         loaded = pd.read_csv(csv_path)

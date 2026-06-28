@@ -641,7 +641,7 @@ class TestProvenanceChainExport:
         chain.register_node(n_fig)
 
         out_file = tmp_path / "fig_report.md"
-        result = chain.export_figure_provenance_report("Fig X", output_path=out_file)
+        _ = chain.export_figure_provenance_report("Fig X", output_path=out_file)  # noqa: F841 (side-effect only, original var= removed by ruff)
         assert out_file.exists()
 
     def test_export_mermaid_and_report_both_produce_strings(self, tmp_path):
@@ -882,7 +882,7 @@ class TestGlobalSingletons:
 
     def test_set_tracker_replaces_singleton(self):
         reset_tracker()
-        original = get_tracker()
+        _ = get_tracker()  # noqa: F841 (side-effect only, original var= removed by ruff)
         new_tracker = ProvenanceTracker()
         set_tracker(new_tracker)
         assert get_tracker() is new_tracker

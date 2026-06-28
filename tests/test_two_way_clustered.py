@@ -220,7 +220,6 @@ class TestDidTwoWay:
         )
 
         # Find DID coefficient SE in both
-        did_name = "treat_x_post"
         se_1w = result_1w.get("did_se", 0)
         se_2w = result_2w.get("did_se", 0)
 

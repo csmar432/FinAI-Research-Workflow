@@ -263,7 +263,7 @@ class TestFitAll:
     def test_fit_partial_preserves_cached(self, lp_engine):
         """Calling fit with subset preserves previously computed horizons."""
         lp_engine.fit_single(h=-1)
-        results = lp_engine.fit(horizons=[-1, 0, 1])
+        _ = lp_engine.fit(horizons=[-1, 0, 1])  # noqa: F841 (side-effect only, original var= removed by ruff)
         # h=-1 should be cached (same object), h=0 and h=1 computed
         assert -1 in lp_engine._results
 
