@@ -254,7 +254,7 @@ def test_mock_tools_detected(mcp_servers_path):
     for tool in registry.tools.values():
         if tool.is_mock:
             # Mock tools typically lack detailed schemas or have placeholder descriptions
-            desc_lower = tool.description.lower()
+            _ = tool.description.lower()  # noqa: F841 (side-effect only, original var= removed by ruff)
             # A well-formed real tool would have at least a description
             assert len(tool.description.strip()) >= 0  # Always passes; mock is informational
 

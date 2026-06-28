@@ -9,7 +9,6 @@ rng = np.random.default_rng(42)
 def _make_panel_data(n: int = 200) -> dict:
     """Shared mock panel data for tests."""
     t = 4
-    nid = n
     e = rng.standard_normal((n * t, 4))
     df = {
         "y": e[:, 0],

@@ -354,7 +354,7 @@ class TestPerDimensionMAE:
 class TestConfusionMatrix:
     def test_confusion_matrix_shape(self, builtin_dataset):
         """Confusion matrix should have 3x3 structure (accept/reject/borderline)."""
-        analyzer = CalibrationAnalyzer(builtin_dataset)
+        _ = CalibrationAnalyzer(builtin_dataset)  # noqa: F841 (side-effect only, original var= removed by ruff)
 
         predictions = [s.human_recommendation for s in builtin_dataset.samples]
         actuals = [s.human_recommendation for s in builtin_dataset.samples]
@@ -372,7 +372,7 @@ class TestConfusionMatrix:
 
     def test_confusion_matrix_perfect_prediction(self, builtin_dataset):
         """Confusion matrix diagonal should equal the count of correct predictions."""
-        analyzer = CalibrationAnalyzer(builtin_dataset)
+        _ = CalibrationAnalyzer(builtin_dataset)  # noqa: F841 (side-effect only, original var= removed by ruff)
 
         predictions = [s.human_recommendation for s in builtin_dataset.samples]
         actuals = [s.human_recommendation for s in builtin_dataset.samples]
@@ -392,7 +392,7 @@ class TestConfusionMatrix:
 class TestReliabilityDiagram:
     def test_reliability_diagram_bin_structure(self, builtin_dataset):
         """Test the reliability diagram computation pattern with known bins."""
-        analyzer = CalibrationAnalyzer(builtin_dataset)
+        _ = CalibrationAnalyzer(builtin_dataset)  # noqa: F841 (side-effect only, original var= removed by ruff)
 
         predicted_scores = [7.5, 6.0, 8.0, 5.0, 9.0]
         actual_scores = [7.0, 5.5, 8.5, 4.5, 9.0]

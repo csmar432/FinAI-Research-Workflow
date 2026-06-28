@@ -121,7 +121,7 @@ class TestJournalTemplateSelector:
         """Select 经济研究, verify correct template with category and latex_code."""
         from scripts.journal_template import JournalTemplateSelector, TEMPLATES
 
-        selector = JournalTemplateSelector()
+        _ = JournalTemplateSelector()  # noqa: F841 (side-effect only, original var= removed by ruff)
         template = TEMPLATES.get("经济研究")
 
         assert template is not None, "经济研究 template not found"
@@ -176,7 +176,7 @@ class TestJournalTemplateSelector:
         from scripts.journal_template import JournalTemplateSelector, TEMPLATES
 
         selector = JournalTemplateSelector()
-        template = TEMPLATES.get("经济研究")
+        _ = TEMPLATES.get("经济研究")  # noqa: F841 (side-effect only, original var= removed by ruff)
 
         content = {
             "title": "测试论文",

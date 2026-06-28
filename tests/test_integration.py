@@ -162,7 +162,7 @@ def test_graceful_degradation():
         reflector = ResearchReflector(mem)
 
         # No context → ToolSelector should still return results
-        task = planner.tasks.get("task_001") if planner.tasks else None
+        _ = planner.tasks.get("task_001") if planner.tasks else None  # noqa: F841 (side-effect only, original var= removed by ruff)
         # Even if no tasks exist, select should not crash
         from scripts.core.planner import Task, TaskStatus
         dummy = Task(

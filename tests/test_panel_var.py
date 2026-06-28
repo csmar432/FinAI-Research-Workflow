@@ -34,7 +34,7 @@ def test_panel_var_init_with_lags():
     import inspect
     sig = inspect.signature(PanelVAR.__init__)
     # 至少有一个 lag 相关参数
-    params = list(sig.parameters.keys())
+    _ = list(sig.parameters.keys())  # noqa: F841 (side-effect only, original var= removed by ruff)
     # 通用检查：能调用
     m = PanelVAR()
     assert m is not None

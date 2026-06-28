@@ -310,6 +310,11 @@ ignore = [
 #   research_framework/ modules: NO per-file-ignores (academic logic).
 [tool.ruff.lint.per-file-ignores]
 "scripts/core/*.py" = ["S110"]  # P2-2 修复计划：F841 移除后会让 143 处死代码报错，需逐一清理后才能稳定
+# P3 2026-06-29: tests/ 保留 F841 忽略 — ruff --unsafe-fixes 在 tests 删除
+# "var = (call)" 会留下裸表达式 (orphan expr)，影响可读性。Tests 中这类
+# "为 side-effect 而 eval" 的赋值（如 engine = RegressionEngine(...)）非常常见，
+# 让 ruff 标记为 warning 但不阻断，等手动清理或保留 noqa。
+"tests/*.py" = ["F841"]  # noqa: orphan-expr
 "scripts/agents/*.py" = ["S110"]
 "scripts/demo_*.py" = ["S110"]
 "scripts/dashboard*.py" = ["S110"]

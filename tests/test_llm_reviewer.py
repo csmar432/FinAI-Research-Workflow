@@ -174,7 +174,7 @@ class TestLLMReviewer:
 
     def test_cache_dir_created(self, tmp_path):
         """Cache directory should be created on init when enabled."""
-        reviewer = LLMReviewer(
+        _ = LLMReviewer(  # noqa: F841 (side-effect only, original var= removed by ruff)
             enable_cache=True,
             cache_dir=str(tmp_path / "review_cache"),
         )

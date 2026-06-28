@@ -98,7 +98,7 @@ class TestAgentLoader:
         steps = self.loader.get_pipeline_steps("research_report")
         assert len(steps) > 0
         # Should have hitl_gate_after parsed
-        hitl_steps = [s for s in steps if s.hitl_gate]
+        _ = [s for s in steps if s.hitl_gate]  # noqa: F841 (side-effect only, original var= removed by ruff)
         assert any(s.hitl_gate_after == "valuation" for s in steps)
         assert any(s.max_workers == 6 for s in steps)
 

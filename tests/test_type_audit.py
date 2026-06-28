@@ -41,7 +41,7 @@ def test_all_files_with_definitions_have_dunder_all():
         content = f.read_text()
 
         # Check for top-level class or function definitions
-        has_class = bool(ast.parse(content) and True)  # just check it parses
+        _ = bool(ast.parse(content) and True)  # just check it parses  # noqa: F841 (side-effect only, original var= removed by ruff)
         tree = ast.parse(content)
 
         has_public_class = any(
