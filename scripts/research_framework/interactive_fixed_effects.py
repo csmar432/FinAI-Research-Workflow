@@ -596,7 +596,7 @@ class InteractiveFixedEffects:
                 beta = np.zeros(k)
         else:
             y_demeaned = y_mat - np.mean(y_mat, axis=1, keepdims=True) - np.mean(y_mat, axis=0, keepdims=True) + np.mean(y_mat)
-            residuals_final = (y_demeaned - Lambda_F).reshape(-1)
+            (y_demeaned - Lambda_F).reshape(-1)
             beta = np.zeros(1)
 
         # Re-compute residuals with final beta
@@ -946,7 +946,7 @@ class CCEPanelEstimator:
         y_demeaned = y_mat - y_mean_i - y_mean_t + y_mean_grand  # (n, t)
 
         # Cross-sectional averages (CCEs)
-        y_bar = np.mean(y_mat, axis=0, keepdims=True)  # (1, t) — time-specific averages
+        np.mean(y_mat, axis=0, keepdims=True)  # (1, t) — time-specific averages
 
         if X_mat is not None:
             X_mean_i = np.mean(X_mat, axis=1, keepdims=True)  # (n, 1, k)
@@ -991,9 +991,9 @@ class CCEPanelEstimator:
             if robust:
                 # Eicker-Huber-White robust
                 w = resid ** 2
-                XtWX = X_dm.T @ (w[:, None] * X_dm) / n_obs
+                X_dm.T @ (w[:, None] * X_dm) / n_obs
             else:
-                XtWX = X_dm.T @ X_dm / n_obs
+                X_dm.T @ X_dm / n_obs
 
             try:
                 var_beta = sigma2 * np.linalg.inv(X_dm.T @ X_dm / n_obs + 1e-8 * np.eye(k_exog)) @ (X_dm.T @ X_dm / n_obs) @ np.linalg.inv(X_dm.T @ X_dm / n_obs + 1e-8 * np.eye(k_exog))

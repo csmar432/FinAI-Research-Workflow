@@ -227,8 +227,8 @@ class NumberExtractor:
             for m in _COEF_PATTERNS[0].finditer(line):
                 val = float(m.group(1))
                 if self._is_valid(val):
-                    se = float(m.group(3)) if m.group(3) else None
-                    t_val = float(m.group(4)) if m.group(4) else None
+                    float(m.group(3)) if m.group(3) else None
+                    float(m.group(4)) if m.group(4) else None
                     num = ExtractedNumber(
                         value=val,
                         raw_text=m.group(0),
@@ -247,7 +247,7 @@ class NumberExtractor:
             for m in _COEF_PATTERNS[1].finditer(line):
                 val = float(m.group(1))
                 if self._is_valid(val):
-                    se = float(m.group(3)) if m.group(3) else float(m.group(4)) if m.group(4) else None
+                    float(m.group(3)) if m.group(3) else float(m.group(4)) if m.group(4) else None
                     num = ExtractedNumber(
                         value=val,
                         raw_text=m.group(0),

@@ -79,7 +79,7 @@ def make_description(name: str) -> str:
     if name.startswith("e2b_"):
         return f"云端代码执行: {name.replace('e2b_', '')}"
     if name.startswith("get_"):
-        parts = name.replace("_", " ").split()
+        name.replace("_", " ").split()
         return f"获取{name.replace('get_', '').replace('_', ' ')}数据"
     return name
 

@@ -734,7 +734,6 @@ class StreamingWriter:
         Generator that yields SSEEvent for each chunk.
         Caller should await/iterate and send events over SSE.
         """
-        delay = delay_ms if delay_ms is not None else self.delay_ms
         chunks = self._split_chunks(text)
         total = len(chunks)
         for idx, chunk in enumerate(chunks):

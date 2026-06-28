@@ -412,7 +412,7 @@ class IVPanel:
 
         ss_res_rf = np.sum(resid_rf**2)
         ss_tot = np.sum((y - y.mean()) ** 2)
-        rf_r2 = 1.0 - ss_res_rf / (ss_tot + 1e-12)
+        1.0 - ss_res_rf / (ss_tot + 1e-12)
 
         # ── First-stage R² for each endogenous variable ───────────────────
         first_stage_r2: list[float] = []
@@ -951,7 +951,7 @@ def _compute_residuals_from_result(
     # 去中心化（within 变换）
     n = len(y)
     k = X.shape[1]
-    index = pd.MultiIndex.from_arrays([df_sub[unit_var].values, df_sub[time_var].values])
+    pd.MultiIndex.from_arrays([df_sub[unit_var].values, df_sub[time_var].values])
 
     # OLS 残差
     try:

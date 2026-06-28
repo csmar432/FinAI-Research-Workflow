@@ -1036,7 +1036,7 @@ def _wild_cluster_bootstrap(
         y = df_sub[y_var].values.astype(float)
         model = sm.OLS(y, X.values).fit()
         beta = float(model.params[1])
-        n_obs = len(y)
+        len(y)
     except (KeyError, IndexError, TypeError, ValueError, AttributeError):
         return {"pval": np.nan, "ci_lower": np.nan, "ci_upper": np.nan}
 
@@ -1215,7 +1215,7 @@ class ModernDiDEngine:
                     X_parts.append(df_sub[xv].values.astype(float).reshape(-1, 1))
 
         X = np.column_stack(X_parts)
-        xnames = ["const", self.treat_var, self.time_var, self.treat_var + "_x_" + self.time_var] + self.x_vars
+        ["const", self.treat_var, self.time_var, self.treat_var + "_x_" + self.time_var] + self.x_vars
 
         # Determine active cluster variables
         cl1 = cluster_var or self.cluster_var
@@ -2252,7 +2252,7 @@ def _estimate_group_time_att(
             mu_c = df_sub.loc[y_control.index, p_col].values if p_col in df_sub.columns else np.mean(y_c)
             if isinstance(mu_c, pd.Series):
                 mu_c = mu_c.values
-            residuals_c = y_c - mu_c
+            y_c - mu_c
             # IPW SE: sqrt(Var(1/e * (Y - mu)) / n_e + Var(e/G / e * mu) / n_c)
             var_ipw = np.var(ipw_treated) / len(ipw_treated)
             var_mu = np.var(e_control / P_g_val * mu_c) / len(y_control)

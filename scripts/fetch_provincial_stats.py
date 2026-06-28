@@ -707,7 +707,7 @@ class ProvincialStatsFetcher:
         for table, rows in ranking_map.items():
             rows_sorted = sorted(rows, key=lambda x: x[1], reverse=True)
             if table in self.data["ranking_tables"]:
-                headers = self.data["ranking_tables"][table].get("headers", [])
+                self.data["ranking_tables"][table].get("headers", [])
                 self.data["ranking_tables"][table]["data"] = [
                     [rank + 1, prov, val, src]
                     for rank, (prov, val, src) in enumerate(rows_sorted)

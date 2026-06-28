@@ -116,10 +116,9 @@ def validate_server(srv_dir: Path, verbose: bool = False) -> dict[str, Any]:
         input_schema = schema.get("inputSchema", schema.get("parameters", {}))
         if isinstance(input_schema, dict):
             schema_params = set(input_schema.get("properties", {}).keys())
-            required_params = set(input_schema.get("required", []))
+            set(input_schema.get("required", []))
         else:
             schema_params = set()
-            required_params = set()
 
         # Get handler signature parameters
         handler_sig_params = set()

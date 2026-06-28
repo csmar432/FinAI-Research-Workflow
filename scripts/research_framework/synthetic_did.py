@@ -548,7 +548,7 @@ def _placebo_test(
     n_donor, T_post = Y_post_donor.shape
 
     # 真实 ATT
-    synth_post = Y_post_donor.T @ donor_weights
+    Y_post_donor.T @ donor_weights
     real_att = float(np.mean(Y_pre_treated[:0] if len(Y_pre_treated) > 0 else np.zeros(T_post)))
     if len(Y_pre_treated) > 0:
         real_att = float(

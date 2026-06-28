@@ -471,7 +471,7 @@ class PaperQualityScorer:
         """为经济金融论文构建 JSON schema。"""
         dim_blocks = []
         for dim_id in dim_keys:
-            dim_info = self.ECON_FIN_DIMENSIONS.get(dim_id, {})
+            self.ECON_FIN_DIMENSIONS.get(dim_id, {})
             dim_blocks.append(f"""  "{dim_id}": {{
     "score": 0-10的分数,
     "evidence": ["支撑证据1", "支撑证据2"],

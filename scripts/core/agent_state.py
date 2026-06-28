@@ -927,7 +927,6 @@ class HITLManager:
 
         restored = 0
         now = time.time()
-        preserved_statuses = {"pending"}
 
         with self._lock:
             for req_data in hitl_state["pending_requests"]:

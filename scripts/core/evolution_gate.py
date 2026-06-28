@@ -180,11 +180,9 @@ class NoveltyGate(BaseGate):
 
             if similarity < self.similarity_threshold:
                 passed_count += 1
-                status = "✅ PASS"
             else:
                 issues.append(f"想法与已有文献高度重叠（相似度={similarity:.2f}）：{idea_text[:80]}")
                 suggestions.append(f"考虑从 {idea_text[:50]}... 方向寻找差异化视角")
-                status = "❌ FAIL"
 
             detailed_results.append({
                 "idea": idea_text[:100],
@@ -539,7 +537,7 @@ class DualityGate(BaseGate):
         self, direction: str, results: dict
     ) -> tuple[float, float]:
         """估计合理的量级范围。"""
-        se = results.get("se", 0)
+        results.get("se", 0)
         coef = results.get("coef", 0)
         base = abs(coef)
 

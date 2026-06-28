@@ -545,7 +545,7 @@ class DataSourceChecker:
         # 授权请求消息（如果需要）
         auth_msg = ""
         if requires_synthetic:
-            missing_names = [req.user_facing_name for req in required_without_data]
+            [req.user_facing_name for req in required_without_data]
             auth_msg = (
                 f"\n{'='*60}\n"
                 f"🔴 数据缺口 — 无法继续\n"

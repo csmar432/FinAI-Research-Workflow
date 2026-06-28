@@ -622,7 +622,7 @@ class RobustnessRunner:
         no cluster_var is set, or the underlying TWFE fit fails.
         """
         B = int(config.get("B", 999))
-        seed = int(config.get("seed", 42))
+        int(config.get("seed", 42))
         bootstrap_type = config.get("bootstrap_type", "rademacher")
         cluster_var = config.get("cluster_var", self.unit_var)
         try:

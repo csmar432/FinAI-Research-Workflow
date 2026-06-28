@@ -240,10 +240,10 @@ class BehavioralFinanceDirection(BaseResearchDirection):
 
             # Detect columns
             col_lower = {c.lower().strip(): c for c in df.columns}
-            date_col = col_lower.get("date")
+            col_lower.get("date")
             sentiment_col = col_lower.get("sentiment") or col_lower.get("cicci") or col_lower.get("s")
             return_col = col_lower.get("return") or col_lower.get("ret") or col_lower.get("stock_return")
-            turnover_col = col_lower.get("turnover") or col_lower.get("turnover_rate")
+            col_lower.get("turnover") or col_lower.get("turnover_rate")
             size_col = col_lower.get("size") or col_lower.get("mktcap")
             bm_col = col_lower.get("bm") or col_lower.get("book_to_market")
 

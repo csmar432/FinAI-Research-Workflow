@@ -334,9 +334,6 @@ class AutoDebugger:
         """添加调试打印（最后手段）。"""
         lines = code.split("\n")
         # 在主要计算前添加调试信息
-        debug_info = [
-            'import sys; print(f\"Running {sys._getframe().f_code.co_name}\")',
-        ]
         for i, line in enumerate(lines):
             if line.startswith("def ") or line.startswith("import "):
                 continue
@@ -476,7 +473,7 @@ class FigureGenerator:
 
             for i in range(len(row_labels)):
                 for j in range(len(col_labels)):
-                    text = ax.text(j, i, f"{data[i][j]:.2f}",
+                    ax.text(j, i, f"{data[i][j]:.2f}",
                                    ha="center", va="center", color="black", fontsize=8)
 
             ax.set_title(title)
@@ -615,7 +612,7 @@ class AutonomyLoop:
         language = config.get("language", "python")
         title = getattr(node, "title", "")
         description = getattr(node, "description", "")
-        mechanism = getattr(node, "mechanism", "")
+        getattr(node, "mechanism", "")
 
         if language == "python":
             script = self._generate_python_script(method, title, description, config)
@@ -1132,7 +1129,6 @@ xtreg ln_wage age tenuren union, fe robust
         自动使用 AutonomyLoop 执行，实现 BFTS + 自动实验闭环。
         """
         # Monkey-patch the _run_pilot method
-        original_run_pilot = explorer._run_pilot
 
         def auto_pilot(node: Any) -> Any:
             """使用 AutonomyLoop 执行 Pilot 实验。"""

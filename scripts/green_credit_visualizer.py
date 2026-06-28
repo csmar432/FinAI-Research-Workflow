@@ -104,7 +104,7 @@ def plot_event_study(event_study_data: dict, output_path: Path):
                        alpha=0.25, color=COLORS["ci_fill"], label="95% CI")
 
         # 系数点
-        colors = [COLORS["negative"] if c < 0 else COLORS["positive"] for c in coefs]
+        [COLORS["negative"] if c < 0 else COLORS["positive"] for c in coefs]
         ax.plot(periods, coefs, "o-", color=COLORS["primary"],
                linewidth=2, markersize=6, zorder=3)
 

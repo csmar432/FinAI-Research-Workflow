@@ -309,7 +309,7 @@ def _probe_url(url: str, timeout: int = 6) -> tuple[bool, str]:
             return True, f"HTTP {resp.status}"
     except urllib.error.HTTPError as e:
         return False, f"HTTP {e.code}"
-    except urllib.error.URLError as e:
+    except urllib.error.URLError:
         return False, f"连接失败"
     except Exception as e:
         return False, str(e)[:60]

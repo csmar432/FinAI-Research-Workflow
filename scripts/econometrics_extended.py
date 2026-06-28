@@ -337,7 +337,7 @@ class SyntheticControl(BaseEconometricModel):
             treatment_time_idx = treatment_time
 
         pre_treatment = df[df[time_var] < treatment_time_idx]
-        post_treatment = df[df[time_var] >= treatment_time_idx]
+        df[df[time_var] >= treatment_time_idx]
 
         if len(pre_treatment) == 0:
             raise ValueError("No pre-treatment observations")
@@ -622,7 +622,7 @@ class PanelDataVAR(BaseEconometricModel):
             try:
                 coef = np.linalg.lstsq(X_with_const, y, rcond=None)[0]
                 residuals = y - X_with_const @ coef
-                n, k = len(y), X_with_const.shape[1]
+                n, _k = len(y), X_with_const.shape[1]
                 sigma = np.std(residuals)
                 r_squared = 1 - np.sum(residuals**2) / np.sum((y - np.mean(y))**2)
 
@@ -696,7 +696,6 @@ class PanelDataVAR(BaseEconometricModel):
         # Find the index of the causing variable lags in the coefficient vector
         # Joint F-test: test H0 that all lags of 'causing' have zero effect on 'caused'
         # Simplified: extract sub-vector and compute F-statistic
-        k = self.lags
         n = len(caused_coefs)
 
         # Build restricted vs unrestricted model comparison
@@ -1072,16 +1071,14 @@ class CallawaySantAnnaDID(BaseEconometricModel):
         self._validate_data(data)
 
         df = data.copy()
-        t = df[self.time_var].sort_values().unique()
+        df[self.time_var].sort_values().unique()
         g = df[df[self.treatment_var] == 1].groupby(self.unit_var)[self.time_var].min()
         df[self.g_name] = df[self.unit_var].map(g).fillna(0).astype(int)
 
-        cohort_att: dict[tuple, float] = {}
-        cohort_se: dict[tuple, float] = {}
         group_time_att: dict[tuple, float] = {}
 
         treated_units = df[df[self.treatment_var] == 1][self.unit_var].unique()
-        control_units = df[df[self.treatment_var] == 0][self.unit_var].unique()
+        df[df[self.treatment_var] == 0][self.unit_var].unique()
 
         control_mean = df[df[self.treatment_var] == 0].groupby(self.time_var)[self.outcome_var].mean()
 
@@ -1323,7 +1320,7 @@ class PanelThresholdRegression(BaseEconometricModel):
 
         for gamma in grid:
             df_h = df.copy()
-            regime = (df_h[self.threshold_var] <= gamma).astype(int)
+            (df_h[self.threshold_var] <= gamma).astype(int)
             X = df_h[x].values
             Y = df_h[y].values
 
@@ -1813,7 +1810,7 @@ class FamaMacBeth(BaseEconometricModel):
             p_values[var] = p_val
 
         # Fama-MacBeth R²: mean squared coefficient / (mean squared + mean se²)
-        total_var = sum(v ** 2 for v in mean_coefs.values()) + 1e-10
+        sum(v ** 2 for v in mean_coefs.values()) + 1e-10
         self.results = {
             "method": "Fama-MacBeth (1973) Two-Step",
             "n_periods": n_periods,
@@ -1958,11 +1955,11 @@ class BaconDeComposed(BaseEconometricModel):
         early_treated = df[df["_g"] > 0].groupby("_g")[self.unit_var].count()
         late_treated = early_treated[early_treated < early_treated.median()]
         early_cohorts = set(late_treated.index)
-        late_cohorts = set(early_treated.index) - early_cohorts
+        set(early_treated.index) - early_cohorts
 
         comparisons: list[dict] = []
         t_vals = sorted(df[self.time_var].unique())
-        min_t, max_t = t_vals[0], t_vals[-1]
+        min_t, _max_t = t_vals[0], t_vals[-1]
 
         # Step 1: Compute cohort-time cell means for outcome
         df["_treated"] = (df[self.treatment_var] == 1).astype(int)
@@ -2013,11 +2010,11 @@ class BaconDeComposed(BaseEconometricModel):
                     # Counterfactual for late cohort = early cohort's untreated mean at t.
                     # For post-treatment (t >= late_g): use the pre-period average as reference.
                     if t < late_g:
-                        y_early_pre = never_means.get(t, never_means.get(min_t, never_global_mean))
-                        y_late_pre = never_means.get(t, never_means.get(min_t, never_global_mean))
+                        never_means.get(t, never_means.get(min_t, never_global_mean))
+                        never_means.get(t, never_means.get(min_t, never_global_mean))
                     else:
-                        y_early_pre = never_means.get(roll_t[-1], never_means.get(min_t, never_global_mean))
-                        y_late_pre = never_means.get(roll_t[-1], never_means.get(min_t, never_global_mean))
+                        never_means.get(roll_t[-1], never_means.get(min_t, never_global_mean))
+                        never_means.get(roll_t[-1], never_means.get(min_t, never_global_mean))
                     for t0 in pre_t:
                         y_early_pre0 = cell_map.get((early_g, t0), None)
                         y_late_pre0 = cell_map.get((late_g, t0), None)

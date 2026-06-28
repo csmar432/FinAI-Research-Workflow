@@ -532,7 +532,7 @@ def main():
 
     # 路由1：仅整合
     if args.assemble:
-        refs = _load_reference_material()
+        _load_reference_material()
         topic = args.topic or "待定"
         outline = _load_outline_file(args.outline_file) if args.outline_file else {}
         outline.setdefault("topic", topic)

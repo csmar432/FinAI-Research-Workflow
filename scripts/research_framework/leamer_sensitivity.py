@@ -271,8 +271,8 @@ class EbersteinMagnacSensitivity:
 
         # 计算 β_EM(ρ) = β̂_OLS - ρ * cov(X, ε) / var(X)
         # 注: OLS 残差与 X 正交, cov_xe 实际接近 0; 在扰动版本下用 |β̂| * (1/F) 近似偏误
-        cov_xe = float(np.cov(X[:, endogenous_idx], residuals)[0, 1])
-        var_x = float(np.var(X[:, endogenous_idx]))
+        float(np.cov(X[:, endogenous_idx], residuals)[0, 1])
+        float(np.var(X[:, endogenous_idx]))
         # 用 1/sqrt(F) 模拟"可能的内生偏误"幅度
         bias_scale = float(np.std(residuals) / max(np.sqrt(max(f_stat, 1.0)), 1.0))
 
@@ -653,7 +653,7 @@ class SpilloverIndex:
                 m = sm.OLS(y_i, X_i).fit()
                 var_results.append(m)
                 residuals_i = m.resid
-                sigma_i = np.var(residuals_i)
+                np.var(residuals_i)
 
                 # 简单近似：方差贡献 = R² / n
                 fevd_matrix[i, :] = m.rsquared / n
@@ -816,7 +816,7 @@ def test_ar2(residuals: np.ndarray, order: int = 2) -> dict:
                 continue
             rho = float(np.corrcoef(e_t, e_lag)[0, 1])
             # 渐近 Z 近似
-            z = rho * np.sqrt(n)
+            rho * np.sqrt(n)
             r.append(rho)
 
         rho_1 = r[0] if len(r) > 0 else 0.0

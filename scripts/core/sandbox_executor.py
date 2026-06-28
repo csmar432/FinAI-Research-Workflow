@@ -405,7 +405,7 @@ class FullSandboxExecutor:
         self, code: str, sandbox: Path, capture_plots: bool
     ) -> str:
         """Build the execution wrapper script."""
-        plots_dir = str(sandbox / "plots")
+        str(sandbox / "plots")
         code_json = json.dumps(code)
         return f'''
 import sys

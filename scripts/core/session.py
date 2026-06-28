@@ -746,7 +746,7 @@ class ResearchSession:
         """
         Kahn's topological sort — tasks with no unmet dependencies come first.
         """
-        task_map = {t.id: t for t in tasks}
+        {t.id: t for t in tasks}
         in_degree = {t.id: 0 for t in tasks}
 
         for t in tasks:

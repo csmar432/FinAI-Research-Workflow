@@ -397,7 +397,7 @@ class ResearchPlanner:
         Topological sort using Kahn's algorithm.
         Tasks with no unmet dependencies come first.
         """
-        task_map = {t.id: t for t in tasks}
+        {t.id: t for t in tasks}
         in_degree = {t.id: len(t.dependencies) for t in tasks}
         ready = [t for t in tasks if in_degree[t.id] == 0]
         sorted_tasks = []

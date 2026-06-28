@@ -132,7 +132,7 @@ def _step_id() -> str:
 
 def _build_pipeline_yaml() -> dict:
     """Build the YAML dict for the current pipeline."""
-    name = st.session_state.pb_pipeline_name.strip() or "my_pipeline"
+    st.session_state.pb_pipeline_name.strip() or "my_pipeline"
     desc = st.session_state.pb_pipeline_desc.strip() or "自定义流水线"
 
     steps_yaml = []
@@ -241,7 +241,7 @@ def _load_pipeline(name: str):
 def _render_agent_card(name: str, data: dict):
     """Render a single agent card in the palette."""
     category = data.get("category", "utility")
-    color = CATEGORY_COLORS.get(category, "gray")
+    CATEGORY_COLORS.get(category, "gray")
     role = data.get("role", "")
     goal = data.get("goal", "")
     color_map = {"paper": "🟦", "analyst": "🟩", "utility": "⬜"}

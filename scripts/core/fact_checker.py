@@ -174,7 +174,7 @@ class YoYQoQLogicRule(ValidationRule):
 
         # Extract all QoQ growth rates
         qoq_pattern = r"(?:环比|QoQ|quarter-over-quarter)[^\d]*(\d+\.?\d*)\s*%"
-        qoq_matches = re.findall(qoq_pattern, text.lower())
+        re.findall(qoq_pattern, text.lower())
 
         # Check for impossible combinations
         # e.g., Q4 growth > Q1 growth but overall year growth < Q4 growth
@@ -309,7 +309,7 @@ class MathConsistencyRule(ValidationRule):
         # Check for common financial formula patterns
         # ROE = Net Income / Equity
         roe_pattern = r"ROE\s*[=≈]\s*(\d+\.?\d*)\s*%"
-        roe_matches = re.findall(roe_pattern, text)
+        re.findall(roe_pattern, text)
 
         # Net Margin + Gross Margin sanity check
         net_margin_pattern = r"净利率\s*[=≈]\s*(\d+\.?\d*)\s*%"

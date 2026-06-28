@@ -345,7 +345,7 @@ class EnhancedFinancialAnalyst:
         current_assets = balance.get("current_assets", 0)
         current_liabilities = balance.get("current_liabilities", 0)
         total_liabilities = balance.get("total_liabilities", balance.get("total_current_liabilities", 0))
-        total_debt = balance.get("total_debt", balance.get("long_term_debt", 0))
+        balance.get("total_debt", balance.get("long_term_debt", 0))
 
         current_ratio = current_assets / current_liabilities if current_liabilities else 0
         debt_ratio = total_liabilities / total_assets if total_assets else 0
@@ -727,7 +727,7 @@ class EnhancedValuationAnalyst:
         # 提取基础数据
         revenue = income.get("revenue", income.get("total_revenue", 0))
         net_income = income.get("net_income", income.get("total_net_income", 0))
-        equity = balance.get("total_equity", balance.get("shareholders_equity", 0))
+        balance.get("total_equity", balance.get("shareholders_equity", 0))
         shares = market_data.get("shares_outstanding", income.get("shares_outstanding", 1))
         shares = max(shares, 1)
 
@@ -1254,9 +1254,9 @@ class EnhancedEarningsQualityAnalyst:
 
             # 标准化
             ta_norm = ta / at_minus_1
-            delta_rev_norm = delta_rev / at_minus_1
-            delta_rec_norm = delta_rec / at_minus_1
-            ppe_norm = ppe / at_minus_1
+            delta_rev / at_minus_1
+            delta_rec / at_minus_1
+            ppe / at_minus_1
 
             # 简化：使用行业平均系数估算非正常应计项目
             # 实际应用中应使用回归分析确定系数
@@ -1860,7 +1860,7 @@ class EnhancedCompetitiveAnalyst(BaseAnalystAgent):
     ) -> dict[str, Any]:
         """针对竞争分析的特殊分析"""
         market_data = data.get("market_data", {})
-        news = data.get("news", [])
+        data.get("news", [])
 
         if "波特" in focus_area or "五力" in focus_area:
             prompt = f"""作为竞争分析专家，请对以下公司进行波特五力分析。

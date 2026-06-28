@@ -225,7 +225,7 @@ class PipelineGraph:
                 warnings.append(f"WARNING: Unreachable nodes: {unreachable}")
 
         # Check for dangling non-OUTPUT nodes
-        output_ids = {n.id for n in self.nodes if n.node_type == NodeType.OUTPUT}
+        {n.id for n in self.nodes if n.node_type == NodeType.OUTPUT}
         dangling = [
             n.id for n in self.nodes
             if n.node_type not in {NodeType.OUTPUT, NodeType.GATE}

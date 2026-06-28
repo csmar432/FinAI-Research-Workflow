@@ -162,14 +162,13 @@ class TableFormatter:
             Variable names that should be rendered in red (\\textcolor{red}{...})
             to indicate simulated/demonstration data.
         """
-        sig_map = {"***": "p<0.01", "**": "p<0.05", "*": "p<0.10", "$\\dagger$": "p<0.15", "": ""}
         sim = simulated_vars or set()
 
         def _red(s: str) -> str:
             """Wrap simulated values in red."""
             return f"\\textcolor{{red}}{{{s}}}"
 
-        col_count = 1 + len(y_labels)
+        1 + len(y_labels)
         col_spec = "l" + "c" * len(y_labels)
 
         lines = [
@@ -404,7 +403,7 @@ class ReportGenerator:
                  else self._metadata["title_en"])
         abstract = (self._metadata["abstract_zh"] if self.language == "zh"
                    else self._metadata["abstract_en"])
-        keywords = (self._metadata.get("keywords_zh", [])
+        (self._metadata.get("keywords_zh", [])
                     if self.language == "zh"
                     else self._metadata.get("keywords_en", []))
 
@@ -412,7 +411,7 @@ class ReportGenerator:
         # When submitting to a specific journal, replace the .cls file:
         #   JF/JFE → jf.cls / jfe.cls,  RFS → rfs.cls,
         #   管理世界/经济研究/金融研究 → ctexart.cls
-        journal = self._metadata.get("journal", "") or ""
+        self._metadata.get("journal", "") or ""
         doc_class = "article"   # standalone-safe default
 
         lines = [

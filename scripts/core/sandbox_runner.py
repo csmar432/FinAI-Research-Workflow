@@ -430,7 +430,7 @@ class E2BRunner:
             )
 
         code = path.read_text(encoding="utf-8")
-        arg_str = " ".join(args or [])
+        " ".join(args or [])
 
         wrapped = (
             f"import subprocess, sys\n"

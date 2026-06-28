@@ -566,7 +566,7 @@ class CampaignOrchestrator:
 
     def _topological_sort(self, stages: list[Stage]) -> list[Stage]:
         """拓扑排序（Kahn算法）。"""
-        stage_map = {s.name: s for s in stages}
+        {s.name: s for s in stages}
         in_degree = {s.name: len(s.depends_on) for s in stages}
         queue = [s for s in stages if in_degree[s.name] == 0]
         sorted_list = []

@@ -395,7 +395,6 @@ class AdjustmentStrategyGenerator:
     ) -> AdjustmentAction | None:
         """根据诊断创建具体调整动作"""
 
-        cause = diag.cause
         strategy = diag.suggested_adjustment
 
         if strategy == AdjustmentStrategy.LEVEL_1_CONTROL_VARS:
@@ -1254,7 +1253,7 @@ def check_placebo(
             X = X_df.values
             orig_model = sm.OLS(y, X).fit(disp=False)
             # 用 DataFrame 获取系数（自动按列顺序对应）
-            params_df = pd.DataFrame({"param": orig_model.params}, index=X_df.columns[1:])  # skip const
+            pd.DataFrame({"param": orig_model.params}, index=X_df.columns[1:])  # skip const
             did_idx_in_params = list(X_df.columns[1:]).index("did")
             orig_coef = float(orig_model.params[did_idx_in_params])
             orig_pval = float(orig_model.pvalues[did_idx_in_params])
@@ -1271,7 +1270,7 @@ def check_placebo(
 
         # 预计算常量：常数列 + treat + post
         const_col = np.ones((len(data), 1))
-        treat_col = data[treatment_var].values
+        data[treatment_var].values
         post_col = data["post"].values
 
         for sim_i in range(n_simulations):

@@ -457,7 +457,7 @@ class AShareVariableFetcher:
             dataclass with data, source, availability, and error info.
         """
         var = AShareVariable(variable) if isinstance(variable, str) else variable
-        spec = VARIABLE_REGISTRY[var]
+        VARIABLE_REGISTRY[var]
 
         # Check cache
         cache_key = f"{var.value}:{ts_code}:{start_date}:{end_date}"

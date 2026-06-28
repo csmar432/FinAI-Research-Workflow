@@ -289,7 +289,6 @@ class CarbonEconomicsDirection(BaseResearchDirection):
             os.path.join(manual_base, "carbon_panel.csv"),
             os.path.join(manual_base, "co2_emissions.csv"),
         ]
-        found_panel = False
         for path in panel_files:
             if os.path.exists(path):
                 try:
@@ -315,7 +314,6 @@ class CarbonEconomicsDirection(BaseResearchDirection):
                     if "year" not in df.columns and "report_year" in df.columns:
                         df.rename(columns={"report_year": "year"}, inplace=True)
                     data["panel"] = df
-                    found_panel = True
                     _log.info("  Panel loaded from %s: %d rows, %d cols",
                               path, len(df), len(df.columns))
                     break
@@ -1097,7 +1095,7 @@ n{{1}}{{c}}{{(3)}} \\
 
         rows = []
         if heterogeneity is not None and isinstance(heterogeneity, pd.DataFrame) and len(heterogeneity) > 0:
-            coef_col = next((c for c in heterogeneity.columns
+            next((c for c in heterogeneity.columns
                              if "diff" in c.lower() or "coef" in c.lower()), None)
             for split_name, label in split_labels.items():
                 sub = heterogeneity[heterogeneity.get("split", pd.Series()) == split_name]

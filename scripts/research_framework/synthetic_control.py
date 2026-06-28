@@ -328,13 +328,13 @@ def _augmented_sc(
 
     # Design matrix: [Y_donors_pre, 1] (intercept as extra column)
     X_pre = np.column_stack([Y_donors_pre, np.ones(n_pre)])
-    X_post = np.column_stack([Y_donors_post, np.ones(len(Y_treated_post))])
+    np.column_stack([Y_donors_post, np.ones(len(Y_treated_post))])
 
-    n_vars = n_donors + 1  # donors + intercept
+    n_donors + 1  # donors + intercept
 
     def objective(params: np.ndarray) -> float:
         w = params[:n_donors]
-        alpha = params[n_donors]
+        params[n_donors]
         pred = X_pre @ params
         sse = np.sum((Y_treated_pre - pred) ** 2)
         sse += ridge_lambda * np.sum(w**2)
@@ -385,7 +385,7 @@ def _unit_placebo(
     Computes RMSPE ratio for a pseudo-treated unit using the same
     donor weights (excluding the pseudo-treated from its own pool).
     """
-    units = list(df[unit_col].unique())
+    list(df[unit_col].unique())
 
     if unit_col == treat_unit or unit_col not in donor_names:
         return {"unit": unit_col, "rmspe_ratio": np.nan, "pre_mspe": np.nan, "post_mspe": np.nan}
@@ -940,7 +940,6 @@ class SyntheticControlEngine:
         fig, ax = plt.subplots(figsize=figsize)
 
         r = self._result
-        treat_idx = self.treat_period_idx
 
         # Plot placebo units (donor paths)
         unit_placebo = r.additional.get("inference", {}).get("unit_placebo_df")

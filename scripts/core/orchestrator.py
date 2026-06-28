@@ -601,7 +601,6 @@ class AgentOrchestrator:
             )
         """
         results: dict[str, AgentResult] = {}
-        errors: dict[str, str] = {}
 
         def run_single(agent_name: str) -> tuple[str, AgentResult | Exception]:
             agent = self._agents.get(agent_name)

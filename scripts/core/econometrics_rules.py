@@ -280,7 +280,7 @@ class DIDValidator:
         # 后期趋势检查
         post_trend_ok = True
         if len(post) >= 2:
-            post_coefs = post.sort_values("period")["coef"].values
+            post.sort_values("period")["coef"].values
             # 简单检查：后期系数是否持续显著
             for _, row in post.iterrows():
                 t = row["coef"] / row["se"]
@@ -640,7 +640,6 @@ class BalanceTestValidator:
             is_imbalanced = smd > threshold or p_val < alpha
 
             if is_imbalanced:
-                reason = f"SMD={smd:.3f} > {threshold}" if smd > threshold else f"t检验p={p_val:.4f} < {alpha}"
                 imbalance_vars.append(var)
 
             all_abs_bias.append(smd)
@@ -1066,7 +1065,7 @@ class HeteroskedasticityTest:
 
             try:
                 beta, ssr, rank = np.linalg.lstsq(X_vif, y_vif, rcond=None)[:3]
-                residuals = y_vif - X_vif @ beta
+                y_vif - X_vif @ beta
                 tss = np.sum((y_vif - np.mean(y_vif))**2)
                 r2 = 1 - ssr / tss if tss > 0 else 0.0
                 vif = 1 / (1 - r2) if r2 < 1 else float("inf")
@@ -1353,8 +1352,8 @@ class EconometricsRuleEngine:
         if "pscore" in (data.get("df_matched") if isinstance(data.get("df_matched"), pd.DataFrame) else pd.DataFrame()).columns:
             # 如果有倾向得分，检验共同支撑
             pscore_df = data["df_matched"]
-            pscore_min = pscore_df["pscore"].min()
-            pscore_max = pscore_df["pscore"].max()
+            pscore_df["pscore"].min()
+            pscore_df["pscore"].max()
 
             treat_pscore = pscore_df[pscore_df[treatment_col] == 1]["pscore"]
             ctrl_pscore = pscore_df[pscore_df[treatment_col] == 0]["pscore"]
@@ -1377,7 +1376,7 @@ class EconometricsRuleEngine:
         running_var = data.get("running_var")
         cutoff = data.get("cutoff", 0)
         bandwidth = data.get("bandwidth")
-        treatment_col = data.get("treatment_col", "treatment")
+        data.get("treatment_col", "treatment")
 
         if running_var is None:
             result.add_error("RDD验证需要提供 running_var（驱动变量）")
@@ -1452,7 +1451,7 @@ class EconometricsRuleEngine:
         residuals = data.get("residuals")
         X = data.get("X")
         varnames = data.get("varnames")
-        threshold = data.get("hetero_threshold", 0.1)
+        data.get("hetero_threshold", 0.1)
 
         if residuals is None:
             result.add_error("OLS验证需要提供 residuals（残差）")

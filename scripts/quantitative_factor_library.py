@@ -771,7 +771,7 @@ class EventStudy:
 
             # 确保长度匹配
             common_est = est_df.loc[ff_est.index]
-            common_ev = ev_df.loc[ff_ev.index]
+            ev_df.loc[ff_ev.index]
 
             # FF因子回归
             if model == "ff3":

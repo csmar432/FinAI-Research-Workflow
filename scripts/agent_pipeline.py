@@ -53,6 +53,7 @@ from typing import Any
 
 # Bootstrap sys.path so `python scripts/agent_pipeline.py` works without `pip install -e .`
 from scripts.core import _bootstrap  # noqa: F401
+from scripts.core.ansi import bold, cyan, dim, yellow, red  # P3-8 修复 2026-06-29: mypy name-defined (120 errors) 根因
 _bootstrap.bootstrap()
 
 logger = logging.getLogger(__name__)
@@ -2382,7 +2383,7 @@ class AgentPipeline:
                 for k, v in data.items():
                     setattr(self, k, v)
 
-        sr = _LiveUpdateResult(status, node_data)
+        _LiveUpdateResult(status, node_data)
         fake_steps = [_LiveUpdateStep(s) for s in self._live_stages.keys()]
         fake_results = {type("S", (), {"value": k}): _LiveUpdateResult(v.get("_status", "pending"), v) for k, v in self._live_stages.items()}
 

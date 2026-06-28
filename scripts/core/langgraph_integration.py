@@ -586,7 +586,6 @@ def _patched_invoke(self, initial_state: dict | None = None) -> dict:
 
     checkpoint_id = f"chk_{_uuid.uuid4().hex[:8]}"
     current_node = self.graph.entry_point
-    visited: set[str] = set()
     max_iter = 100
 
     while current_node and current_node != "__end__" and state["iter_count"] < max_iter:

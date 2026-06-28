@@ -574,7 +574,7 @@ class AdvancedChartFactory:
         # Squarify treemap as sunburst approximation
         try:
             values = [max(1, int(hierarchy.get("value", 100)))]
-            colors = CB_PALETTE[:1]
+            CB_PALETTE[:1]
             squarify.plot(
                 sizes=values, label=["root"], alpha=0.9,
                 color=CB_PALETTE[0], text_kwargs={"fontsize": 12},

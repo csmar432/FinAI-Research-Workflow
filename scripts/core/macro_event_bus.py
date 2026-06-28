@@ -200,7 +200,7 @@ class MacroEventBus:
         with self._lock:
             if sub_id:
                 # 单个取消（通过 handler ID）
-                handlers = self._subscribers.get(topic, [])
+                self._subscribers.get(topic, [])
                 self._subscribers[topic] = []
                 return True
             else:

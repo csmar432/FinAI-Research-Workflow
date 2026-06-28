@@ -267,7 +267,7 @@ class ReviewerCalibrator:
         Returns:
             CalibrationReport
         """
-        review_id = review_report.get("review_id", f"review_{int(time.time())}")
+        review_report.get("review_id", f"review_{int(time.time())}")
 
         if method == "ground_truth" and ground_truth_id:
             return self._calibrate_ground_truth(review_report, ground_truth_id)
@@ -1417,7 +1417,7 @@ class PersistentCalibratorFeedbackLoop(CalibratorFeedbackLoop):
             return {"journal": journal, "samples": 0, "message": "无数据"}
 
         severities = [t["severity"] for t in trends]
-        bias_types = [t.get("bias_type", "unknown") for t in trends
+        [t.get("bias_type", "unknown") for t in trends
                       if "bias_type" in t]
         return {
             "journal": journal,

@@ -593,7 +593,7 @@ def _run_empirical_analysis(workflow: PaperWorkflow, data_path: str):
             print("\n⏳ 正在运行回归分析...")
 
             # 构建变量列表
-            all_vars = [dep_var] + indep_vars.split(",") + (control_vars.split(",") if control_vars else [])
+            [dep_var] + indep_vars.split(",") + (control_vars.split(",") if control_vars else [])
 
             # 调用回归模块
             result = run_regression(df_clean, dep_var, indep_vars.split(","),
@@ -750,7 +750,7 @@ def main():
         step4_data_analysis(workflow)
 
         # 步骤5：整合输出
-        full_paper = step5_finalize(workflow)
+        step5_finalize(workflow)
 
         print("\n" + "="*60)
         print("🎉 论文写作工作流完成！")
