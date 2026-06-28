@@ -510,6 +510,7 @@ jobs:
           python -c "from scripts.core.ide_platform import get_platform_info; print('platform:', get_platform_info())"
         shell: bash
       - name: Run subset tests
+        shell: bash
         run: |
           set -o pipefail
           pytest tests/test_checkpoint.py tests/test_event_monitor.py --tb=long -v 2>&1 | tee pytest-cs.log
