@@ -189,7 +189,7 @@ def run_did(df, y_var, treat_var, time_var, x_vars, did_name="did",
 
     # DID term is NOT demeaned (it is the causal variable) — keep it on original scale
     did_col.index = df_fe.index
-    X_cols = x_vars + [did_name]
+    x_vars + [did_name]
     X = pd.concat([df_fe[x_vars].astype(float), did_col.astype(float)], axis=1).fillna(0)
     y = df_fe[y_var].astype(float).values
     model = sm.OLS(y, X.values).fit(cov_type="HC1" if robust_se else "nonrobust")
@@ -263,7 +263,7 @@ def add_docx_figure(doc, img_path, caption):
 # LATEX TABLE
 # ─────────────────────────────────────────
 def did_to_latex(results_list, y_labels, x_vars, title="", label=""):
-    col_count = 1 + len(y_labels)
+    1 + len(y_labels)
     col_spec = "l" + "c" * len(y_labels)
     lines = [
         "\\begin{table}[htbp]",

@@ -240,7 +240,7 @@ def get_semantic_details(paper_id: str) -> dict | None:
             return None
         resp.raise_for_status()
         return resp.json()
-    except (requests.RequestException, ValueError, OSError) as exc:
+    except (requests.RequestException, ValueError, OSError):
         # Specific errors: network failure, JSON decode error, file I/O
         return None
 

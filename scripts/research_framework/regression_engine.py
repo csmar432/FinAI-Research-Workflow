@@ -886,7 +886,7 @@ class RegressionEngine:
             n_ctrl = (~treat_mask).sum()
             df_sub.loc[treat_mask, "prop_score"] = rng.uniform(0.4, 0.9, size=n_treat)
             df_sub.loc[~treat_mask, "prop_score"] = rng.uniform(0.1, 0.6, size=n_ctrl)
-        except Exception as exc:
+        except Exception:
             _log.error("PSM Logit failed unexpectedly — re-raising", exc_info=True)
             raise
 

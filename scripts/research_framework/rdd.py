@@ -580,7 +580,6 @@ def _bandwidth_cct(
     n_r = np.sum(x_c >= 0)
 
     # 调整因子
-    alpha = 2.0 / 5.0  # IMSE 指数
     min_h = np.percentile(np.abs(x_c), 5)
     max_h = np.percentile(np.abs(x_c), 95)
 
@@ -778,8 +777,8 @@ def _local_linear_regression(
     w_r = w[right_mask]
 
     # 加权 OLS
-    W_l = np.diag(w_l)
-    W_r = np.diag(w_r)
+    np.diag(w_l)
+    np.diag(w_r)
 
     beta_l = np.linalg.lstsq(X_left * w_l[:, None], y_l * w_l, rcond=None)[0]
     beta_r = np.linalg.lstsq(X_right * w_r[:, None], y_r * w_r, rcond=None)[0]
@@ -906,15 +905,15 @@ def _fuzzy_rdd(
     left_mask = x_c < 0
     right_mask = x_c >= 0
 
-    X_left = poly_terms(x_c[left_mask], order)
-    X_right = poly_terms(x_c[right_mask], order)
+    poly_terms(x_c[left_mask], order)
+    poly_terms(x_c[right_mask], order)
 
     # ===========================
     # Reduced Form
     # ===========================
-    y_l, y_r = y[left_mask], y[right_mask]
-    w_l, w_r = w[left_mask], w[right_mask]
-    T_l, T_r = T[left_mask], T[right_mask]
+    _y_l, _y_r = y[left_mask], y[right_mask]
+    _w_l, _w_r = w[left_mask], w[right_mask]
+    _T_l, _T_r = T[left_mask], T[right_mask]
 
     # RF: Y = beta0 + beta1*f(X) + tau*1[X>=c]
     # 简化：直接用 cutoff 分组
@@ -1724,7 +1723,7 @@ class RDDEngine:
 
         # 带宽内数据
         in_band = np.abs(x_c) <= bandwidth
-        x_in, y_in = x[in_band], y[in_band]
+        _x_in, y_in = x[in_band], y[in_band]
 
         # bin averages
         n_bins = max(3, nbins)
@@ -1750,7 +1749,7 @@ class RDDEngine:
         x_fit_right = np.linspace(0, bandwidth, 100)
 
         def _fit_line(x_fit, side_mask):
-            mask = np.abs(x_c[in_band]) <= bandwidth
+            np.abs(x_c[in_band]) <= bandwidth
             x_s = x_c[in_band][side_mask]
             y_s = y_in[side_mask]
             w_s = _kernel_weights(x[in_band][side_mask] + self.cutoff, self.cutoff, bandwidth, kernel)

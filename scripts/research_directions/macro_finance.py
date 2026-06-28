@@ -823,7 +823,7 @@ class MacroFinanceDirection(BaseResearchDirection):
 
         coef = did_result.get("did_coef", 0)
         se = did_result.get("did_se", 0)
-        t = did_result.get("did_t", 0)
+        did_result.get("did_t", 0)
         p = did_result.get("did_p", 1)
         n = did_result.get("n_obs", 0)
         r2 = did_result.get("r_squared", 0)

@@ -82,7 +82,6 @@ def count_journal_templates() -> dict[str, int]:
         return {"total": 0}
 
     total = 0
-    en_zh = 0
     for node in ast.walk(tree):
         # 找形如 "name": {...} 的赋值
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
@@ -113,11 +112,22 @@ def count_skills() -> int:
 
 
 def count_research_directions() -> int:
-    """统计 scripts/research_directions/ 下的研究方向数。"""
-    rd = PROJECT_ROOT / "scripts" / "research_directions"
-    if not rd.exists():
-        return 0
-    return sum(1 for f in rd.glob("*.py") if not f.name.startswith("_"))
+    """统计实际注册的研究方向数。
+
+    P0-6 第二阶段修复 (2026-06-29): 之前数 scripts/research_directions/*.py 文件数，
+    但那是 BaseResearchDirection 子类数（13 个），不等于 DirectionFactory 注册的方向数（45）。
+    改为查询 DirectionFactory._registry。
+    """
+    try:
+        from scripts.research_directions import DirectionFactory  # noqa: E402
+        if not DirectionFactory._initialized:
+            DirectionFactory._init_registry()
+        return len(DirectionFactory._registry)
+    except Exception:
+        rd = PROJECT_ROOT / "scripts" / "research_directions"
+        if not rd.exists():
+            return 0
+        return sum(1 for f in rd.glob("*.py") if not f.name.startswith("_"))
 
 
 def count_test_files() -> dict[str, int]:

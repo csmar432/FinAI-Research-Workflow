@@ -91,7 +91,7 @@ def _grs_test(
         return np.nan, np.nan
 
     # GRS 统计量
-    alpha_prime_cov_alpha_inv_alpha = alphas.T @ cov_alpha_inv @ alphas
+    alphas.T @ cov_alpha_inv @ alphas
     lambda_val = mean_excess.T @ np.linalg.inv(cov_excess + np.eye(K) * 1e-8) @ mean_excess
     trace_val = np.trace(lambda_val)
 
@@ -1496,7 +1496,7 @@ class LassoFactorSelector:
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X_clean)
 
-        factor_names = list(factors_df.columns)
+        list(factors_df.columns)
 
         # 交叉验证
         alphas = np.logspace(-5, 1, n_alphas)

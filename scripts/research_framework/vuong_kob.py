@@ -185,7 +185,7 @@ class VuongTest:
             ll2 = self._compute_pointwise_ll(residuals2)
 
         n = min(n1, n2)
-        k = max(k1, k2)
+        max(k1, k2)
 
         # 逐点差异
         diff = ll1 - ll2
@@ -430,7 +430,6 @@ class OaxacaBlinderDecomposition:
             import statsmodels.api as sm
         except ImportError:
             _log.warning("[OB] statsmodels not installed — using numpy OLS")
-            use_burnham = False
 
         n1, n2 = len(y1), len(y2)
 
@@ -459,7 +458,7 @@ class OaxacaBlinderDecomposition:
         raw_gap = float(np.mean(y1) - np.mean(y2))
 
         # Check exactness (within numerical tolerance)
-        add_up = abs(endowments + coefficients + interaction - raw_gap) < 0.1
+        abs(endowments + coefficients + interaction - raw_gap) < 0.1
 
         # Percentage shares
         total = abs(endowments) + abs(coefficients) + abs(interaction)

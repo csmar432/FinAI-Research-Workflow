@@ -451,7 +451,7 @@ def _check_macro_via_mcp(countries: list[str]) -> list[MacroEvent]:
                     report_date=item.get("date", ""),
                 ))
             return events
-    except Exception as exc:
+    except Exception:
         pass  # EODHD MCP failed — continue to financial fallback
 
     # Try MCP user-financial (China macro)
@@ -476,7 +476,7 @@ def _check_macro_via_mcp(countries: list[str]) -> list[MacroEvent]:
                             report_date=latest.get("date", datetime.now().strftime("%Y-%m-%d")),
                         ))
                         break
-    except Exception as exc:
+    except Exception:
         pass  # user-financial MCP failed — continue to mock fallback
 
     # Fallback to mock
@@ -520,7 +520,7 @@ def _check_policy_via_mcp(keywords: list[str]) -> list[PolicyEvent]:
                     ))
             if len(events) >= 10:
                 break
-    except Exception as exc:
+    except Exception:
         pass  # Policy search failed — continue to mock fallback
 
     if not events:
@@ -722,7 +722,7 @@ def _run_pipeline_sync(
                 enable_self_evolution=False,
                 on_gate_approved=_on_gate_approved,
             )
-            result = pl.run()
+            pl.run()
             finished_at = datetime.now()
             return {
                 "status": "completed",
@@ -735,7 +735,7 @@ def _run_pipeline_sync(
             }
         else:
             # Research report pipeline
-            result = _run_demo_pipeline(topic, output_dir, event)
+            _run_demo_pipeline(topic, output_dir, event)
             finished_at = datetime.now()
             return {
                 "status": "completed",
@@ -798,8 +798,8 @@ def _run_pipeline_bg(
 def _run_demo_pipeline(topic: str, output_dir: str, event: ResearchEvent) -> dict:
     """Run demo_research_report.py as subprocess."""
     import threading as _t
-    safe_topic = "".join(c if c.isalnum() else "_" for c in topic[:30])
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    "".join(c if c.isalnum() else "_" for c in topic[:30])
+    datetime.now().strftime("%Y%m%d_%H%M%S")
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)

@@ -846,14 +846,14 @@ class SpatialDurbinModel:
                 det_A = np.sum(np.log(np.abs(np.linalg.eigvals(A))))
 
                 y_star = np.linalg.solve(A, y)
-                X_star = np.linalg.solve(A, X_full @ np.block([[np.eye(k)], [np.diag(theta)]]))
-                X_combined = np.linalg.solve(A, X) @ (np.eye(k) + np.diag(theta))
-                X_combined = np.linalg.solve(A, X) @ np.eye(k) + W @ X @ np.diag(theta) if False else (
+                np.linalg.solve(A, X_full @ np.block([[np.eye(k)], [np.diag(theta)]]))
+                np.linalg.solve(A, X) @ (np.eye(k) + np.diag(theta))
+                np.linalg.solve(A, X) @ np.eye(k) + W @ X @ np.diag(theta) if False else (
                     np.linalg.solve(A, X) + rho * W @ X @ np.diag(theta)
                 )
 
                 # Simplified: use reduced form
-                B = np.linalg.solve(A, np.column_stack([X, rho * W @ X + X @ np.diag(theta)]))
+                np.linalg.solve(A, np.column_stack([X, rho * W @ X + X @ np.diag(theta)]))
                 residual = y_star - X_full @ np.concatenate([beta, theta])
                 sigma2 = np.sum(residual ** 2) / n
 
@@ -1071,7 +1071,7 @@ class SpatialDurbinModel:
                     y_boot = np.linalg.solve(A, rhs)
                 except np.linalg.LinAlgError:
                     continue
-                resid_boot = y_boot - self.X @ beta - (W @ self.X) @ theta
+                y_boot - self.X @ beta - (W @ self.X) @ theta
                 # 更新 β, θ 的 bootstrap 复制
                 try:
                     X_full_local = np.column_stack([self.X, W @ self.X])

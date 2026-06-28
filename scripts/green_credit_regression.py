@@ -92,7 +92,7 @@ CLUSTER_NOTE = "标准误在企业层面进行聚类调整"
 def load_panel_data() -> pd.DataFrame:
     """加载面板数据并检查数据来源"""
     panel_path = SCRIPT_DIR / "papers" / "green_credit_financing" / "panel_data.csv"
-    meta_path = SCRIPT_DIR / "papers" / "green_credit_financing" / "data_metadata.json"
+    SCRIPT_DIR / "papers" / "green_credit_financing" / "data_metadata.json"
 
     if not panel_path.exists():
         raise FileNotFoundError(f"面板数据不存在: {panel_path}\n请先运行: python scripts/green_credit_data.py")

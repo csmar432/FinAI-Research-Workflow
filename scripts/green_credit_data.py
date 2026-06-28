@@ -211,7 +211,7 @@ def _parse_amount(value) -> float | None:
         return float(s[:-1]) * 1e3
     try:
         return float(s.replace(",", "").replace("$", "").replace("¥", ""))
-    except Exception as e:
+    except Exception:
         return None
 
 

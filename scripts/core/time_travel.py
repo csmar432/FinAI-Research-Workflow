@@ -515,7 +515,7 @@ class TimeTravelDebugger:
 
         while step < max_steps:
             # 保存当前状态作为快照
-            snapshot = self.take_snapshot(
+            self.take_snapshot(
                 agent_id=current_state.get("agent_id", "replay"),
                 state_type="replay",
                 state_data=current_state,

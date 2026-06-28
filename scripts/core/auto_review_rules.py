@@ -91,9 +91,7 @@ class AutoReviewRule:
             suggestion: str | None
         """
         context = context or {}
-        issues: list[str] = []
-        passed_checks = 0
-        total_checks = len(self.rules) if self.rules else 1
+        len(self.rules) if self.rules else 1
 
         if self.validation_type == "content_structure_check":
             result = self._check_content_structure(content)

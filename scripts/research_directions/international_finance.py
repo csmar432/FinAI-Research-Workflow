@@ -434,7 +434,7 @@ class InternationalFinanceDirection(BaseResearchDirection):
         """Format regression results as 4 LaTeX tables."""
         tables: dict[str, str] = {}
 
-        status = reg_results.get("status", "pending")
+        reg_results.get("status", "pending")
         tables_list = reg_results.get("tables", {})
 
         # Table 1: Summary statistics

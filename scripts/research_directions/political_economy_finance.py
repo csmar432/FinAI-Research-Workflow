@@ -392,35 +392,35 @@ class PoliticalEconomyFinanceDirection(BaseResearchDirection):
             leverage = coef_data.get("leverage", {})
             # OLS columns
             pol_c = _fmt_val(pol_conn.get("coef"))
-            pol_se = _fmt_se(pol_conn.get("se"))
+            _fmt_se(pol_conn.get("se"))
             soe_c = _fmt_val(soe.get("coef"))
-            soe_se = _fmt_se(soe.get("se"))
+            _fmt_se(soe.get("se"))
             polboard_c = _fmt_val(polboard.get("coef"))
-            polboard_se = _fmt_se(polboard.get("se"))
+            _fmt_se(polboard.get("se"))
             size_c = _fmt_val(size.get("coef"))
-            size_se = _fmt_se(size.get("se"))
+            _fmt_se(size.get("se"))
             age_c = _fmt_val(age.get("coef"))
-            age_se = _fmt_se(age.get("se"))
+            _fmt_se(age.get("se"))
             lev_c = _fmt_val(leverage.get("coef"))
-            lev_se = _fmt_se(leverage.get("se"))
+            _fmt_se(leverage.get("se"))
             # PSM column
             psm_table = tables.get("table1_psm", {})
             psm_coef = psm_table.get("coefficients", {}).get("ATE", {})
             psm_c = _fmt_val(psm_coef.get("coef"))
-            psm_se = _fmt_se(psm_coef.get("se"))
+            _fmt_se(psm_coef.get("se"))
             # IV column
             iv_table = tables.get("table1_iv", {})
             iv_coef = iv_table.get("coefficients", {}).get("political_connection", {})
             iv_c = _fmt_val(iv_coef.get("coef"))
-            iv_se = _fmt_se(iv_coef.get("se"))
+            _fmt_se(iv_coef.get("se"))
             # N and R2
             n_val = _fmt_n(table1.get("n_obs"))
             r2_val = _fmt_r2(table1.get("r_squared"))
             note_line = ""
         else:
-            pol_c = pol_se = soe_c = soe_se = polboard_c = polboard_se = ""
-            size_c = size_se = age_c = age_se = lev_c = lev_se = ""
-            psm_c = psm_se = iv_c = iv_se = ""
+            pol_c = soe_c = polboard_c = ""
+            size_c = age_c = lev_c = ""
+            psm_c = iv_c = ""
             n_val = r2_val = ""
             note_line = r"\item \note{⚠️ 数据待获取 — 本表格为占位模板，非实证结果。请配置数据源后自动填充。}"
 
@@ -471,17 +471,17 @@ class PoliticalEconomyFinanceDirection(BaseResearchDirection):
             size = coef_data.get("size", {})
             age = coef_data.get("age", {})
             lev = coef_data.get("leverage", {})
-            pol_c = _fmt_val(pol.get("coef")); pol_se = _fmt_se(pol.get("se"))
-            soe_c = _fmt_val(soe.get("coef")); soe_se = _fmt_se(soe.get("se"))
-            polboard_c = _fmt_val(polboard.get("coef")); polboard_se = _fmt_se(polboard.get("se"))
-            size_c = _fmt_val(size.get("coef")); size_se = _fmt_se(size.get("se"))
-            age_c = _fmt_val(age.get("coef")); age_se = _fmt_se(age.get("se"))
-            lev_c = _fmt_val(lev.get("coef")); lev_se = _fmt_se(lev.get("se"))
+            pol_c = _fmt_val(pol.get("coef")); _fmt_se(pol.get("se"))
+            soe_c = _fmt_val(soe.get("coef")); _fmt_se(soe.get("se"))
+            polboard_c = _fmt_val(polboard.get("coef")); _fmt_se(polboard.get("se"))
+            size_c = _fmt_val(size.get("coef")); _fmt_se(size.get("se"))
+            age_c = _fmt_val(age.get("coef")); _fmt_se(age.get("se"))
+            lev_c = _fmt_val(lev.get("coef")); _fmt_se(lev.get("se"))
             n_val = _fmt_n(loan.get("n_obs")); r2_val = _fmt_r2(loan.get("r_squared"))
             note_line = ""
         else:
-            pol_c = pol_se = soe_c = soe_se = polboard_c = polboard_se = ""
-            size_c = size_se = age_c = age_se = lev_c = lev_se = ""
+            pol_c = soe_c = polboard_c = ""
+            size_c = age_c = lev_c = ""
             n_val = r2_val = ""
             note_line = r"\item \note{⚠️ 数据待获取 — 本表格为占位模板，非实证结果。请配置数据源后自动填充。}"
 
@@ -532,16 +532,16 @@ class PoliticalEconomyFinanceDirection(BaseResearchDirection):
             post = coef_data.get("post_reform", {})
             state = coef_data.get("state_ownership", {})
             pol_post = coef_data.get("political_connection_x_post", {})
-            shock_c = _fmt_val(shock.get("coef")); shock_se = _fmt_se(shock.get("se"))
-            pre_c = _fmt_val(pre.get("coef")); pre_se = _fmt_se(pre.get("se"))
-            post_c = _fmt_val(post.get("coef")); post_se = _fmt_se(post.get("se"))
-            state_c = _fmt_val(state.get("coef")); state_se = _fmt_se(state.get("se"))
-            polpost_c = _fmt_val(pol_post.get("coef")); polpost_se = _fmt_se(pol_post.get("se"))
+            shock_c = _fmt_val(shock.get("coef")); _fmt_se(shock.get("se"))
+            pre_c = _fmt_val(pre.get("coef")); _fmt_se(pre.get("se"))
+            post_c = _fmt_val(post.get("coef")); _fmt_se(post.get("se"))
+            state_c = _fmt_val(state.get("coef")); _fmt_se(state.get("se"))
+            polpost_c = _fmt_val(pol_post.get("coef")); _fmt_se(pol_post.get("se"))
             n_val = _fmt_n(table.get("n_obs")); r2_val = _fmt_r2(table.get("r_squared"))
             note_line = ""
         else:
-            shock_c = shock_se = pre_c = pre_se = post_c = post_se = ""
-            state_c = state_se = polpost_c = polpost_se = ""
+            shock_c = pre_c = post_c = ""
+            state_c = polpost_c = ""
             n_val = r2_val = ""
             note_line = r"\item \note{⚠️ 数据待获取 — 本表格为占位模板，非实证结果。请配置数据源后自动填充。}"
 
@@ -587,8 +587,8 @@ class PoliticalEconomyFinanceDirection(BaseResearchDirection):
             priv = tables.get("table4_private", {})
             soe_coef = soe.get("coefficients", {}).get("political_connection", {})
             priv_coef = priv.get("coefficients", {}).get("political_connection", {})
-            soe_c = _fmt_val(soe_coef.get("coef")); soe_se = _fmt_se(soe_coef.get("se"))
-            priv_c = _fmt_val(priv_coef.get("coef")); priv_se = _fmt_se(priv_coef.get("se"))
+            soe_c = _fmt_val(soe_coef.get("coef")); _fmt_se(soe_coef.get("se"))
+            priv_c = _fmt_val(priv_coef.get("coef")); _fmt_se(priv_coef.get("se"))
             soe_size = _fmt_val(soe.get("coefficients", {}).get("size", {}).get("coef"))
             priv_size = _fmt_val(priv.get("coefficients", {}).get("size", {}).get("coef"))
             soe_age = _fmt_val(soe.get("coefficients", {}).get("age", {}).get("coef"))
@@ -599,7 +599,7 @@ class PoliticalEconomyFinanceDirection(BaseResearchDirection):
             soe_r2 = _fmt_r2(soe.get("r_squared")); priv_r2 = _fmt_r2(priv.get("r_squared"))
             note_line = ""
         else:
-            soe_c = soe_se = priv_c = priv_se = ""
+            soe_c = priv_c = ""
             soe_size = priv_size = soe_age = priv_age = soe_lev = priv_lev = ""
             soe_n = priv_n = soe_r2 = priv_r2 = ""
             note_line = r"\item \note{⚠️ 数据待获取 — 本表格为占位模板，非实证结果。请配置数据源后自动填充。}"

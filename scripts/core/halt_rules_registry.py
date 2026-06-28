@@ -1181,7 +1181,7 @@ class HaltRulesRegistry:
         """Validate citation format and DOI correctness."""
         violations: list[str] = []
         text = content if isinstance(content, str) else content.get("text", "")
-        acceptable = rule.get("validation", {}).get("acceptable_formats", [])
+        rule.get("validation", {}).get("acceptable_formats", [])
 
         # Check DOI format
         dois = re.findall(r"10\.\d{4,}/[\w\.\-/]+", text)
@@ -1240,13 +1240,13 @@ class HaltRulesRegistry:
 
         for check in rules:
             check_type = check.get("check", "")
-            required_fields = check.get("required_fields", [])
+            check.get("required_fields", [])
 
             if check_type == "correlation_vs_causation":
                 causal_terms = ["因果", "cause", "导致", "drives", "决定", "determines"]
                 correl_terms = ["相关", "correlated", "associated", "有关"]
                 has_causal = any(t in text.lower() for t in causal_terms)
-                has_correl = any(t in text.lower() for t in correl_terms)
+                any(t in text.lower() for t in correl_terms)
                 if has_causal:
                     caveats = ["不能", "not", "未必", "不一定", "并不意味着", "相关关系",
                               "not imply", "correlation does not imply"]
@@ -1690,7 +1690,7 @@ class HaltRulesRegistry:
                 return None
 
         # Try underscore/camelCase variants
-        variants = [field_name, field_name.lower(), field_name.upper()]
+        [field_name, field_name.lower(), field_name.upper()]
         for key in data:
             if key.lower().replace("_", "") == field_name.lower().replace("_", ""):
                 try:

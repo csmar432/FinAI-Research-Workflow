@@ -431,7 +431,7 @@ class TextDataPipeline:
         if dates:
             entities["dates"] = dates
         commitments = self.extractor.extract_commitments(text)
-        metrics = self.extractor.extract_key_metrics(text)
+        self.extractor.extract_key_metrics(text)
 
         # 关键词披露
         key_disclosures = sentiment.get("key_disclosure_highlights", [])

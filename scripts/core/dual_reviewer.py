@@ -411,8 +411,8 @@ class DualReviewer:
         disagreements = []
 
         # 检查关键问题是否一致
-        primary_critical = set(primary.get("critical_issues", []))
-        shadow_critical = set(shadow.get("critical_arguments", []))
+        set(primary.get("critical_issues", []))
+        set(shadow.get("critical_arguments", []))
 
         # 评分分歧
         for raw in primary.get("dimension_scores", []):

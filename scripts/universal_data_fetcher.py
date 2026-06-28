@@ -215,7 +215,7 @@ class DataFetcher:
                 return DataResult(data=data, source=DataSource.MCP,
                                provenance="→".join(provenance), available=True)
             provenance.append(f"mcp_miss:{err[:30] if err else 'no_impl'}")
-        except NotImplementedError as e:
+        except NotImplementedError:
             provenance.append("mcp_no_impl")
         except Exception as e:
             provenance.append(f"mcp_err:{str(e)[:30]}")
@@ -247,7 +247,7 @@ class DataFetcher:
                 return DataResult(data=data, source=DataSource.HTTP_DIRECT,
                                provenance="→".join(provenance), available=True)
             provenance.append(f"http_miss:{err[:30] if err else 'no_impl'}")
-        except NotImplementedError as e:
+        except NotImplementedError:
             provenance.append("http_no_impl")
         except Exception as e:
             provenance.append(f"http_err:{str(e)[:20]}")
@@ -556,7 +556,7 @@ class PatentDataFetcher(DataFetcher):
         # USPTO公开专利检索
         try:
             import urllib.request
-            encoded = urllib.parse.quote(company_name)
+            urllib.parse.quote(company_name)
             # Build URL with concatenation to avoid f-string-escape issues
             # (PEP 701 forbids backslash-escapes inside f-string expressions
             # in Python < 3.12)
@@ -856,7 +856,7 @@ def _cli() -> int:
             kwargs["ticker"] = args.ticker
         if args.indicator:
             kwargs["indicator"] = args.indicator
-        sources = [s.strip() for s in args.sources.split(",") if s.strip()]
+        [s.strip() for s in args.sources.split(",") if s.strip()]
         result = fetcher.fetch(args.data_type, **kwargs)
         summary = {
             "source": result.source.value,

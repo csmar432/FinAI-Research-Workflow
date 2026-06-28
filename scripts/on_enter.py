@@ -63,7 +63,6 @@ def _get_macro_today() -> list[dict]:
         })
 
     # FOMC: approximate (every 6 weeks on Wednesday)
-    fomc_dates = []
     fomc = date(today.year, 1, 1)
     while fomc.weekday() != 2:
         fomc += timedelta(days=1)
@@ -226,7 +225,7 @@ def run_action(choice: str) -> bool:
         venv_python = sys.executable
 
     em = PROJECT_ROOT / "scripts" / "event_monitor.py"
-    daemon_status = _check_daemon()
+    _check_daemon()
 
     if choice == "1":
         print(f"\n  🔍 执行事件扫描...\n")

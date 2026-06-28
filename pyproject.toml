@@ -290,9 +290,10 @@ ignore = [
     "F811",  # redefinition of unused
     "F821",  # undefined name (延迟引用, 实际运行时正常)
     "F822",  # undefined name in __all__
-    "F841",  # local variable assigned but never used (大量解包语义, 故意忽略)
     "I001",  # import block is un-sorted or un-formatted (运行 isort 单独跑)
 ]
+# P2-2 修复 (2026-06-29): F841 死代码已清理 237 处（ruff --unsafe-fixes），
+# 现移除 F841 from ignore list，CI 必须 0 F841 错误才能合并。
 # P2-2 修复 2026-06-28: 移除 W291/W292/W293 (trailing whitespace, no newline at eof, ws on blank line)
 # 这些是 trivial 风格问题，CI 跑 formatter (black/ruff format) 自动处理
 # F841 死代码清理路线图（143 处）已记录在 docs/TASKS_RUNBOOK.md §P2-2-cleanup

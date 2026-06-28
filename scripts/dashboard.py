@@ -1066,7 +1066,7 @@ def _get_papers() -> list:
     if outline_dir.exists():
         for f in sorted(outline_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)[:10]:
             try:
-                content = f.read_text(encoding="utf-8")[:200]
+                f.read_text(encoding="utf-8")[:200]
                 papers.append({
                     "id": f.stem,
                     "title": f.stem[:50],
@@ -1223,7 +1223,7 @@ def main():
     set_page_config()
     add_custom_css()
 
-    pages = render_sidebar()
+    render_sidebar()
 
     # 渲染对应页面
     page = st.session_state.get("current_page", "🏠 概览")

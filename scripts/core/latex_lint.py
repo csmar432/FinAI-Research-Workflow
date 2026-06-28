@@ -165,7 +165,7 @@ class LatexLintChecker:
 
         # 构建 label 集合（包含本文件和所有 input 文件）
         all_labels = self._get_all_labels()
-        all_bibs = self._get_all_bib_entries()
+        self._get_all_bib_entries()
 
         for key, line_no, context in refs:
             if key not in all_labels:

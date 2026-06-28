@@ -77,8 +77,8 @@ def check_docs_current(ssot: dict) -> list[str]:
     testing = ssot["testing"]
 
     # Backward compat
-    ecom_total = str(econ.get("total_method_modules") or econ.get("total_independent_implementations", 0))
-    ecom_estimators = str(econ.get("total_individual_estimators") or 0)
+    str(econ.get("total_method_modules") or econ.get("total_independent_implementations", 0))
+    str(econ.get("total_individual_estimators") or 0)
 
     for filepath, patterns in REPLACEMENTS.items():
         path = ROOT / filepath
@@ -88,17 +88,17 @@ def check_docs_current(ssot: dict) -> list[str]:
         content = path.read_text()
         for pattern, _ in patterns:
             if "{mcp_total}" in pattern:
-                expected = str(mcp["total_directories"])
+                str(mcp["total_directories"])
             elif "{econ_total}" in pattern:
-                expected = ecom_total
+                pass
             elif "{econ_estimators}" in pattern:
-                expected = ecom_estimators
+                pass
             elif "{skills_total}" in pattern:
-                expected = str(skills["total"])
+                str(skills["total"])
             elif "{cov_gate}" in pattern:
-                expected = str(testing["ci_coverage_gate"])
+                str(testing["ci_coverage_gate"])
             elif "{test_files}" in pattern:
-                expected = str(testing["test_files"])
+                str(testing["test_files"])
             else:
                 continue
             # Find the number this pattern would match

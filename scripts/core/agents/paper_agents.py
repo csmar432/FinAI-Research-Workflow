@@ -1171,7 +1171,7 @@ class DataFetchAgent(BaseAgent):
     """
 
     def act(self, context: dict[str, Any]) -> dict[str, Any]:
-        task = context.get("task", "")
+        context.get("task", "")
         provinces = context.get("provinces", [])
         indicators = context.get("indicators", [])
         years = context.get("years", ["2024"])

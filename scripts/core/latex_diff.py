@@ -332,7 +332,7 @@ class LatexDiffTracker:
             diff_tex = generated
 
         # 生成临时编译脚本
-        log_path = self._diff_dir / f"diff_{old_version}_{new_version}.log"
+        self._diff_dir / f"diff_{old_version}_{new_version}.log"
 
         try:
             for pass_num in range(passes):

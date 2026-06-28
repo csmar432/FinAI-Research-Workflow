@@ -623,8 +623,8 @@ class SafeCodeExecutor:
         start_time: float,
     ) -> ExecutionResult:
         """Execute code in a subprocess with resource limits."""
-        stdout_buffer = io.StringIO()
-        stderr_buffer = io.StringIO()
+        io.StringIO()
+        io.StringIO()
         charts: list[str] = []
 
         # Prepare wrapper script
@@ -828,8 +828,8 @@ if charts:
                 error="Docker is not installed or not accessible",
             )
 
-        stdout_buffer = io.StringIO()
-        stderr_buffer = io.StringIO()
+        io.StringIO()
+        io.StringIO()
         charts: list[str] = []
 
         # Prepare code file

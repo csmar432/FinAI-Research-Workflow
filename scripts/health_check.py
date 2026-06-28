@@ -717,7 +717,7 @@ def _check_mcp(verify: bool = False) -> tuple[int, int, list[ProblemItem], list[
     # 网络问题汇总
     network_failures = {k: v for k, v in network_probed.items() if not v[0]}
     if network_failures:
-        names = ", ".join(network_failures.keys())
+        ", ".join(network_failures.keys())
         msgs = "; ".join(f"{k}({v[1]})" for k, v in network_failures.items())
         problems.append(ProblemItem(
             category=ProblemCategory.NETWORK,

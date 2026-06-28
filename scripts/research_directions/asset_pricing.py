@@ -475,7 +475,7 @@ class AssetPricingDirection(BaseResearchDirection):
                 if not avail or not return_cols:
                     continue
 
-                alpha_list, beta_rows = [], []
+                alpha_list, _beta_rows = [], []
                 for ret_col in return_cols:
                     if ret_col not in df.columns:
                         continue
@@ -490,7 +490,7 @@ class AssetPricingDirection(BaseResearchDirection):
                     X = self._add_constant(X)
                     try:
                         beta_coeffs, residuals, rank, sv = self._ols_svd(X.values, y.values)
-                        se = self._compute_se_with_formula(residuals, X.values)
+                        self._compute_se_with_formula(residuals, X.values)
                         alpha_list.append(
                             {
                                 "portfolio": ret_col,

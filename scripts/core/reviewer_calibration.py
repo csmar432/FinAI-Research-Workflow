@@ -1644,7 +1644,7 @@ class CalibrationAnalyzer:
 
         for cls in classes:
             tp = sum(1 for p, a in zip(predicted, actual) if p == cls and a == cls)
-            fn = sum(1 for p, a in zip(predicted, actual) if p != cls and a == cls)
+            sum(1 for p, a in zip(predicted, actual) if p != cls and a == cls)
             total_actual = sum(1 for a in actual if a == cls)
             recall = tp / max(total_actual, 1)
             recalls.append(recall)

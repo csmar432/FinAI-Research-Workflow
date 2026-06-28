@@ -593,7 +593,7 @@ class LiteratureVectorStore:
         if year_range:
             where_filter["year"] = {"$gte": year_range[0], "$lte": year_range[1]}
         if method_filter:
-            methods_str = ",".join(method_filter)
+            ",".join(method_filter)
             where_filter["methods"] = {"$contains": method_filter[0]}
 
         try:

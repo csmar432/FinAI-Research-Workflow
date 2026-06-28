@@ -45,11 +45,11 @@ def parse_and_save(symbol: str, raw_data: dict, output_dir: Path):
                 if s.endswith(suffix):
                     try:
                         return float(s[:-1]) * mult
-                    except Exception as e:
+                    except Exception:
                         return 0.0
             try:
                 return float(s.replace(",", "").replace("$", "").replace("¥", ""))
-            except Exception as e:
+            except Exception:
                 return 0.0
 
         ta = to_num(total_assets)

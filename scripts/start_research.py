@@ -187,7 +187,7 @@ def cmd_resume(args) -> int:
 
     # 继续澄清
     try:
-        profile = clarifier.run_interactive(state.topic)
+        clarifier.run_interactive(state.topic)
     except KeyboardInterrupt:
         return 130
 
@@ -239,7 +239,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="研究入口（5 轮逐步澄清 → 研究画像 → 手动进入下一步）"
     )
-    subparsers = parser.add_subparsers(dest="command", required=False)
+    parser.add_subparsers(dest="command", required=False)
 
     # 默认行为：新建研究
     parser.add_argument("--topic", "-t", type=str, help="研究主题")

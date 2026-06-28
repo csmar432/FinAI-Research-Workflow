@@ -633,14 +633,14 @@ class WorkflowVisualizer:
 
         total_ms = sum(n.duration_ms for n in self._nodes)
         total_tokens = sum(n.tokens_used for n in self._nodes)
-        completed = sum(1 for n in self._nodes if n.status in ("已完成", "执行失败"))
-        errored = sum(1 for n in self._nodes if n.status == "执行失败")
+        sum(1 for n in self._nodes if n.status in ("已完成", "执行失败"))
+        sum(1 for n in self._nodes if n.status == "执行失败")
         total_ms_display = self._ms_to_str(total_ms)
         total_tokens_display = self._tokens_fmt(total_tokens)
 
         # ── Layout orientation ────────────────────────────────────
         is_vertical = layout == "垂直"
-        node_types = list({n.type for n in self._nodes})
+        list({n.type for n in self._nodes})
         type_color_map = {}
         for n in self._nodes:
             if n.type not in type_color_map:

@@ -296,7 +296,7 @@ def _quantile_regression_numpy(
     n, k = X.shape
     # Koenker & Bassett (1978) 解析方差估计
     tau_arr = np.array(tau)
-    h = 1.0 / (n ** (1.0 / 5.0))  # 简单带宽
+    1.0 / (n ** (1.0 / 5.0))  # 简单带宽
     # 简化：使用残差标准误估计
     sigma = np.sqrt(np.mean(residuals ** 2))
     # 对角信息矩阵近似（简化版）
@@ -412,7 +412,7 @@ def _lm_test(
 
         y_vals = df_fe[y].values
         X_vals = sm.add_constant(df_fe[X_vars], has_constant="skip").values
-        names = ["const"] + X_vars
+        ["const"] + X_vars
 
         mod = sm.QuantReg(y_vals, X_vals)
         res = mod.fit(q=tau, maxiter=5000)
@@ -1018,7 +1018,7 @@ class PanelQuantileRegression:
         # 过滤存在的变量
         show_vars = [v for v in show_vars if f"coef_{v}" in df.columns]
 
-        taus = sorted(self._results.keys())
+        sorted(self._results.keys())
         n_cols = 1 + len(show_vars)  # tau + vars
         col_spec = "l" + "c" * n_cols
 

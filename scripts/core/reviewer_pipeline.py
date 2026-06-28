@@ -343,7 +343,6 @@ class ReviewerPipeline:
         # Verdict: stricter of LLM verdict and halt-rule check
         llm_passed = llm_stage.passed
         rules_passed = rules_stage.passed
-        bias_passed = bias_stage.passed
 
         if not llm_passed or not rules_passed:
             final_verdict = "major_revision"

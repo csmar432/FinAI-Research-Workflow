@@ -545,9 +545,9 @@ class VisualEvaluator:
     ) -> AgentOutput:
         # Base64 encode image
         try:
-            img_data = base64.b64encode(chart_path.read_bytes()).decode()
+            base64.b64encode(chart_path.read_bytes()).decode()
         except Exception:
-            img_data = ""
+            pass
 
         prompt = textwrap.dedent(f"""
             请评估以下学术图表的质量。

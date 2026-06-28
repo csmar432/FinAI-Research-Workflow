@@ -352,7 +352,7 @@ class ESGFinanceDirection(BaseResearchDirection):
 
         # Check ESG zero values (common missing data encoding)
         for var in found_esg:
-            miss = panel_df[var].isna().mean()
+            panel_df[var].isna().mean()
             zero = float((panel_df[var] == 0).mean())
             if zero > 0.3:
                 base["warnings"].append(

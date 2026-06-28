@@ -251,7 +251,7 @@ def run_mcp_diagnostic(target: str | None = None) -> list[dict]:
     Returns:
         list of diagnostic results (JSON-serializable dicts)
     """
-    root = Path(__file__).parent.parent.resolve()
+    Path(__file__).parent.parent.resolve()
     config = _read_cursor_mcp_config()
     enabled = set(config.get("mcpServers", {}).keys())
 

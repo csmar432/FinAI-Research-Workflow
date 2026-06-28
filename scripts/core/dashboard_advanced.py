@@ -138,7 +138,7 @@ def render_fleet_status():
                 format_func=lambda x: STATUS_LABELS[x]
             )
         with col2:
-            refresh = st.button("🔄 刷新")
+            st.button("🔄 刷新")
 
         # 过滤数据
         filtered_df = df[df["状态"].isin([STATUS_LABELS[s] for s in status_filter])]
@@ -342,7 +342,7 @@ def render_execution_timeline():
     with col1:
         hours = st.selectbox("时间范围", [1, 6, 12, 24, 72, 168], index=3)
     with col2:
-        refresh = st.button("🔄 刷新")
+        st.button("🔄 刷新")
     with col3:
         st.caption(f"显示最近 {hours} 小时的数据")
 

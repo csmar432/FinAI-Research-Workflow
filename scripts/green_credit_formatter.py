@@ -131,7 +131,6 @@ def md_to_latex(text: str) -> str:
     result = []
     in_table = False
     table_lines = []
-    in_math = False
 
     for line in lines:
         stripped = line.strip()
@@ -256,13 +255,13 @@ def md_to_docx_python(text: str, output_path: Path) -> bool:
 
         # 一级标题
         if stripped.startswith("# ") and not stripped.startswith("## "):
-            h = doc.add_heading(stripped[2:], level=1)
+            doc.add_heading(stripped[2:], level=1)
         # 二级标题
         elif stripped.startswith("## ") and not stripped.startswith("### "):
-            h = doc.add_heading(stripped[3:], level=2)
+            doc.add_heading(stripped[3:], level=2)
         # 三级标题
         elif stripped.startswith("### "):
-            h = doc.add_heading(stripped[4:], level=3)
+            doc.add_heading(stripped[4:], level=3)
 
         # 表格
         elif stripped.startswith("|"):

@@ -406,7 +406,7 @@ class ProvenanceChain:
         }
 
         for node_id, node in self.nodes.items():
-            color = type_color.get(node.node_type, "")
+            type_color.get(node.node_type, "")
             shape = "{" + "{" + node.node_type.value + "}" + "}" if node.node_type == NodeType.NUMBER else "(" + node.node_type.value + ")"
             label = node.label[:40] + "..." if len(node.label) > 40 else node.label
             lines.append(f'    {node_id}{shape}["{label}"]')

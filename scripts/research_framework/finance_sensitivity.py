@@ -955,7 +955,7 @@ class SpilloverIndex:
             try:
                 model = VAR(vol_win)
                 results = model.fit(maxlags=n_lags, ic=None)
-                irf = results.irf(periods=10)
+                results.irf(periods=10)
 
                 # 方差分解（10 步ahead）
                 fevd = results.fevd(periods=10)
@@ -984,7 +984,7 @@ class SpilloverIndex:
                 directional_to = 100 * (np.sum(spillover_contrib, axis=0) - np.diag(spillover_contrib)) / np.sum(spillover_contrib)
 
                 # 净溢出
-                net_spillover = directional_from - directional_to
+                directional_from - directional_to
 
                 spillover_tables.append(spillover_contrib)
                 total_indices.append(total_spillover)
@@ -1178,7 +1178,7 @@ class CreditRiskSensitivity:
         else:
             pdf_phi = np.exp(z) / (1 + np.exp(z)) ** 2
 
-        probs = model.predict(X)
+        model.predict(X)
         marginal_effects = {}
         for i, name in enumerate(xnames):
             me = float(np.mean(pdf_phi * model.params[i]))
