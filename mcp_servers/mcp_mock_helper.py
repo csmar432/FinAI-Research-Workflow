@@ -98,7 +98,12 @@ def check_mock_permission(
         }, ensure_ascii=False))] 
 
     if mode == "allow":
-        # 允许模式：直接通过，不做任何提示
+        # 允许模式：直接通过，但仍打印 stderr 警告 (P0-4 强化 2026-07-03)
+        sys.stderr.write(
+            f"⚠️  [{server_name}/{tool_name}] MOCK DATA IN USE (MCP_MOCK_MODE=allow). "
+            f"Results are NOT real API data — academic use requires real source.\n"
+        )
+        sys.stderr.flush()
         return None
 
     # confirm 模式（默认）
@@ -138,7 +143,7 @@ def check_mock_permission(
 # 响应包装
 # ─────────────────────────────────────────────────────────────────────────────
 
-def mock_response(data: Any, tool_name: str, note: str = "") -> str:
+def mock_response(data: Any, tool_name: str, note: str = "", server_name: str = "") -> str:
     """
     将模拟数据包装为标准响应，并附加元数据。
 
@@ -151,13 +156,24 @@ def mock_response(data: Any, tool_name: str, note: str = "") -> str:
         "mock_warning": <warning message>,
         "note": <note>
     }
+
+    P0-4 强化 2026-07-03: 同时向 stderr 打印一行醒目警告，便于用户在
+    终端一眼识别模拟数据（避免误把模拟数据作为真实来源）。
     """
+    if server_name:
+        sys.stderr.write(
+            f"⚠️  MOCK DATA [{server_name}/{tool_name}]: response is simulated, "
+            f"not from real API. Do NOT cite as empirical source.\n"
+        )
+        sys.stderr.flush()
     result = {
         "result": data,
         "success": True,
         "tool": tool_name,
         "data_source": "MOCK",
         "note": note,
+        "provenance": "MOCK",
+        "is_empirical": False,
     }
     if note:
         result["mock_warning"] = (

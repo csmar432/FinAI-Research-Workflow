@@ -2,7 +2,7 @@
 
 > **Describe your research topic → receive a submission-ready LaTeX draft.**
 >
-> An AI-assisted research workflow for economic and financial research — from idea to LaTeX manuscript draft. Integrates 43 MCP data source directories (note: ~28 are fully free, 12 require API keys, 3 are opt-in legal-risk; see `python scripts/count_assets.py`), modern causal inference (DID/IV/RDD/PSM/GMM, see dependency notes), LaTeX formatting for 30 journal templates (English/Chinese/Japanese/German), and AI-assisted review loops.
+> An AI-assisted research workflow for economic and financial research — from idea to LaTeX manuscript draft. Integrates **43 MCP server directories (41 real implementations + 2 mock-only for institutional data + 3 opt-in legal-risk)**, modern causal inference (DID/IV/RDD/PSM/GMM, see dependency notes), LaTeX formatting for 30 journal templates (English/Chinese/Japanese/German), and AI-assisted review loops.
 >
 > ⚠️ **Important**: This tool generates manuscript drafts that require human review before submission. All causal identification strategies, statistical results, and citations must be verified by a researcher.
 >
@@ -50,7 +50,7 @@
 | **🩺 系统自检** | `python scripts/health_check.py --json` · 验证环境就绪 |
 | **Complete Chinese guide** | [使用指南.md](使用指南.md) · 完整的 13 章中文手册 |
 | **~20 econometric method implementations** | [使用指南.md - 实证分析方法](使用指南.md#8-实证分析方法) |
-| **43 MCP server directories** | [使用指南.md - MCP 数据源](使用指南.md#6-mcp-数据源)；28 个完全免费（其余 12 需 API Key，3 个 opt-in 法律风险）|
+| **43 MCP server directories** | [使用指南.md - MCP 数据源](使用指南.md#6-mcp-数据源)；**41 真实实现（含 stdlib HTTP/数据库）+ 2 mock-only (CSMAR/Wind 需机构账号) + 3 opt-in 法律风险（CNKI/Wanfang/中文文献）** |
 | **17 AI Skills** | [knowledge/skills/](knowledge/skills/) |
 | **API reference** | [scripts/](scripts/) 目录下的每个模块都含 docstring 和类型注解 |
 | **Troubleshooting** | [使用指南.md - 常见问题](使用指南.md#13-常见问题) |
@@ -68,7 +68,7 @@ $ python scripts/agent_pipeline.py --topic "Carbon trading and green innovation"
 ## Why FinAI Research Workflow?
 
 - **Built for economists, not generic AI demos** — every default is calibrated for the *Journal of Finance* / *经济研究* standard (DID with heterogeneous treatment effects, cluster-robust SEs at the firm level, 19 robustness checks, parallel-trend plots).
-- **43 MCP server directories** — covers A-share financials, US equities, global macro (FRED/World Bank/IMF/OECD/BEA), and 200M+ academic papers. Note: some servers are stubs (require institutional/paid accounts: Tushare Pro, Wind, CSMAR, CEIC, EODHD). Free alternatives exist via `user-financial` (akshare) and `user-yfinance`.
+- **43 MCP server directories** — covers A-share financials, US equities, global macro (FRED/World Bank/IMF/OECD/BEA), and 200M+ academic papers. **41 directories have full Python implementations; 2 are mock-only (user-csmar, user-wind require institutional accounts); 3 are opt-in legal-risk (CNKI, Wanfang, Chinese Literature)**. Free alternatives exist via `user-financial` (akshare) and `user-yfinance`.
 - **~20 econometric method implementations, not just OLS** — standard DID, event study, Bacon decomposition, staggered DID (Callaway-Sant'Anna/Sun-Abraham/Borusyak/Goodman-Bacon, requires `pip install diff-in-diff2`), synthetic control, instrumental variables (requires `linearmodels`), panel GMM, RDD, event studies, mediation, and more. See CLAUDE.md for the full list with dependency notes.
 - **30 journal templates, English/Chinese/Japanese/German** — JF, JFE, RFS, JAE, Econometrica, 经济研究, 金融研究, 管理世界, 会计研究, 中国工业经济.
 - **18 specialised AI skills** (Claude Code / Cursor / GitHub Copilot) — idea discovery, literature review, novelty check, experiment design, data acquisition, paper drafting, figure generation, LaTeX compilation, review loops.
@@ -231,7 +231,7 @@ Describe your research in plain Chinese — the agent handles the rest:
 | Feature | Description |
 |---------|-------------|
 | **Multi-Agent Pipeline** | Orchestrates 5 pipeline agents (outline → literature → plotting → writing → refinement) with optional HITL gates |
-| **43 MCP Data Servers** | 43 registered MCP servers; 28 work without API keys (yfinance, akshare, World Bank, IMF, OECD, FRED, ArXiv, NBER, OpenAlex, SEC EDGAR, eastmoney, etc.); 12 require API keys (Tushare Pro, Wind, CSMAR, CEIC, EODHD, etc.); 3 are opt-in legal-risk (CNKI, Wanfang, Chinese Literature). Run `python scripts/count_assets.py` for the latest breakdown. |
+| **43 MCP Data Servers** | 43 registered MCP server directories; **41 are fully implemented in Python (stdlib HTTP + databases)**; 2 are mock-only (user-csmar, user-wind require institutional accounts); 3 are opt-in legal-risk (user-cnki, user-wanfang, user-chinese-literature). Of the 41 real servers, ~28 work without API keys (yfinance, akshare, World Bank, IMF, OECD, FRED, ArXiv, NBER, OpenAlex, SEC EDGAR, eastmoney, etc.); 11 require API keys (Tushare Pro, CEIC, EODHD, etc.). Run `python scripts/count_assets.py` for the latest breakdown. |
 | **~30 Econometric Methods** | DID (5 variants), RDD, synthetic control, panel GMM, spatial regression, IV/2SLS, causal ML, GARCH, survival analysis, panel cointegration — JF/JFE/RFS standard. Modern staggered DID (Callaway-Sant'Anna, Borusyak, Sun-Abraham) requires `pip install diff-in-diff2` |
 | **Provenance Tracking** | Full data lineage from raw API to final chart/table |
 | **HITL Gates** | Human-in-the-loop approval at critical pipeline stages |
@@ -544,12 +544,8 @@ flowchart TD
 ```
 
 > **Pipeline stages note:** The core pipeline has **5 stages** (outline → literature → plotting → writing → refinement) with optional HITL gates. Idea generation, novelty verification, and data acquisition run as parallel/prior stages. The research framework CLI (`scripts/research_framework/pipeline.py`) provides a focused DID/IV/RDD analysis mode.
-    style S8 fill:#533483,color:#fff
-    style Start fill:#1a1a2e,color:#fff
-    style Done fill:#1a1a2e,color:#fff
-```
 
-### MCP Data Source Selection (43 Sources with 4-Layer Fallback)
+### MCP Data Source Selection (43 Directories: 41 Real + 2 Mock + 3 Opt-in Legal)
 
 ```mermaid
 flowchart LR

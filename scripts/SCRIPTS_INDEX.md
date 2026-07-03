@@ -17,7 +17,7 @@
 | 🔌 MCP Servers (`mcp_servers/user_*/`) | 43 | MCP 数据源 |
 | **合计（仅 Python 文件）** | **391** | 不含 MCP / docs / tests fixtures |
 
-> 自动生成于 2026-06-29
+> 自动生成于 2026-07-03
 ---
 
 ## 一、Entry Points · 用户入口
@@ -216,4 +216,4 @@ report_*.py           # 报告生成（小写下划线）
 
 ---
 
-*本索引由 `scripts/SCRIPTS_INDEX.md` 维护，最后更新: 2026-06-29（自动对账）
+*本索引由 `scripts/SCRIPTS_INDEX.md` 维护，最后更新: 2026-07-03（自动对账）

@@ -57,7 +57,7 @@
 
 ## ✨ Core Capabilities
 
-### 📊 Data Acquisition (43 MCP server directories, mixed free/stub)
+### 📊 Data Acquisition (43 MCP server directories: 41 real + 2 mock + 3 opt-in legal)
 
 > **Note**: ~15 servers are fully free (no API key). Others require institutional/paid accounts (Tushare Pro, Wind, CSMAR, CEIC, EODHD). Some have stub implementations (SIPO, ESG, Chinese Customs, CNRD).
 
@@ -148,7 +148,7 @@ Step 2  Idea ↔ Data verify  → scripts/idea_data_checker.py (HITL checkpoint)
 Step 3  Literature review   → MCP multi-source, citation network, gap analysis
 Step 4  Novelty check       → JF/JFE/RFS/arXiv search
 Step 5  Empirical design    → DID/IV/RD/PSM/18 robustness checks
-Step 6  Data acquisition    → 43 MCP servers, 4-layer fallback
+Step 6  Data acquisition    → 43 MCP server directories (41 real implementations + 2 mock + 3 opt-in legal), 4-layer fallback
 Step 7  Paper writing       → outline → draft → figures → LaTeX
 Step 8  Adversarial review  → multi-round, until publishable
 ```
@@ -236,7 +236,7 @@ Step 1.5 Idea-data check   → Verify data availability BEFORE commitment
 Step 2  Literature review  → Semantic Scholar + ArXiv + OpenAlex + NBER
 Step 3  Novelty check      → JF/JFE/RFS/arXiv dedup → novelty score
 Step 4  Experiment design  → DID/IV/RDD identification strategy
-Step 5  Data acquisition   → 43 MCP servers (free fallback chain)
+Step 5  Data acquisition   → 43 MCP server directories (41 real + 2 mock + 3 opt-in legal; free fallback chain)
 Step 6  Paper writing      → Outline → sections → figures → LaTeX
 Step 7  Adversarial review → Multi-round LLM + human review
 ```
