@@ -86,417 +86,72 @@ jobs:
         run: python3 scripts/ci_security_gate.py
         continue-on-error: false
 
-  # ── 测试分组 ─────────────────────────────────────────────────────────
-  test-batch-1:
-    name: Tests batch 1/3 (core)
+  # ── audit-2026-07-04 PR-2: unify 3 test batches into 1 job + xdist ────
+  # P0-6 (3-batch fragile combine) + P0-7 (--maxfail truncation was in each
+  # batch) + P0-8 (320 lines of fail-log-handler YAML duplicated). All
+  # consolidated here; reusable fail handler in .github/actions/handle-fail/.
+  test:
+    name: Tests (unified, parallel)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Install CI deps
+      - name: Install CI deps + xdist
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
+          # pytest-xdist for parallel test execution; replaces 3-batch split
+          pip install "pytest-xdist>=3.5.0"
           pip install --no-deps -e .
-      - name: Run core tests
-        id: run_core_tests
+      - name: Run all tests (parallel)
+        id: run_tests
         run: |
           set -o pipefail
-          pytest tests/test_llm_reviewer.py tests/test_modern_did.py \
-            tests/test_checkpoint.py tests/test_event_monitor.py \
-            tests/test_llm_gateway.py tests/test_session.py \
-            tests/test_tool_selector.py \
-            tests/test_regression_engine.py tests/test_planner.py tests/test_type_audit.py \
-            tests/test_fin_charts.py tests/test_health_check.py \
-            tests/test_core_ansi.py \
-            --cov=scripts --cov-branch --tb=long --timeout=120 --maxfail=1 -rfE \
-            -v 2>&1 | tee pytest-batch1.log
+          # P0-7: --maxfail=1 (audit-2026-07-04). pytest-xdist '-n 2' parallelises
+          # across 2 worker cores (less aggressive than -n auto; ensures
+          # conftest-driven sys.path manipulation is consistent in each
+          # worker subprocess). This replaces the old 3-batch split.
+          # With --maxfail=1 any failure stops the run quickly so the
+          # real failure surfaces in CI rather than being truncated.
+          # We do NOT use --cov-append here because there's only one test
+          # job now; coverage is written directly to .coverage.
+          #
+          # PYTHONPATH=.:$(pwd) is set so that 'scripts.core.*' imports
+          # work in worker subprocesses regardless of xdist timing of
+          # rootdir discovery vs conftest evaluation.
+          PYTHONPATH="${PYTHONPATH:-}:." \
+          pytest tests/ \
+            -n 2 \
+            --cov=scripts --cov-branch \
+            --tb=long --timeout=120 --maxfail=1 -rfE \
+            -v 2>&1 | tee pytest-unified.log
         env:
           DEEPSEEK_API_KEY: dummy_key
           RELAY_API_KEY: dummy_key
-      - name: Verify coverage data exists
-        if: success()
-        id: verify_cov
-        run: |
-          set +e
-          echo "=== ls -la .coverage .coverage.* ==="
-          ls -la .coverage .coverage.* 2>&1 || true
-          echo "=== ls -la . ==="
-          ls -la || true
-          echo "=== coverage data_file ==="
-          python -c "import coverage; c=coverage.Coverage(); print('data_file:', c.data_file)" 2>&1 || true
-          echo "=== coverage version ==="
-          python -c "import coverage; print(coverage.__version__)" 2>&1 || true
-          echo "=== pytest-cov ==="
-          pip show pytest-cov 2>&1 | head -3 || true
-          exit 0
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: pytest-batch1-log
-          path: pytest-batch1.log
-          retention-days: 7
-      - name: Upload coverage data
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-batch1
-          path: .coverage
-          retention-days: 7
-          include-hidden-files: true
-        continue-on-error: true
-      - name: Append fail log to issue tracker
-        if: failure()
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require('fs');
-            let log = 'NO LOG';
-            try {
-              const raw = fs.readFileSync('pytest-batch1.log', 'utf-8');
-              // Only keep last 200 lines
-              const lines = raw.split('\n');
-              log = lines.slice(-200).join('\n');
-            } catch (e) { log = 'LOG READ ERR: ' + e.message; }
-            // 60KB step summary safe limit
-            log = log.slice(-30000);
-            const body = [
-              '### batch 1 fail @ ' + context.sha.slice(0,7),
-              '',
-              '`' + (process.env.RUN_URL || 'no-url') + '`',
-              '',
-              '```',
-              log,
-              '```',
-            ].join('\n');
-            const title = '[CI BATCH 1] ' + (context.sha || '').slice(0,7) + ' ' + new Date().toISOString();
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'ci-fail-log',
-              state: 'open',
-              per_page: 1,
-            });
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: title,
-                body: body,
-                labels: ['ci-fail-log'],
-              });
-            }
-      - name: Publish fail log to ci-debug branch
-        if: failure()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
-            git fetch origin ci-debug
-            git checkout -B ci-debug origin/ci-debug
-            git rebase origin/main || true
-          else
-            git checkout -b ci-debug origin/main
-          fi
-          mkdir -p .ci-fail-logs
-          if [ -f pytest-batch1.log ]; then
-            cp pytest-batch1.log .ci-fail-logs/batch1-${GITHUB_SHA:0:7}.log
-          fi
-          echo "### batch 1 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
-          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
-          echo "" >> .ci-fail-logs/INDEX.md
-          git add .ci-fail-logs/
-          git commit -m "ci: batch 1 fail log @ ${GITHUB_SHA:0:7}" || true
-          echo "=== git push start ==="
-          set -x
-          git push -f origin ci-debug
-          set +x
-          echo "=== git push end ==="
-      - name: Surface fail reason via step summary
-        if: failure()
-        run: |
-          echo "## batch 1 fail" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f pytest-batch1.log ]; then
-            tail -n 80 pytest-batch1.log >> $GITHUB_STEP_SUMMARY
-          else
-            echo "pytest-batch1.log not found — pytest may not have run (install step failed?)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-  test-batch-2:
-    name: Tests batch 2/3 (orchestrator)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-      - name: Install CI deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-ci.txt
-          pip install --no-deps -e .
-      - name: Run orchestrator tests
-        run: |
-          set -o pipefail
-          pytest tests/test_analyst_agents.py tests/test_ai_router.py \
-            tests/test_halt_rules.py \
-            tests/test_halt_rules_registry.py tests/test_citation_verifier.py \
-            tests/test_agent_loader.py tests/test_data_cache.py \
-            tests/test_agent_pipeline_core.py \
-            tests/test_research_framework_exports.py tests/test_retry_utils.py \
-            --cov=scripts --cov-branch --cov-append --tb=long --timeout=120 --maxfail=1 -rfE \
-            -v 2>&1 | tee pytest-batch2.log
-        env:
-          DEEPSEEK_API_KEY: dummy_key
-          RELAY_API_KEY: dummy_key
-      - name: Verify coverage data exists
-        if: success()
-        run: |
-          echo "=== ls -la .coverage .coverage.* ==="
-          ls -la .coverage .coverage.* 2>&1 || true
-      - name: Upload pytest log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest-batch2-log
-          path: pytest-batch2.log
+          name: pytest-unified-log
+          path: pytest-unified.log
           retention-days: 7
       - name: Upload coverage data
         if: success()
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-batch2
+          name: coverage-unified
           path: .coverage
           retention-days: 7
           include-hidden-files: true
-      - name: Append fail log to issue tracker
+      - name: Handle failure (issue tracker, ci-debug, step summary)
         if: failure()
-        uses: actions/github-script@v9
+        uses: ./.github/actions/handle-fail
         with:
-          script: |
-            const fs = require('fs');
-            let log = 'NO LOG';
-            try {
-              const raw = fs.readFileSync('pytest-batch2.log', 'utf-8');
-              const lines = raw.split('\n');
-              log = lines.slice(-200).join('\n');
-            } catch (e) { log = 'LOG READ ERR: ' + e.message; }
-            log = log.slice(-30000);
-            const body = [
-              '### batch 2 fail @ ' + context.sha.slice(0,7),
-              '',
-              '```',
-              log,
-              '```',
-            ].join('\n');
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'ci-fail-log',
-              state: 'open',
-              per_page: 1,
-            });
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: '[CI BATCH 2] ' + (context.sha || '').slice(0,7),
-                body: body,
-                labels: ['ci-fail-log'],
-              });
-            }
-      - name: Publish fail log to ci-debug branch
-        if: failure()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
-            git fetch origin ci-debug
-            git checkout -B ci-debug origin/ci-debug
-            git rebase origin/main || true
-          else
-            git checkout -b ci-debug origin/main
-          fi
-          mkdir -p .ci-fail-logs
-          if [ -f pytest-batch2.log ]; then
-            cp pytest-batch2.log .ci-fail-logs/batch2-${GITHUB_SHA:0:7}.log
-          fi
-          echo "### batch 2 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
-          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
-          echo "" >> .ci-fail-logs/INDEX.md
-          git add .ci-fail-logs/
-          git commit -m "ci: batch 2 fail log @ ${GITHUB_SHA:0:7}" || true
-          git push -f origin ci-debug 2>&1 | tail -5 || true
-      - name: Surface fail reason via step summary
-        if: failure()
-        run: |
-          echo "## batch 2 fail" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f pytest-batch2.log ]; then
-            tail -n 80 pytest-batch2.log >> $GITHUB_STEP_SUMMARY
-          else
-            echo "pytest-batch2.log not found — pytest may not have run (install step failed?)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-  test-batch-3:
-    name: Tests batch 3/3 (econometrics)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-      - name: Install CI deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-ci.txt
-          pip install --no-deps -e .
-      - name: Run econometrics tests
-        run: |
-          set -o pipefail
-          pytest tests/test_econometrics_rules.py tests/test_interactive_fixed_effects.py \
-            tests/test_panel_quantile_regression.py tests/test_local_projections_did.py \
-            tests/test_journal_template.py tests/test_memory.py \
-            tests/test_mcp_tool_market.py tests/test_rdd.py \
-            tests/test_report_generator.py tests/test_research_framework.py \
-            tests/test_reviewer_calibration.py tests/test_spatial_regression.py \
-            tests/test_synthetic_control.py tests/test_synthetic_did.py \
-            tests/test_triple_diff_did.py tests/test_latex_lint.py \
-            tests/test_ollama_provider.py tests/test_project_config.py \
-            tests/test_diagnostic_advanced.py tests/test_demo_research_report.py \
-            tests/test_two_way_clustered.py tests/test_presence_server.py \
-            tests/test_provenance.py tests/test_provenance_integration.py \
-            tests/test_iv_panel.py tests/test_psm_did.py \
-            tests/test_knowledge_graph_smoke.py \
-            tests/test_factor_models_smoke.py \
-            tests/test_mcp_servers_import.py \
-            --cov=scripts --cov-branch --cov-append --tb=long --timeout=120 --maxfail=1 -rfE \
-            -v 2>&1 | tee pytest-batch3.log
-        env:
-          DEEPSEEK_API_KEY: dummy_key
-          RELAY_API_KEY: dummy_key
-      - name: Verify coverage data exists
-        if: success()
-        run: |
-          echo "=== ls -la .coverage .coverage.* ==="
-          ls -la .coverage .coverage.* 2>&1 || true
-      - name: Upload pytest log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest-batch3-log
-          path: pytest-batch3.log
-          retention-days: 7
-      - name: Upload coverage data
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-batch3
-          path: .coverage
-          retention-days: 7
-          include-hidden-files: true
-      - name: Append fail log to issue tracker
-        if: failure()
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require('fs');
-            let log = 'NO LOG';
-            try {
-              const raw = fs.readFileSync('pytest-batch3.log', 'utf-8');
-              const lines = raw.split('\n');
-              log = lines.slice(-200).join('\n');
-            } catch (e) { log = 'LOG READ ERR: ' + e.message; }
-            log = log.slice(-30000);
-            const body = [
-              '### batch 3 fail @ ' + context.sha.slice(0,7),
-              '',
-              '```',
-              log,
-              '```',
-            ].join('\n');
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'ci-fail-log',
-              state: 'open',
-              per_page: 1,
-            });
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: '[CI BATCH 3] ' + (context.sha || '').slice(0,7),
-                body: body,
-                labels: ['ci-fail-log'],
-              });
-            }
-      - name: Publish fail log to ci-debug branch
-        if: failure()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
-            git fetch origin ci-debug
-            git checkout -B ci-debug origin/ci-debug
-            git rebase origin/main || true
-          else
-            git checkout -b ci-debug origin/main
-          fi
-          mkdir -p .ci-fail-logs
-          if [ -f pytest-batch3.log ]; then
-            cp pytest-batch3.log .ci-fail-logs/batch3-${GITHUB_SHA:0:7}.log
-          fi
-          echo "### batch 3 fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
-          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
-          echo "" >> .ci-fail-logs/INDEX.md
-          git add .ci-fail-logs/
-          git commit -m "ci: batch 3 fail log @ ${GITHUB_SHA:0:7}" || true
-          git push -f origin ci-debug 2>&1 | tail -5 || true
-      - name: Surface fail reason via step summary
-        if: failure()
-        run: |
-          echo "## batch 3 fail" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f pytest-batch3.log ]; then
-            tail -n 80 pytest-batch3.log >> $GITHUB_STEP_SUMMARY
-          else
-            echo "pytest-batch3.log not found — pytest may not have run (install step failed?)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          log_path: pytest-unified.log
+          label: Tests
 
   cross-platform:
     name: Cross-platform smoke test
@@ -542,85 +197,13 @@ jobs:
           name: pytest-cs-${{ matrix.os }}-log
           path: pytest-cs.log
           retention-days: 7
-      - name: Append fail log to issue tracker
+      - name: Handle failure (composite action)
         if: failure()
-        uses: actions/github-script@v9
+        uses: ./.github/actions/handle-fail
         with:
-          script: |
-            const fs = require('fs');
-            let log = 'NO LOG';
-            try {
-              const raw = fs.readFileSync('pytest-cs.log', 'utf-8');
-              const lines = raw.split('\n');
-              log = lines.slice(-200).join('\n');
-            } catch (e) { log = 'LOG READ ERR: ' + e.message; }
-            log = log.slice(-30000);
-            const body = [
-              '### cs (' + process.env.MATRIX_OS + ') fail @ ' + context.sha.slice(0,7),
-              '',
-              '```',
-              log,
-              '```',
-            ].join('\n');
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'ci-fail-log',
-              state: 'open',
-              per_page: 1,
-            });
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: '[CI CS] ' + (context.sha || '').slice(0,7),
-                body: body,
-                labels: ['ci-fail-log'],
-              });
-            }
-        env:
-          MATRIX_OS: ${{ matrix.os }}
-      - name: Publish fail log to ci-debug branch
-        if: failure()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
-            git fetch origin ci-debug
-            git checkout -B ci-debug origin/ci-debug
-            git rebase origin/main || true
-          else
-            git checkout -b ci-debug origin/main
-          fi
-          mkdir -p .ci-fail-logs
-          if [ -f pytest-cs.log ]; then
-            cp pytest-cs.log .ci-fail-logs/cs-${{ matrix.os }}-${GITHUB_SHA:0:7}.log
-          fi
-          echo "### cs (${{ matrix.os }}) fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
-          echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
-          echo "" >> .ci-fail-logs/INDEX.md
-          git add .ci-fail-logs/
-          git commit -m "ci: cs (${{ matrix.os }}) fail log @ ${GITHUB_SHA:0:7}" || true
-          git push -f origin ci-debug 2>&1 | tail -5 || true
-      - name: Surface fail reason via step summary
-        if: failure()
-        run: |
-          echo "## cs (${{ matrix.os }}) fail" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f pytest-cs.log ]; then
-            tail -n 60 pytest-cs.log >> $GITHUB_STEP_SUMMARY
-          else
-            echo "pytest-cs.log not found — pytest may not have run (install step failed?)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          log_path: pytest-cs.log
+          label: Cross-platform
+          matrix_os: ${{ matrix.os }}
 
   docker:
     name: Docker Build
@@ -655,39 +238,25 @@ jobs:
     name: Coverage Report
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test-batch-1, test-batch-2, test-batch-3]
+    needs: [test]
     if: always()
     steps:
       - uses: actions/checkout@v7
       - name: Skip when any test failed
-        if: needs.test-batch-1.result != 'success' || needs.test-batch-2.result != 'success' || needs.test-batch-3.result != 'success'
+        if: needs.test.result != 'success'
         run: |
-          echo "::warning::Skipping coverage upload because at least one test batch did not succeed:"
-          echo "  batch 1: ${{ needs.test-batch-1.result }}"
-          echo "  batch 2: ${{ needs.test-batch-2.result }}"
-          echo "  batch 3: ${{ needs.test-batch-3.result }}"
+          echo "::warning::Skipping coverage upload because test did not succeed:"
+          echo "  test: ${{ needs.test.result }}"
 
       # Explicit per-artifact download (avoids pattern-glob issues in PR runs).
       # Download each batch only if that batch succeeded; combine whatever is available.
       # This fixes the prior overly-strict condition requiring ALL 3 batches to succeed.
-      - name: Download coverage-batch1
-        if: needs.test-batch-1.result == 'success'
+      - name: Download coverage-unified
+        if: needs.test.result == 'success'
         uses: actions/download-artifact@v8
         with:
-          name: coverage-batch1
-          path: coverage-data/batch1
-      - name: Download coverage-batch2
-        if: needs.test-batch-2.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: coverage-batch2
-          path: coverage-data/batch2
-      - name: Download coverage-batch3
-        if: needs.test-batch-3.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: coverage-batch3
-          path: coverage-data/batch3
+          name: coverage-unified
+          path: coverage-data/unified
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -700,29 +269,26 @@ jobs:
         run: |
           set -x
           ls -la coverage-data/ || true
-          ls -la coverage-data/batch1/ coverage-data/batch2/ coverage-data/batch3/ 2>&1 || true
           # Build coverage combine command from available artifacts
           COV_FILES=""
-          for batch in batch1 batch2 batch3; do
-            if [ -f "coverage-data/$batch/.coverage" ]; then
-              COV_FILES="$COV_FILES coverage-data/$batch/.coverage"
-            fi
-          done
+          if [ -f "coverage-data/unified/.coverage" ]; then
+            COV_FILES="coverage-data/unified/.coverage"
+          fi
           echo "Combining: $COV_FILES"
           if [ -n "$COV_FILES" ]; then
             coverage combine --keep $COV_FILES
             # Aggregate coverage: scripts/ is 60K+ lines, tests cover targeted modules.
             # P3-audit-2026-07-04: Threshold 22% → 30% → 25% 推进.
             # 历史：6% → 10% → 15% → 22% → 30% → 25%(当前).
-            # 当前 batch1+2+3 实际覆盖率 27%（vs 30% 期望）—— 30% 过高，
+            # 当前统一测试任务实际覆盖率 27%（vs 30% 期望）—— 30% 过高，
             # 推进到 25% 作为"已加 84 个 smoke 测试 + GRS + mcp import"的合理中间值。
-            # 后续可通过 (a) 扩展 batch3 测试列表 或 (b) 拆出 batch4 提升到 50%。
+            # PR-6 (audit-2026-07-04) 将补 ~425 真测试函数自然推高到 60%+。
             coverage report -m --fail-under=25
           else
             echo "No coverage data available — skipping combine"
           fi
       - name: Upload to Codecov
-        if: needs.test-batch-1.result == 'success' || needs.test-batch-2.result == 'success' || needs.test-batch-3.result == 'success'
+        if: needs.test.result == 'success'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -731,52 +297,12 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - name: Append coverage fail log to issue tracker
+      - name: Handle coverage failure
         if: failure()
-        uses: actions/github-script@v9
+        uses: ./.github/actions/handle-fail
         with:
-          script: |
-            const fs = require('fs');
-            let listing = '';
-            try {
-              const { execSync } = require('child_process');
-              listing = execSync(
-                'echo "=== workspace ==="; ls -la; ' +
-                'echo "=== coverage-data ==="; ls -laR coverage-data/ 2>&1 || true; ' +
-                'echo "=== find .coverage ==="; find . -name ".coverage*" -maxdepth 4 2>&1 || true',
-                { encoding: 'utf-8' }
-              );
-            } catch (e) { listing = 'ls err: ' + e.message; }
-            const body = [
-              '### coverage fail @ ' + context.sha.slice(0,7),
-              '',
-              '```',
-              listing.slice(0, 5000),
-              '```',
-            ].join('\n');
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'ci-fail-log',
-              state: 'open',
-              per_page: 1,
-            });
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: '[CI COVERAGE] ' + (context.sha || '').slice(0,7),
-                body: body,
-                labels: ['ci-fail-log'],
-              });
-            }
+          log_path: pytest-unified.log
+          label: Coverage
 
   # P3-8 修复 2026-06-28: 添加 mypy 类型检查 CI job
   # 注意：本项目大量使用 # type: ignore 和 Any，预期会有错误。
