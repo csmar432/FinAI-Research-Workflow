@@ -114,24 +114,44 @@ class TestDataProvenance:
 
 
 class TestStars:
-    """Tests for _stars significance helper."""
+    """Tests for _stars significance helper.
 
-    def test_stars_001(self):
+    Per the docstring:
+        *** : p < 0.001  (so p == 0.001 stays ***)
+        **  : p < 0.01   (so p == 0.01 falls through to *)
+        *   : p < 0.05
+        †   : p < 0.10
+        ""  : p >= 0.10
+    """
+
+    def test_stars_0001(self):
         assert _stars(0.0001) == "***"
 
-    def test_stars_01(self):
-        assert _stars(0.01) == "**"
-
-    def test_stars_05(self):
-        assert _stars(0.05) == "*"
-
-    def test_stars_above(self):
-        assert _stars(0.5) == ""
-
-    def test_stars_boundary_001(self):
-        # 0.001 is the boundary; 0.0010 stays ***
+    def test_stars_001_boundary(self):
+        # Boundary: 0.001 stays *** (uses <=)
         assert _stars(0.001) == "***"
 
-    def test_stars_boundary_01(self):
-        # 0.01 is the boundary for **
-        assert _stars(0.01) == "**"
+    def test_stars_005(self):
+        # 0.005 is < 0.01, so **
+        assert _stars(0.005) == "**"
+
+    def test_stars_01_boundary(self):
+        # 0.01 is NOT < 0.01, falls through to < 0.05, so *
+        assert _stars(0.01) == "*"
+
+    def test_stars_03(self):
+        # 0.03 is < 0.05, so *
+        assert _stars(0.03) == "*"
+
+    def test_stars_05_boundary(self):
+        # 0.05 is NOT < 0.05, falls through to < 0.10, so †
+        assert _stars(0.05) == r"$\dagger$"
+
+    def test_stars_08(self):
+        # 0.08 is < 0.10, so †
+        assert _stars(0.08) == r"$\dagger$"
+
+    def test_stars_above(self):
+        # 0.5 and beyond: empty
+        assert _stars(0.5) == ""
+        assert _stars(1.0) == ""
