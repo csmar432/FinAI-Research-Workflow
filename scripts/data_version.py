@@ -177,13 +177,13 @@ class DataVersionManager:
     def _generate_version_id(self, ticker: str, data: pd.DataFrame) -> str:
         """生成唯一版本ID"""
         timestamp = datetime.now().strftime("%Y_%m_%d_%H%M%S")
-        content_hash = hashlib.md5(pd.util.hash_pandas_object(data).values.tobytes()).hexdigest()[:8]
+        content_hash = hashlib.md5(pd.util.hash_pandas_object(data).values.tobytes(), usedforsecurity=False).hexdigest()[:8]
         safe_ticker = ticker.replace(".", "_").replace("-", "_")
         return f"{safe_ticker}_{timestamp}_{content_hash}"
 
     def _compute_data_hash(self, data: pd.DataFrame) -> str:
         """计算数据内容哈希"""
-        return hashlib.md5(pd.util.hash_pandas_object(data).values.tobytes()).hexdigest()[:16]
+        return hashlib.md5(pd.util.hash_pandas_object(data).values.tobytes(), usedforsecurity=False).hexdigest()[:16]
 
     def _save_data(self, version_id: str, data: pd.DataFrame) -> Path:
         """保存数据到文件，优先 parquet，备用 csv，同时写一份 gzip 备份。

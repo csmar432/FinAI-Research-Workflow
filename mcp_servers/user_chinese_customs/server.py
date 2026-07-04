@@ -160,8 +160,8 @@ async def handle_import(params: dict) -> dict:
 
     hs_code = params.get("hs_code", "")
     country = params.get("country", "")
-    month_from = params.get("month_from", "")
-    month_to = params.get("month_to", "")
+    params.get("month_from", "")
+    params.get("month_to", "")
 
     if not API_KEY:
         return {

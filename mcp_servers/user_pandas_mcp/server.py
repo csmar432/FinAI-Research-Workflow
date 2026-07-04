@@ -387,7 +387,7 @@ TOOLS = [
 async def handle_pd_read(args: dict) -> list[TextContent]:
     path = args["path"]
     name = args.get("name", "")
-    encoding = args.get("encoding", "utf-8")
+    args.get("encoding", "utf-8")
 
     df = _load_df(path)
     if df is None:

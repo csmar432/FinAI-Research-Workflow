@@ -102,8 +102,8 @@ async def handle_search(args: dict) -> list[TextContent]:
     author = args.get("author", "")
     year_from = args.get("year_from", 2020)
     year_to = args.get("year_to", 2025)
-    limit = args.get("limit", 20)
-    
+    args.get("limit", 20)
+
     # 模拟NBER论文搜索结果
     result = {
         "query": query,
@@ -156,10 +156,10 @@ async def handle_details(args: dict) -> list[TextContent]:
     paper_id = args.get("paper_id", "")
     if not paper_id:
         return [TextContent(type="text", text=json.dumps({"error": "paper_id is required"}))]
-    
+
     # 清理paper_id
     paper_id = paper_id.replace("w", "").replace("W", "")
-    
+
     result = {
         "paper_id": f"w{paper_id}",
         "title": "Artificial Intelligence and Economic Growth: Evidence from Machine Learning Adoption",

@@ -95,7 +95,7 @@ def check_mock_permission(
             "to_enable_temporarily": "MCP_MOCK_MODE=allow",
             "to_enable_per_session": "见 README.md '科研诚信 - Mock 数据' 章节",
             "data_source": "MOCK_DISABLED",
-        }, ensure_ascii=False))] 
+        }, ensure_ascii=False))]
 
     if mode == "allow":
         # 允许模式：直接通过，但仍打印 stderr 警告 (P0-4 强化 2026-07-03)

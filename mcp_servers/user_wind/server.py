@@ -158,8 +158,8 @@ async def handle_credit_spread(args: dict) -> list[TextContent]:
 
 
     try:
-        rating = args.get("rating", "AAA")
-        period = args.get("period", "3Y")
+        args.get("rating", "AAA")
+        args.get("period", "3Y")
         # 模拟信用利差数据
         result = {
             "data": [

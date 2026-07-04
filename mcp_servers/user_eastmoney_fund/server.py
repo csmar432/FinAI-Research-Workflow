@@ -148,7 +148,7 @@ async def handle_fund_nav(args: dict) -> list[TextContent]:
         symbol = fund_code.replace(".OF", "")
         df = ak.fund_open_fund_info_em(symbol=symbol, indicator="单位净值走势")
         return [TextContent(type="text", text=_df_to_json(df))]
-    except Exception as e:
+    except Exception:
         # 返回模拟数据
         result = {
             "data": [

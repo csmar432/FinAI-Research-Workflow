@@ -206,7 +206,7 @@ async def handle_esg_trend(params: dict) -> dict:
         return check
 
     stock_code = params.get("stock_code", "")
-    years = params.get("years", 5)
+    params.get("years", 5)
 
     if not SYNTAO_KEY:
         return {
@@ -245,7 +245,7 @@ async def handle_esg_controversy(params: dict) -> dict:
         return check
 
     stock_code = params.get("stock_code", "")
-    event_type = params.get("event_type", "all")
+    params.get("event_type", "all")
 
     if not CUSTOM_KEY:
         return {

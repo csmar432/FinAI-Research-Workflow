@@ -169,7 +169,7 @@ def _get_timeseries_map() -> dict:
 async def handle_province_indicator(args: dict) -> list[TextContent]:
     province = args.get("province", "").strip()
     indicator = args.get("indicator", "").strip()
-    year_str = args.get("year") or ""
+    args.get("year") or ""
 
     if not province or province not in PROVINCES:
         return [TextContent(type="text", text=_err(

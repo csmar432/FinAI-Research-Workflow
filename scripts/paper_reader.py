@@ -225,7 +225,7 @@ def get_from_semantic_scholar(arxiv_id: str = "", title: str = "") -> dict:
     # 检查本地缓存（24小时）
     cache_dir = PAPERS_DIR / ".semantic_cache"
     cache_dir.mkdir(exist_ok=True)
-    cache_key = arxiv_id if arxiv_id else hashlib.md5(title.encode()).hexdigest()
+    cache_key = arxiv_id if arxiv_id else hashlib.md5(title.encode(), usedforsecurity=False).hexdigest()
     cache_file = cache_dir / f"{cache_key}.json"
 
     if cache_file.exists():

@@ -265,10 +265,15 @@ def fetch_bulletin_content(url: str) -> str | None:
             # Some provincial government sites have expired/misconfigured TLS
             # certificates. We re-try with verification off, but suppress the
             # InsecureRequestWarning so it doesn't pollute CI logs.
+            #
+            # P3-audit-2026-07-03: bandit B501 reports verify=False as HIGH.
+            # This is an explicit fallback path (verify=True tried first).
+            # We accept the risk for legacy government sites with expired certs.
+            # Operators should monitor upstream cert renewal.
             _log.debug(f"SSL verification failed, retrying without: {ssl_err}")
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            resp = requests.get(
+            resp = requests.get(  # nosec B501
                 url,
                 headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"},
                 timeout=15, verify=False, allow_redirects=True,

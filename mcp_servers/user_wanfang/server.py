@@ -191,7 +191,7 @@ def _build_wanfang_search_url(query: str, year_from: int, year_to: int,
                                paper_type: str = "periodical",
                                page: int = 1) -> tuple[str, dict]:
     """Build Wanfang search URL and params."""
-    encoded_query = urllib.parse.quote(query)
+    urllib.parse.quote(query)
 
     # Build base URL with query params
     params = {
@@ -554,7 +554,7 @@ async def handle_get_wanfang_paper_detail(args: dict) -> list[dict]:
     """Handle get_wanfang_paper_detail tool."""
     wanfang_id = args.get("wanfang_id", "")
     title = args.get("title", "")
-    fetch_citations = args.get("fetch_citations", False)
+    args.get("fetch_citations", False)
 
     if not wanfang_id and not title:
         return [{"type": "text", "text": json.dumps(

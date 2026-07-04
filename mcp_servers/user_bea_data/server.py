@@ -125,8 +125,8 @@ async def handle_gdp(args: dict) -> list[TextContent]:
 
     year = args.get("year", 2024)
     quarter = args.get("quarter", "A")
-    component = args.get("component", "gdp")
-    
+    args.get("component", "gdp")
+
     result = {
         "source": "BEA National Income and Product Accounts",
         "year": year,
@@ -152,7 +152,7 @@ async def handle_gdi(args: dict) -> list[TextContent]:
 
     year = args.get("year", 2024)
     quarter = args.get("quarter", "A")
-    
+
     result = {
         "source": "BEA Gross Domestic Income",
         "year": year,
@@ -177,7 +177,7 @@ async def handle_nipa(args: dict) -> list[TextContent]:
 
     table_name = args.get("table_name", "1.1.5")
     year = args.get("year", 2024)
-    
+
     result = {
         "source": "BEA NIPA Tables",
         "table": table_name,
@@ -203,7 +203,7 @@ async def handle_industry(args: dict) -> list[TextContent]:
 
     year = args.get("year", 2024)
     industry_level = args.get("industry_level", "sector")
-    
+
     result = {
         "source": "BEA Gross Domestic Product by Industry",
         "year": year,

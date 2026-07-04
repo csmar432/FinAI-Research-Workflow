@@ -297,7 +297,7 @@ class CollaborationLayer:
             return False
 
         annotation = {
-            "annotation_id": hashlib.md5(f"{user_id}{time.time()}".encode()).hexdigest()[:12],
+            "annotation_id": hashlib.md5(f"{user_id}{time.time()}".encode(), usedforsecurity=False).hexdigest()[:12],
             "user_id": user_id,
             "user_name": self._users.get(user_id, User("", "", Role.VIEWER, 0, 0)).name,
             "comment": comment,

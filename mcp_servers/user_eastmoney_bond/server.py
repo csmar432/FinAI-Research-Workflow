@@ -132,7 +132,7 @@ async def handle_bond_spot(args: dict) -> list[TextContent]:
         else:
             df = ak.bond_zh_cov()
         return [TextContent(type="text", text=_df_to_json(df))]
-    except Exception as e:
+    except Exception:
         # 返回模拟数据
         result = {
             "data": [
@@ -152,7 +152,7 @@ async def handle_bond_repo(args: dict) -> list[TextContent]:
         return check
 
 
-    period = args.get("period", "7D")
+    args.get("period", "7D")
     try:
         result = {
             "data": [

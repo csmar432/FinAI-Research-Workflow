@@ -122,10 +122,10 @@ async def handle_financial(args: dict) -> list[TextContent]:
     ts_code = args.get("ts_code", "")
     report_type = args.get("report_type", "income")
     year = args.get("year", 2024)
-    
+
     if not ts_code:
         return [TextContent(type="text", text=json.dumps({"error": "ts_code is required"}))]
-    
+
     try:
         if report_type == "income":
             result = {
@@ -184,7 +184,7 @@ async def handle_corporate(args: dict) -> list[TextContent]:
     ts_code = args.get("ts_code", "")
     if not ts_code:
         return [TextContent(type="text", text=json.dumps({"error": "ts_code is required"}))]
-    
+
     try:
         info_type = args.get("info_type", "ownership")
         if info_type == "ownership":
@@ -239,7 +239,7 @@ async def handle_trading(args: dict) -> list[TextContent]:
     ts_code = args.get("ts_code", "")
     if not ts_code:
         return [TextContent(type="text", text=json.dumps({"error": "ts_code is required"}))]
-    
+
     try:
         result = {
             "ts_code": ts_code,
@@ -266,8 +266,8 @@ async def handle_analyst(args: dict) -> list[TextContent]:
 
 
     ts_code = args.get("ts_code", "")
-    analyst_name = args.get("analyst_name", "")
-    
+    args.get("analyst_name", "")
+
     try:
         result = {
             "ts_code": ts_code or "样本股票",

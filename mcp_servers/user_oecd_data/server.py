@@ -140,7 +140,7 @@ async def handle_gdp(args: dict) -> list[TextContent]:
         return check
 
     country = args.get("country_code", "USA")
-    indicator = args.get("indicator", "gdp_growth")
+    args.get("indicator", "gdp_growth")
     year_range = args.get("year_range", "2010-2025")
     try:
         start_year, end_year = year_range.split("-")

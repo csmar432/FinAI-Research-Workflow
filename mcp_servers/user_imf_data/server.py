@@ -243,7 +243,7 @@ async def handle_bop(args: dict) -> list[TextContent]:
                 val = obs.get("@OBS_VALUE")
                 if val is not None:
                     try:
-                        year = int(year_str)
+                        int(year_str)
                         data.append({
                             "year": year_str,
                             "value": round(float(val), 3),
@@ -312,7 +312,7 @@ async def handle_ifs(args: dict) -> list[TextContent]:
                 val = obs.get("@OBS_VALUE")
                 if val is not None:
                     try:
-                        year = int(year_str)
+                        int(year_str)
                         data.append({
                             "year": year_str,
                             "value": round(float(val), 4),
