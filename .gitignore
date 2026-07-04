@@ -190,18 +190,20 @@ canvases/
 docs/tutorials/TUTORIALS_README.md
 
 # ── Local development experiments (not for public repo) ──────────────────────
-scripts/core/agent_pipeline_lg.py
-scripts/core/debate_arena.py
-scripts/core/debate_calibrator_bridge.py
-scripts/core/interactive_explorer.py
-scripts/core/orchestrator_lg_bridge.py
-scripts/core/paper_deep_parser.py
-scripts/health_check_mcp.py
-tests/test_debate_arena.py
+# audit-2026-07-04 PR-2: previously the 7 scripts/core modules below were
+# gitignored, so CI never collected or tested them despite being present
+# in developer local checkouts and shipped in the finai-research-workflow
+# wheel. PR-2 ('pytest tests/' — unify batch architecture) exposed the gap:
+# the test for debate_arena failed because the corresponding source file
+# was not in git. Removed 7 entries so the source files are now tracked.
+#
+# The remaining 14 tests/test_*.py entries are kept ignored for now:
+# they pre-date the audit cleanup and use APIs that don't match the
+# current code. Re-adding them (or deleting for good) is part of PR-6
+# (audit-2026-07-04) — coverage push to 60%.
 tests/test_debate_calibrator_bridge.py
 tests/test_econometrics_DEPRECATED.py
 tests/test_institutional_holdings.py
-tests/test_interactive_explorer.py
 tests/test_journal_compile.py
 tests/test_kleibergen_paap.py
 tests/test_langgraph_pipeline.py
@@ -209,10 +211,8 @@ tests/test_mediation_test.py
 tests/test_new_modules_2026.py
 tests/test_new_modules_v181.py
 tests/test_new_modules_v184.py
-tests/test_orchestrator_lg_bridge.py
 tests/test_p2_fixes.py
 tests/test_panel_threshold_regression.py
-tests/test_paper_deep_parser.py
 tests/test_placebo_permutations.py
 tests/test_prisma_compliance.py
 
@@ -233,34 +233,6 @@ did_results.json
 mcp_servers/user_tushare/tools/get_institutional_holdings.json
 mcp_servers/user_tushare/tools/get_top_holders.json
 
-# ── Test files (local development, not for public repo) ───────────────────────
-# v5 fix: removed `tests/test_agent_pipeline_core.py` from this ignore list
-# because .github/workflows/ci.yml batch-2 references it. The original v2
-# commit (a32fba5) added the ci.yml reference but forgot to git add the file,
-# leaving CI red for 5 consecutive commits. See AUDIT_V5_2026-06-18.md.
-tests/test_agent_state.py
-tests/test_ai_parliament.py
-tests/test_auto_review_rules.py
-tests/test_autonomy_loop.py
-tests/test_autonomy_loop_comprehensive.py
-tests/test_collaboration.py
-tests/test_hitl_gate.py
-tests/test_hitl_gate_comprehensive.py
-tests/test_idea_data_checker.py
-tests/test_multi_agent.py
-tests/test_orchestrator.py
-tests/test_orchestrator_comprehensive.py
-# test_presence_server.py - REMOVED from gitignore (v28b fix)
-# test_provenance_integration.py - REMOVED from gitignore (v28b fix)
-tests/test_provenance_rag.py
-tests/test_quality_gates.py
-tests/test_reviewer_calibrator.py
-tests/test_self_evolution.py
-tests/test_self_evolution_integration.py
-tests/test_specialized_agents.py
-tests/test_user_data_merger.py
-tests/test_validate_econometrics.py
-
 # ── Local audit & development files ─────────────────────────────────────────
 AUDIT_2026-06-10.md
 AUDIT_2026-06-25.md
@@ -270,7 +242,6 @@ docs/MANUAL_TASKS_RUNBOOK.md
 docs/adr/ADR-002-provenance-chain.md
 scripts/DEPRECATED.md
 scripts/benchmark_econometrics.py
-scripts/core/mock_data_governance.py
 scripts/deprecated/research_workflow.py
 scripts/entity_list_data_fetcher.py
 mcp_servers/user_chinese_literature/Dockerfile
