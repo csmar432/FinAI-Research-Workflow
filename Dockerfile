@@ -24,9 +24,11 @@ COPY pyproject.toml ./
 COPY scripts/ ./scripts/
 COPY mcp_servers/ ./mcp_servers/
 COPY config/ ./config/
-# data/ is in .gitignore; create placeholder so COPY does not fail.
-# Mount real data at runtime: docker run -v "$PWD/data:/app/data" ...
-COPY data/.gitkeep ./data/.gitkeep
+# data/ is excluded by .dockerignore for size/security; mount at runtime:
+#   docker run -v "$PWD/data:/app/data" ...
+# However, an empty data/ dir is needed at build time so apps that
+# touch it (e.g. write to data/cache/) don't fail. Create empty.
+RUN mkdir -p ./data && touch ./data/.gitkeep
 COPY docs/ ./docs/
 COPY knowledge/ ./knowledge/
 

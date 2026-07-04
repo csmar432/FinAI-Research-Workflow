@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies from pyproject.toml (requirements.txt is deprecated)
 COPY pyproject.toml ./
+# Pin hatchling>=1.32: older releases lack `prepare_metadata_for_build_editable`
+# which modern pip (>=24) calls; see https://github.com/pypa/pip/issues/12963
+RUN pip install --no-cache-dir "hatchling>=1.32"
 RUN pip install --no-cache-dir -e .
 
 COPY scripts/ ./scripts/
