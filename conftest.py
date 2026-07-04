@@ -16,14 +16,25 @@ import sys
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).parent.resolve()
-print(f"[conftest] project_root={_PROJECT_ROOT}")
-print(f"[conftest] sys.path before insert: {[p for p in sys.path if 'runner' in p or 'workspace' in p]}")
+print(f"[conftest] project_root={_PROJECT_ROOT}", file=sys.stderr)
+print(f"[conftest] sys.path:", file=sys.stderr)
+for p in sys.path:
+    print(f"  {p}", file=sys.stderr)
+print(f"[conftest] scripts package dir exists: {(_PROJECT_ROOT / 'scripts').exists()}", file=sys.stderr)
+print(f"[conftest] scripts/core dir exists: {(_PROJECT_ROOT / 'scripts' / 'core').exists()}", file=sys.stderr)
+print(f"[conftest] scripts/core/debate_arena.py exists: {(_PROJECT_ROOT / 'scripts' / 'core' / 'debate_arena.py').exists()}", file=sys.stderr)
+print(f"[conftest] scripts/core/__init__.py exists: {(_PROJECT_ROOT / 'scripts' / 'core' / '__init__.py').exists()}", file=sys.stderr)
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
-    print(f"[conftest] inserted {_PROJECT_ROOT}")
-print(f"[conftest] scripts.core.debate_arena importable: ", end="")
+    print(f"[conftest] inserted {_PROJECT_ROOT}", file=sys.stderr)
+print(f"[conftest] scripts.core.debate_arena importable: ", end="", file=sys.stderr)
 try:
     import scripts.core.debate_arena  # noqa: F401
-    print("YES")
+    print("YES", file=sys.stderr)
 except Exception as e:
-    print(f"NO ({e})")
+    print(f"NO ({e})", file=sys.stderr)
+# Try importlib
+print(f"[conftest] importlib.util.find_spec('scripts.core.debate_arena'):", file=sys.stderr)
+import importlib.util
+spec = importlib.util.find_spec('scripts.core.debate_arena')
+print(f"  spec={spec}", file=sys.stderr)
