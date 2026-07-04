@@ -367,7 +367,6 @@ def print_summary_line(report: dict) -> None:
     total = s["total_servers"]
     ready = s["ready_count"]
     compile_ok = s["servers_with_server_py"]
-    docker = s["servers_with_dockerfile"]
     tools = s["total_tool_files"]
 
     print(
