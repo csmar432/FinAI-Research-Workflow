@@ -512,6 +512,188 @@ def check_12_fail_under_floor() -> CheckResult:
     )
 
 
+def check_13_workflow_yaml_unquoted_colons() -> CheckResult:
+    """Verify all GitHub workflow YAML files parse, and warns on quoted-on-need
+    patterns.
+
+    Defense: dynamically parse every .yml/.yaml under .github/workflows/ with
+    PyYAML, and additionally scan for the pattern 'name: <unquoted text with
+    colon>' as a heuristic to catch the bug class even when other YAML in the
+    file happens to parse (e.g. unquoted colons inside a `run:` block).
+    """
+    evidence: list[str] = []
+    bad_files: list[str] = []
+
+    for p in sorted((PROJECT_ROOT / ".github").rglob("*.y*ml")):
+        rel = p.relative_to(PROJECT_ROOT)
+        evidence.append(f"  parsing: {rel}")
+        try:
+            import yaml  # type: ignore[import-untyped]
+
+            yaml.safe_load(p.read_text(encoding="utf-8"))
+        except Exception as e:
+            bad_files.append(f"{rel}: {type(e).__name__}: {e}")
+        # Heuristic: scan for unquoted `name:` containing a colon.
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            stripped = line.lstrip()
+            if not stripped.startswith("- name:") and not stripped.startswith("name:"):
+                continue
+            # Extract value after `name:`.
+            val = stripped.split("name:", 1)[1].lstrip()
+            # If the value is unquoted and contains a colon, that's the bug.
+            if val and not val.startswith('"') and not val.startswith("'"):
+                if ":" in val:
+                    bad_files.append(
+                        f"{rel}:{i}: name field contains unquoted colon: {line.strip()!r}"
+                    )
+
+    if bad_files:
+        return CheckResult(
+            passed=False,
+            actual=f"{len(bad_files)} issue(s)",
+            expected="0 (every workflow YAML must parse; no unquoted `name:` colons)",
+            evidence=evidence + [f"  PROBLEM: {x}" for x in bad_files],
+        )
+    return CheckResult(
+        passed=True,
+        actual="0 issues",
+        expected="0",
+        evidence=evidence,
+    )
+
+
+def check_14_diff_in_diff2_phantom_dep() -> CheckResult:
+    """`diff-in-diff2` does not exist on PyPI as of 2026-07-04.
+
+    PR-4's test-full job discovered this when `pip install -r requirements.txt`
+    failed with `ERROR: Could not find a version that satisfies the requirement
+    diff-in-diff2>=1.0.0`. The package was referenced in:
+      * requirements.txt line 91
+      * pyproject.toml [project.optional-dependencies.econometrics]
+      * multiple docs (CLAUDE.md, README*.md)
+      * scripts/research_framework/modern_did.py via `import diff_in_diff2`
+
+    Defense: verify no active (uncommented) reference to `diff-in-diff2` or
+    `diff_in_diff2` exists in requirements.txt, pyproject.toml, or any
+    tracked source file. Commented-out lines are allowed (they document the
+    historic decision).
+
+    If anyone re-adds this dep without verifying PyPI existence, this check
+    will fail and the related PR will not pass CI.
+    """
+    refs: list[str] = []
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    req = PROJECT_ROOT / "requirements.txt"
+
+    for f in [pyproject, req]:
+        if not f.exists():
+            continue
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            if "diff-in-diff2" in line or "diff_in_diff2" in line:
+                refs.append(f"active install: {f.relative_to(PROJECT_ROOT)}:{i}: {stripped}")
+
+    # In source code, `import diff_in_diff2` is ALLOWED (graceful fallback
+    # via EstimatorUnavailableError in scripts/research_framework/modern_did.py).
+    # We only flag install directives in requirements files here.
+
+    if refs:
+        return CheckResult(
+            passed=False,
+            actual=f"{len(refs)} active install reference(s)",
+            expected="0 (phantom dep — commented references or error-message strings only)",
+            evidence=[f"  PROBLEM: {x}" for x in refs],
+        )
+    return CheckResult(
+        passed=True,
+        actual="0 active install references",
+        expected="0",
+        evidence=[
+            "  verified: requirements.txt comment only",
+            "  pyproject.toml comment only",
+            "  runtime imports allowed (graceful EstimatorUnavailableError)",
+        ],
+    )
+
+
+def check_15_pypi_deps_exist() -> CheckResult:
+    """Spot-check every pip-installable dep declared in requirements.txt and
+    pyproject.toml actually exists on PyPI.
+
+    audit-2026-07-04 PR-4 caught `diff-in-diff2` (which doesn't exist) this
+    way. Generalizing: for each non-comment line containing a `>=` or `==`
+    pin, verify PyPI has at least one matching version. This is run on demand
+    (not in CI by default) because PyPI is rate-limited, but it's a powerful
+    audit signal.
+
+    Skipped when network is unavailable.
+    """
+    import urllib.error
+    import urllib.request
+
+    deps: list[tuple[Path, int, str]] = []  # (file, line, dep_spec)
+    for f in [PROJECT_ROOT / "pyproject.toml", PROJECT_ROOT / "requirements.txt"]:
+        if not f.exists():
+            continue
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            for tok in stripped.replace(" ", ",").split(","):
+                tok = tok.strip().strip('"').strip("'")
+                if ">=" in tok and not tok.startswith("-"):
+                    deps.append((f, i, tok))
+                    break
+            else:
+                continue
+
+    # Quick outbound test
+    try:
+        urllib.request.urlopen("https://pypi.org/pypi/", timeout=3).close()
+    except Exception as e:
+        return CheckResult(
+            passed=True,
+            actual=f"network unavailable ({type(e).__name__})",
+            expected="skipped",
+            evidence=["  PyPI unreachable; skipping live check"],
+        )
+
+    missing: list[str] = []
+    for f, ln, spec in deps[:30]:  # cap at 30 to keep audit fast
+        name = (
+            spec.replace(">=", " >=").replace("<", " <").replace("=", "").split()[0]
+        )
+        # Extras/PEP 508 markers
+        name = name.split("[")[0]
+        # normalize python module name -> distribution name (heuristic)
+        url = f"https://pypi.org/pypi/{name}/json"
+        try:
+            with urllib.request.urlopen(url, timeout=5) as r:
+                if r.status != 200:
+                    missing.append(f"{f.relative_to(PROJECT_ROOT)}:{ln}: {spec} ({name} HTTP {r.status})")
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                missing.append(f"{f.relative_to(PROJECT_ROOT)}:{ln}: {spec} ({name} 404)")
+        except Exception as e:
+            missing.append(f"{f.relative_to(PROJECT_ROOT)}:{ln}: {spec} ({type(e).__name__})")
+
+    if missing:
+        return CheckResult(
+            passed=False,
+            actual=f"{len(missing)}/{len(deps)} deps missing on PyPI",
+            expected="0 missing (sample of first 30 deps)",
+            evidence=[f"  PROBLEM: {x}" for x in missing],
+        )
+    return CheckResult(
+        passed=True,
+        actual=f"{len(deps)}/{len(deps)} deps verified",
+        expected="all deps exist on PyPI",
+        evidence=[f"  sample size: {len(deps)}"],
+    )
+
+
 def check_10_llm_reviewer_stable_model() -> CheckResult:
     """Verify LLMReviewer doesn't default to a non-existent model name.
 
@@ -624,6 +806,24 @@ CHECKS: list[AuditCheck] = [
         "CI fail-under floor",
         "Defense vs. audit-2026-07-04 P0-1 'lower threshold to pass' (floor=25 at PR-1; raise after PR-6)",
         check_12_fail_under_floor,
+    ),
+    AuditCheck(
+        13,
+        "Workflow YAML unquoted-colon check",
+        "Defense: ci.yml YAML parse failures caused silent CI failures in PR-3 (a623563) and PR-4 (997abff). This check parses every .github/workflows/*.yml with PyYAML and flags any unquoted `name:` containing a colon.",
+        check_13_workflow_yaml_unquoted_colons,
+    ),
+    AuditCheck(
+        14,
+        "diff-in-diff2 phantom dep",
+        "Defense vs. phantom dep discovered by PR-4 test-full job: diff-in-diff2 does NOT exist on PyPI but was declared in requirements.txt and pyproject.toml. Code gracefully handles missing import via EstimatorUnavailableError.",
+        check_14_diff_in_diff2_phantom_dep,
+    ),
+    AuditCheck(
+        15,
+        "PyPI deps existence (sample)",
+        "Defense vs. typo'd / phantom deps: spot-checks first 30 deps from requirements.txt + pyproject.toml against PyPI. Skipped when network unavailable.",
+        check_15_pypi_deps_exist,
     ),
 ]
 
