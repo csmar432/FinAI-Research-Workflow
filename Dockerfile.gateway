@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies from pyproject.toml (requirements.txt is deprecated)
 # audit-2026-07-04 PR-3: see Dockerfile.dashboard for why hatchling pin is removed.
 COPY pyproject.toml ./
+# audit-2026-07-04 PR-3: README.md required by pyproject.toml `readme = "README.md"`.
+COPY README.md ./
 RUN pip install --no-cache-dir -e .
 
 COPY scripts/ ./scripts/

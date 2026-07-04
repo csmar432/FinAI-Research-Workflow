@@ -19,7 +19,10 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir -e .
 
 # ── Copy project files ────────────────────────────────────────────────────────
+# README.md is required because pyproject.toml has `readme = "README.md"`
+# and hatchling validates it exists during `pip install -e .`.
 COPY pyproject.toml ./
+COPY README.md ./
 COPY scripts/ ./scripts/
 COPY mcp_servers/ ./mcp_servers/
 COPY config/ ./config/

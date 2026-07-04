@@ -17,6 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # was unreachable and broke all 4 Dockerfile builds. We let pip resolve
 # hatchling from pyproject.toml's requires=[...] instead.
 COPY pyproject.toml ./
+# audit-2026-07-04 PR-3: README.md required by pyproject.toml `readme = "README.md"`.
+COPY README.md ./
 RUN pip install --no-cache-dir -e .
 
 COPY scripts/ ./scripts/
