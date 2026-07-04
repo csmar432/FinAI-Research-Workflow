@@ -1,4 +1,10 @@
-"""Tests for LaTeX multi-backend compilation (PR4, Audit 2026-06-27)."""
+"""Tests for LaTeX multi-backend compilation (PR4, Audit 2026-06-27).
+
+audit-2026-07-04 PR-2: All tests in this module require tectonic (or another
+LaTeX engine) to be installed. CI ubuntu runner does not ship tectonic.
+Individual tests self-skip via shutil.which() check; module is marked so
+`pytest -m latex` runs all of them on dev machines that have tectonic.
+"""
 
 from __future__ import annotations
 
@@ -10,11 +16,17 @@ import pytest
 from scripts.journal_template import JournalTemplate
 
 
+pytestmark = pytest.mark.latex
+
+
+@pytest.mark.latex
 def test_detect_best_backend_finds_tectonic():
-    """tectonic 在 macOS 上已安装，应被检测到。"""
+    """tectonic 在 macOS 上已安装，应被检测到。
+    Skip in environments without tectonic installed (CI ubuntu runner)."""
+    if shutil.which("tectonic") is None:
+        pytest.skip("tectonic LaTeX engine not installed in this environment")
     jt = JournalTemplate.__new__(JournalTemplate)
     backend = jt._detect_best_backend()
-    # macOS 上有 tectonic
     assert backend == "tectonic"
 
 
@@ -47,7 +59,10 @@ def test_compile_nonexistent_file_returns_false():
 
 
 def test_compile_unknown_engine_falls_back_to_autodetect(tmp_path):
-    """未知引擎名应回退到 auto-detect。"""
+    """未知引擎名应回退到 auto-detect。
+    Skip in environments without tectonic installed (CI ubuntu runner)."""
+    if shutil.which("tectonic") is None:
+        pytest.skip("tectonic LaTeX engine not installed in this environment")
     # 创建一个真实的 .tex 文件
     tex_file = tmp_path / "test.tex"
     tex_file.write_text("\\documentclass{article}\\begin{document}test\\end{document}")
@@ -60,7 +75,10 @@ def test_compile_unknown_engine_falls_back_to_autodetect(tmp_path):
 
 
 def test_compile_with_tectonic_auto_detected(tmp_path):
-    """engine=None 时应自动检测到 tectonic。"""
+    """engine=None 时应自动检测到 tectonic。
+    Skip in environments without tectonic installed (CI ubuntu runner)."""
+    if shutil.which("tectonic") is None:
+        pytest.skip("tectonic LaTeX engine not installed in this environment")
     # 一个能被 tectonic 编译的极简文件
     tex_file = tmp_path / "minimal.tex"
     tex_file.write_text(
@@ -78,7 +96,10 @@ def test_compile_with_tectonic_auto_detected(tmp_path):
 
 
 def test_tectonic_compile_success_message(tmp_path, capsys):
-    """tectonic 编译成功应打印确认信息。"""
+    """tectonic 编译成功应打印确认信息。
+    Skip in environments without tectonic installed (CI ubuntu runner)."""
+    if shutil.which("tectonic") is None:
+        pytest.skip("tectonic LaTeX engine not installed in this environment")
     tex_file = tmp_path / "hello.tex"
     tex_file.write_text(
         "\\documentclass{article}\n"
@@ -95,7 +116,10 @@ def test_tectonic_compile_success_message(tmp_path, capsys):
 
 
 def test_no_hang_on_timeout(tmp_path):
-    """编译超时应有明确错误信息，不挂起。"""
+    """编译超时应有明确错误信息，不挂起。
+    Skip in environments without tectonic installed (CI ubuntu runner)."""
+    if shutil.which("tectonic") is None:
+        pytest.skip("tectonic LaTeX engine not installed in this environment")
     # 这是一个超时测试：实际编译应在合理时间内返回
     jt = JournalTemplate.__new__(JournalTemplate)
     tex_file = tmp_path / "test.tex"

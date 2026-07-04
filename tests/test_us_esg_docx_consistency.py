@@ -58,14 +58,20 @@ def test_docx_has_greek_letters(docx_text):
 
 
 def test_docx_has_embedded_images():
-    """docx 必须嵌入图片（之前 0 张）。"""
+    """docx 必须嵌入图片（之前 0 张）。
+    audit-2026-07-04 PR-2: paper artifact not generated in CI; skip if missing."""
+    if not DOCX_PATH.exists():
+        pytest.skip(f"{DOCX_PATH} 不存在 — 先跑 scripts/us_esg_formatter.py")
     with zipfile.ZipFile(DOCX_PATH) as z:
         media = [n for n in z.namelist() if "media" in n]
     assert len(media) >= 3, f"docx 仅嵌入 {len(media)} 张图"
 
 
 def test_docx_has_tables():
-    """docx 必须有表格（之前 0 个）。"""
+    """docx 必须有表格（之前 0 个）。
+    audit-2026-07-04 PR-2: paper artifact not generated in CI; skip if missing."""
+    if not DOCX_PATH.exists():
+        pytest.skip(f"{DOCX_PATH} 不存在 — 先跑 scripts/us_esg_formatter.py")
     with zipfile.ZipFile(DOCX_PATH) as z:
         xml = z.read("word/document.xml").decode("utf-8")
     n_tables = xml.count("<w:tbl>")
@@ -73,7 +79,10 @@ def test_docx_has_tables():
 
 
 def test_docx_chinese_font_configured():
-    """docx 应配置中文字体（eastAsia）。"""
+    """docx 应配置中文字体（eastAsia）。
+    audit-2026-07-04 PR-2: paper artifact not generated in CI; skip if missing."""
+    if not DOCX_PATH.exists():
+        pytest.skip(f"{DOCX_PATH} 不存在 — 先跑 scripts/us_esg_formatter.py")
     with zipfile.ZipFile(DOCX_PATH) as z:
         xml = z.read("word/document.xml").decode("utf-8")
         styles_xml = z.read("word/styles.xml").decode("utf-8")

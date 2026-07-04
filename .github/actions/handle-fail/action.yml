@@ -1,0 +1,116 @@
+---
+name: handle-fail
+description: >
+  On pytest failure: append a comment to a tracking issue, publish the
+  fail log to the ci-debug branch, and surface a tail of the log in
+  the step summary. Use this after any test step that pipes output
+  to a log file.
+inputs:
+  log_path:
+    description: Path to the pytest log file (relative to repo root)
+    required: true
+  label:
+    description: Short label for the failure (e.g. "Tests", "Cross-platform macos")
+    required: true
+  matrix_os:
+    description: Optional OS name for cross-platform jobs
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Append fail log to issue tracker
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const fs = require('fs');
+          let log = 'NO LOG';
+          try {
+            const raw = fs.readFileSync(process.env.LOG_PATH, 'utf-8');
+            const lines = raw.split('\n');
+            log = lines.slice(-200).join('\n');
+          } catch (e) { log = 'LOG READ ERR: ' + e.message; }
+          log = log.slice(-30000);
+          const body = [
+            '### ' + process.env.LABEL + ' fail @ ' + context.sha.slice(0,7),
+            process.env.MATRIX_OS ? ' (os=' + process.env.MATRIX_OS + ')' : '',
+            '',
+            '`' + (process.env.RUN_URL || 'no-url') + '`',
+            '',
+            '```',
+            log,
+            '```',
+          ].filter(Boolean).join('\n');
+          const title = '[CI ' + process.env.LABEL + '] ' + (context.sha || '').slice(0,7) + ' ' + new Date().toISOString();
+          const existing = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'ci-fail-log',
+            state: 'open',
+            per_page: 1,
+          });
+          if (existing.data.length > 0) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existing.data[0].number,
+              body: body,
+            });
+          } else {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['ci-fail-log'],
+            });
+          }
+      env:
+        LOG_PATH: ${{ inputs.log_path }}
+        LABEL: ${{ inputs.label }}
+        MATRIX_OS: ${{ inputs.matrix_os }}
+
+    - name: Publish fail log to ci-debug branch
+      if: failure()
+      shell: bash
+      env:
+        LABEL: ${{ inputs.label }}
+        MATRIX_OS: ${{ inputs.matrix_os }}
+      run: |
+        set -e
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git fetch origin main
+        if git ls-remote --heads origin ci-debug | grep -q ci-debug; then
+          git fetch origin ci-debug
+          git checkout -B ci-debug origin/ci-debug
+          git rebase origin/main || true
+        else
+          git checkout -b ci-debug origin/main
+        fi
+        mkdir -p .ci-fail-logs
+        if [ -n "$MATRIX_OS" ]; then
+          LOG_BASE="${LABEL}-${MATRIX_OS}-${GITHUB_SHA:0:7}.log"
+        else
+          LOG_BASE="${LABEL}-${GITHUB_SHA:0:7}.log"
+        fi
+        cp ${{ inputs.log_path }} ".ci-fail-logs/${LOG_BASE}" 2>/dev/null || true
+        echo "### ${LABEL} ${MATRIX_OS} fail at ${GITHUB_SHA:0:7}" >> .ci-fail-logs/INDEX.md
+        echo "- ${{ github.workflow }} #${{ github.run_number }} ($(date -u +%FT%TZ))" >> .ci-fail-logs/INDEX.md
+        echo "" >> .ci-fail-logs/INDEX.md
+        git add .ci-fail-logs/
+        git commit -m "ci: ${LABEL} ${MATRIX_OS} fail log @ ${GITHUB_SHA:0:7}" || true
+        git push -f origin ci-debug 2>&1 | tail -5 || true
+
+    - name: Surface fail reason via step summary
+      if: failure()
+      shell: bash
+      run: |
+        echo "## ${{ inputs.label }} ${{ inputs.matrix_os }} fail" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        if [ -f ${{ inputs.log_path }} ]; then
+          tail -n 80 ${{ inputs.log_path }} >> $GITHUB_STEP_SUMMARY
+        else
+          echo "log not found — pytest may not have run (install step failed?)" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo '```' >> $GITHUB_STEP_SUMMARY
