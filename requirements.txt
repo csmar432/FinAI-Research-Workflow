@@ -88,7 +88,12 @@ jieba>=0.42.0
 # ── Econometrics Extras ──────────────────────────────────────────────────────
 pandas-datareader>=0.10.0
 pandasql>=0.7.3
-diff-in-diff2>=1.0.0
+# NOTE: diff-in-diff2 is referenced in scripts/research_framework/modern_did.py
+# but does NOT exist on PyPI as of 2026-07-04. The code gracefully raises
+# EstimatorUnavailableError at runtime if the import fails, so we comment
+# this out. The corresponding pyproject.toml entry has also been removed
+# to keep the two files in sync (P0-5 audit fix).
+#diff-in-diff2>=1.0.0
 
 # ── Knowledge Graph Extras ────────────────────────────────────────────────────
 neo4j>=6.2.0

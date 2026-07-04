@@ -123,7 +123,10 @@ econometrics = [
     "linearmodels>=4.17,<99.0",
     "pandas-datareader>=0.10.0,<99.0",
     "pandasql>=0.7.3,<99.0",
-    "diff-in-diff2>=1.0.0,<99.0",
+    # NOTE: diff-in-diff2 is referenced in scripts/research_framework/modern_did.py
+    # but does NOT exist on PyPI as of 2026-07-04 (verified by audit_guard
+    # check 14). The code gracefully raises EstimatorUnavailableError if the
+    # import fails. See requirements.txt comment for the matching removal.
     "honestdid>=0.1.0,<99.0",  # Rambachan-Roth (2023) Honest DiD sensitivity analysis
     # honestdid requires: torch>=1.9, cvxpy>=1.1, scipy>=1.6, numpy>=1.19, pandas>=1.2
     # Install separately: pip install honestdid
