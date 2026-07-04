@@ -682,7 +682,7 @@ class DynamicToolManager:
         # Generate from description
         words = description.split()[:3]
         base = "".join(w[0].lower() for w in words if w[0].isupper())
-        suffix = hashlib.md5(description.encode()).hexdigest()[:4]
+        suffix = hashlib.md5(description.encode(), usedforsecurity=False).hexdigest()[:4]
         return f"tool_{base}_{suffix}"
 
     def _strip_code_fence(self, text: str) -> str:

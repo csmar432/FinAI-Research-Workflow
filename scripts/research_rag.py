@@ -692,7 +692,7 @@ class ResearchRAG:
 
     def _gen_chunk_id(self, content: str, idx: int) -> str:
         """生成稳定的 chunk ID。"""
-        prefix = hashlib.md5(content.encode()).hexdigest()[:6]
+        prefix = hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:6]
         return f"chunk_{prefix}_{idx:04d}"
 
     # ── Embedding ───────────────────────────────────────────────────────────

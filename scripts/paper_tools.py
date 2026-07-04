@@ -254,7 +254,7 @@ def compute_ngram_hash(text: str, n: int = 3) -> set:
     ngrams = set()
     for i in range(len(words) - n + 1):
         ngram = " ".join(words[i:i+n])
-        ngram_hash = hashlib.md5(ngram.encode()).hexdigest()[:8]
+        ngram_hash = hashlib.md5(ngram.encode(), usedforsecurity=False).hexdigest()[:8]
         ngrams.add(ngram_hash)
     return ngrams
 

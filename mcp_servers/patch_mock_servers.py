@@ -206,7 +206,7 @@ def patch_server(server_dir: Path, dry_run: bool = False) -> bool:
         print(f"  ! Parse error in {server_file}: {e}")
         return False
 
-    original = ast.unparse(tree)
+    ast.unparse(tree)
 
     # Apply transformers in order
     transformers = [

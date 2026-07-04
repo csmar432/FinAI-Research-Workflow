@@ -38,8 +38,23 @@ jobs:
         # 避免 pip solver 重复解 20+ 个包导致 timeout
         run: pip install --no-deps -e .
 
-      - name: Ruff lint
+      - name: Ruff lint (scripts)
         run: ruff check scripts/ --ignore E501 --line-length 100
+      - name: Ruff lint (mcp_servers + tests)
+        # P3-audit-2026-07-03: 扩展 ruff 扫描范围到 mcp_servers/ + tests/，
+        # 之前只扫 scripts/ 隐藏了 42 个错误（29 F841 + 13 W291/W293 全在 mcp_servers/）。
+        # 现在分两步：第一遍 scripts/ 严格，第二遍放宽 S110 (基础设施 try-except-pass)。
+        run: |
+          echo "=== ruff mcp_servers (excl. S110) ==="
+          ruff check mcp_servers/ --ignore E501 --line-length 100 --ignore S110 || {
+            echo "::error::mcp_servers ruff failed — see lines above"
+            exit 1
+          }
+          echo "=== ruff tests (excl. F841, S110) ==="
+          ruff check tests/ --ignore E501 --line-length 100 --ignore F841 --ignore S110 || {
+            echo "::error::tests ruff failed — see lines above"
+            exit 1
+          }
       - name: Ruff S110 scan (mandatory)
         run: ruff check scripts/ --ignore E501 --line-length 100 --select S110
         continue-on-error: false

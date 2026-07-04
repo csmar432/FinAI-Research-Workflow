@@ -220,7 +220,7 @@ class AcademicPaperChunker:
             if len(content) < 100:  # 太短的跳过
                 continue
 
-            section_id = f"{paper_id}__{section_name}__{hashlib.md5(content[:50].encode()).hexdigest()[:8]}"
+            section_id = f"{paper_id}__{section_name}__{hashlib.md5(content[:50].encode(), usedforsecurity=False).hexdigest()[:8]}"
             sections.append(PaperSection(
                 section_id=section_id,
                 paper_id=paper_id,
@@ -247,7 +247,7 @@ class AcademicPaperChunker:
             end = min(start + chunk_size, len(text))
             content = text[start:end].strip()
             if content:
-                section_id = f"{paper_id}__chunk__{idx:04d}__{hashlib.md5(content[:50].encode()).hexdigest()[:8]}"
+                section_id = f"{paper_id}__chunk__{idx:04d}__{hashlib.md5(content[:50].encode(), usedforsecurity=False).hexdigest()[:8]}"
                 sections.append(PaperSection(
                     section_id=section_id,
                     paper_id=paper_id,

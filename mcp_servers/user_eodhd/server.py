@@ -127,7 +127,7 @@ def _get_economic_events(country: str = "US", start_date: str = "", end_date: st
     or set EODHD_API_KEY for the official EODHD economic calendar.
     """
     # Known US economic release schedule (based on official BLS/CB calendar)
-    now = datetime.now()
+    datetime.now()
     base_events = [
         # NFP: First Friday of each month, 8:30 AM ET
         {"name": "NFP Non-Farm Payrolls", "agency": "BLS", "frequency": "Monthly", "typical_release": "First Friday, 8:30 AM ET", "impact": "High", "description": "非农就业人数变化，失业率"},

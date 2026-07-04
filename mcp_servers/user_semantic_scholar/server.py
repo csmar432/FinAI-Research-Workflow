@@ -277,7 +277,7 @@ async def handle_search(args: dict) -> list[TextContent]:
     year_to = args.get("year_to", 2025)
     citation_min = args.get("citation_count_min", 0)
     venue = args.get("venue", "")
-    fields_of_study = args.get("fields_of_study", ["Economics"])
+    args.get("fields_of_study", ["Economics"])
     limit = min(args.get("limit", 20), 100)
     offset = args.get("offset", 0)
 
@@ -292,7 +292,7 @@ async def handle_search(args: dict) -> list[TextContent]:
         q_parts.append(f'venue:"{venue}"')
     if citation_min > 0:
         q_parts.append(f"citationCount:>{citation_min}")
-    search_q = " ".join(q_parts)
+    " ".join(q_parts)
 
     params = {
         "query": query,  # Semantic Scholar API 不支持复合查询，用原始 query

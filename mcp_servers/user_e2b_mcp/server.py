@@ -124,7 +124,7 @@ async def handle_e2b_run(args: dict) -> list[TextContent]:
     code = args.get("code", "")
     timeout = args.get("timeout", TIMEOUT_SECONDS)
     packages = args.get("packages", [])
-    network = args.get("network", True)
+    args.get("network", True)
 
     if not E2B_API_KEY:
         return [TextContent(type="text", text=json.dumps({

@@ -354,7 +354,7 @@ def _akshare_fallback(data_type: str, **kwargs) -> dict | None:
             ts_code = kwargs.get("ts_code", "")
             start_date = kwargs.get("start_date", "20180101")
             end_date = kwargs.get("end_date", "")
-            holder_type = kwargs.get("holder_type", "all")
+            kwargs.get("holder_type", "all")
             try:
                 symbol = ts_code.replace(".SZ", "").replace(".SH", "")
                 df = ak.stock_shareholder_change(indicator="机构持股", symbol=symbol)
@@ -385,7 +385,7 @@ def _akshare_fallback(data_type: str, **kwargs) -> dict | None:
             ts_code = kwargs.get("ts_code", "")
             try:
                 symbol = ts_code.replace(".SZ", "").replace(".SH", "")
-                market = "sh" if ".SH" in ts_code.upper() else "sz"
+                "sh" if ".SH" in ts_code.upper() else "sz"
                 df = ak.stock_top10_shareholder_em(symbol=symbol, indicator="十大流通股东")
                 if df is not None and not df.empty:
                     records = df.head(10).to_dict(orient="records")

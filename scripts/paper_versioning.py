@@ -134,7 +134,7 @@ class PaperVersionControl:
         """计算文件内容的 MD5 哈希"""
         if filepath.exists():
             with open(filepath, "rb") as f:
-                return hashlib.md5(f.read()).hexdigest()[:8]
+                return hashlib.md5(f.read(), usedforsecurity=False).hexdigest()[:8]
         return ""
 
     def _copy_to_git(self, source_path: Path, relative_path: str) -> bool:

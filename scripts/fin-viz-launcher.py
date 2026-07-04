@@ -398,7 +398,7 @@ class VizLauncher:
 
 def session_id(query: str) -> str:
     import hashlib
-    return hashlib.md5(query.encode()).hexdigest()[:8]
+    return hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()[:8]
 
 
 # ─── Skill Integration ────────────────────────────────────────────────────────

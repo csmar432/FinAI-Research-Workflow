@@ -646,7 +646,7 @@ class AkshareMacroFetcher:
         cache_key = f"{func.__name__}_{args}_{kwargs}"
         if self.cache_dir:
             import hashlib
-            key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+            key_hash = hashlib.md5(cache_key.encode(), usedforsecurity=False).hexdigest()
             path = os.path.join(self.cache_dir, f"ak_{key_hash}.json")
             if os.path.exists(path) and time.time() - os.path.getmtime(path) < cache_hours * 3600:
                 with open(path) as f:

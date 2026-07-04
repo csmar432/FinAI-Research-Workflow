@@ -499,7 +499,7 @@ async def handle_pw_get_html(args: dict) -> list[TextContent]:
 
 async def handle_pw_search_click(args: dict) -> list[TextContent]:
     input_sel = args.get("search_input_selector", "input[type=text], input[name=q], #searchInput")
-    btn_sel = args.get("search_button_selector", "button[type=submit], .search-btn, input[type=button]")
+    args.get("search_button_selector", "button[type=submit], .search-btn, input[type=button]")
     keyword = args["keyword"]
     wait_after = args.get("wait_after", 2.0)
 

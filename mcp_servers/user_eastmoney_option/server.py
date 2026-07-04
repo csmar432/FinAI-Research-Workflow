@@ -262,10 +262,6 @@ async def handle_option_chain(args: dict) -> list[TextContent]:
 
     try:
         # 50ETF 和 300ETF 使用 opt_call/opt_put
-        symbol_map = {
-            "510050.SH": "10005015",  # 50ETF沽6月
-            "510300.SH": "510300",
-        }
 
         if underlying in ["510050.SH", "510300.SH"]:
             # 认购期权

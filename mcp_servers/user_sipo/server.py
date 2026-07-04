@@ -272,7 +272,7 @@ async def handle_litigation(params: dict) -> dict:
         return check
 
     patent_number = params.get("patent_number", "")
-    record_type = params.get("record_type", "all")
+    params.get("record_type", "all")
 
     if not API_KEY:
         return {

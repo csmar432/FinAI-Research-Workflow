@@ -248,7 +248,7 @@ class ExperimentTracker:
     def _generate_id(self, title: str) -> str:
         """生成唯一的实验ID"""
         raw = f"{title}{datetime.now().isoformat()}{time.time()}"
-        return hashlib.md5(raw.encode()).hexdigest()[:12]
+        return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()[:12]
 
     def _get_git_commit(self) -> str:
         """获取当前 Git commit"""
@@ -522,8 +522,7 @@ class ExperimentTracker:
     ):
         """记录验证结果到数据库"""
         claim_id = hashlib.md5(
-            f"{experiment_id}{verification['raw_text']}{time.time()}".encode()
-        ).hexdigest()[:12]
+            f"{experiment_id}{verification['raw_text']}{time.time()}".encode(), usedforsecurity=False).hexdigest()[:12]
 
         with self._write_lock:
             cursor = self._conn.cursor()
