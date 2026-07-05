@@ -1,7 +1,7 @@
 {
   "$schema": "./project_numbers.schema.json",
   "_comment": "Single Source of Truth for all project metric numbers. All documentation MUST reference these values. Update this file via `python scripts/count_assets.py --sync-ssot`, not by hand. Manually maintained numbers historically drift; auto-generation from disk eliminates the root cause.",
-  "last_verified": "2026-07-04",
+  "last_verified": "2026-07-05",
   "verified_by": "scripts/count_assets.py --sync-ssot",
   "generation_command": "python scripts/count_assets.py --sync-ssot",
   "mcp": {
@@ -45,13 +45,12 @@
   "econometrics": {
     "total_method_modules": 47,
     "test_coverage": {
-      "modules_with_tests": 32,
+      "modules_with_tests": 33,
       "modules_total": 47,
       "percent": 66.0
     },
     "zero_test_modules": [
       "a_share_firm_controls",
-      "a_share_variables",
       "base",
       "china_carbon_events",
       "china_policy_events",
@@ -113,8 +112,8 @@
     "note": "30 = unique keys in JOURNAL_METADATA dict. TEMPLATES dict has 44 entries with legacy aliases merged into 30 unique templates (see scripts/journal_template.py)."
   },
   "testing": {
-    "test_files": 132,
-    "test_functions": 2873,
+    "test_files": 202,
+    "test_functions": 3550,
     "numerical_correctness_tests": 9,
     "ci_coverage_gate": 15,
     "ci_coverage_target": 30,
