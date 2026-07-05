@@ -408,47 +408,13 @@ minversion = "7.0"
 [tool.coverage.run]
 branch = true
 source = ["scripts"]
-omit = [
-    "scripts/ci_verify.py",
-    "scripts/mcp_schema_check.py",
-    "scripts/keychain_setup.py",
-    "scripts/setup_wizard.py",
-    "scripts/universal_data_fetcher.py",
-    "scripts/research_directions/*",
-    "scripts/research_framework/journal_templates*.py",
-    "scripts/research_framework/chinese_journal*.py",
-    "scripts/research_framework/multilang*.py",
-    # P3-audit-2026-07-04: 这些是一次性 CLI/main 脚本，不在测试范围内。
-    # 它们是人工调用入口（runner / dashboard / experiment tracker / paper I/O），
-    # 通过 CLI smoke test 在 docs/ 验证，不需要单元测试覆盖。
-    "scripts/dashboard.py",
-    "scripts/experiment_tracker.py",
-    "scripts/pipeline_builder.py",
-    "scripts/run_research.py",
-    "scripts/sync_numbers.py",
-    "scripts/on_enter.py",
-    "scripts/pipeline_checkpoint.py",
-    "scripts/paper_reader.py",
-    "scripts/paper_versioning.py",
-    "scripts/paper_write.py",
-    "scripts/paper_submitter.py",
-    "scripts/paper_quality_scorer.py",
-    "scripts/paper_tools.py",
-    "scripts/paper_tools_core.py",
-    "scripts/paper_full_pipeline.py",
-    "scripts/paper_submit.py",
-    "scripts/paper_visualizer.py",
-    "scripts/cleanup_paper_index.py",
-    "scripts/review_layer.py",  # DEPRECATED 2026-06-09, 保留历史
-    "scripts/quantitative_factor_library.py",  # 待拆分到 research_framework/
-    "scripts/enhanced_workflow.py",  # 实验性 workflow
-    # ── audit-2026-07-04 P0-1 ───────────────────────────────────────
-    # 上一版本（55f3dea）追加了 9 个 "CI 不导入" 的文件到 omit 以"凑覆盖率"。
-    # 已删除：让 fail-under 真实反映测试覆盖，而非通过 omit 藏分母。
-    # 若新发现某个模块 CI 无法 import，应改为（a）补测试 或（b）让该模块走
-    # optional-import / sys.exit(0) graceful degrade，而不是 omit。
-    # 见 docs/audit/audit-2026-07-04.md §P0-1 "CI 覆盖率凑数恶性循环"。
-]
+# ── audit-2026-07-04 P0-1 + PR-8G: omit 已全部移除 ──────────────────
+# 上一阶段用 omit "藏分母" 是 audit 标记的反模式 (audit-2026-07-04.md §P0-1)。
+# 现在 fail-under 真实反映测试覆盖。
+# 如发现某个模块 CI 无法 import，正确做法是 (a) 补测试 或 (b) 走
+# optional-import / sys.exit(0) graceful degrade，而不是 omit。
+# 见 docs/audit/audit-2026-07-04.md §P0-1 "CI 覆盖率凑数恶性循环"。
+omit = []
 
 [tool.coverage.report]
 exclude_lines = [
