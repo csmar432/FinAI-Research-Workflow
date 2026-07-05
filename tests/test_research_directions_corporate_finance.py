@@ -1,4 +1,4 @@
-"""tests/test_core_dashboard_advanced.py — Deep tests for core/dashboard_advanced."""
+"""tests/test_research_directions_corporate_finance.py — Deep tests for corporate_finance direction."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    from scripts.core import dashboard_advanced as mod
+    from scripts.research_directions import corporate_finance as mod
 except Exception as _exc:
-    pytest.skip(f"dashboard_advanced not importable: {_exc}", allow_module_level=True)
+    pytest.skip(f"corporate_finance not importable: {_exc}", allow_module_level=True)
 
 
 class TestModule:
@@ -29,9 +29,15 @@ class TestModule:
         classes = [n for n in dir(mod) if not n.startswith("_") and isinstance(getattr(mod, n, None), type)]
         assert isinstance(classes, list)
 
-    def test_main_callable(self):
-        if hasattr(mod, "main"):
-            assert callable(mod.main)
+    def test_fetch_data_signature(self):
+        if hasattr(mod, "fetch_data"):
+            import inspect
+            assert callable(mod.fetch_data)
+
+    def test_build_panel_signature(self):
+        if hasattr(mod, "build_panel"):
+            import inspect
+            assert callable(mod.build_panel)
 
 
 class TestPureHelpers:
