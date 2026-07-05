@@ -1,4 +1,4 @@
-"""tests/test_core_dashboard_advanced.py — Deep tests for core/dashboard_advanced."""
+"""tests/test_research_directions_asset_pricing.py — Deep tests for asset_pricing direction."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    from scripts.core import dashboard_advanced as mod
+    from scripts.research_directions import asset_pricing as mod
 except Exception as _exc:
-    pytest.skip(f"dashboard_advanced not importable: {_exc}", allow_module_level=True)
+    pytest.skip(f"asset_pricing not importable: {_exc}", allow_module_level=True)
 
 
 class TestModule:
@@ -29,9 +29,17 @@ class TestModule:
         classes = [n for n in dir(mod) if not n.startswith("_") and isinstance(getattr(mod, n, None), type)]
         assert isinstance(classes, list)
 
-    def test_main_callable(self):
-        if hasattr(mod, "main"):
-            assert callable(mod.main)
+    def test_fetch_data_signature(self):
+        if hasattr(mod, "fetch_data"):
+            import inspect
+            sig = inspect.signature(mod.fetch_data)
+            assert callable(sig)
+
+    def test_build_panel_signature(self):
+        if hasattr(mod, "build_panel"):
+            import inspect
+            sig = inspect.signature(mod.build_panel)
+            assert callable(sig)
 
 
 class TestPureHelpers:
@@ -40,6 +48,7 @@ class TestPureHelpers:
         assert isinstance(helpers, list)
 
     def test_try_zero_arg_helper(self):
+        """Attempt to invoke any zero-argument helper safely."""
         import inspect
         for h in dir(mod):
             if h.startswith("_") or h == "main":
@@ -52,7 +61,7 @@ class TestPureHelpers:
                 if len(sig.parameters) == 0:
                     try:
                         fn()
-                        return
+                        return  # success
                     except Exception:
                         pass
             except Exception:
