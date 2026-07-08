@@ -183,7 +183,39 @@ Five MCP servers return mock/hardcoded data by default. All are clearly labeled:
 
 ---
 
-## 5. Reproducibility Checklist
+## 5. Test Coverage Baseline
+
+**Date**: 2026-07-08  
+**Scope**: `scripts/` (72,178 statements, 20,726 branches)  
+**Test framework**: pytest + pytest-cov 7.1.0 + pytest-xdist -n 2  
+**Hardware**: macOS Apple Silicon, Python 3.12  
+**Total tests**: 8,038 across 397 test files  
+**Threshold (CI gate)**: 28% (`coverage report --fail-under=28`)
+
+| Scope | Stmts | Miss | Branch | Cover | Notes |
+|-------|------:|-----:|-------:|------:|-------|
+| **Overall** | 72,178 | 46,240 | 20,726 | **32.2%** | Passes 28% CI gate |
+| `scripts/research_framework/` | ~12K | ~3K | ~2K | **~80%** | All 47 econometric methods individually tested |
+| `scripts/core/` | ~6K | ~2K | ~1.5K | **~70%** | Agent orchestration, checkpoint, observability |
+| `scripts/research_directions/` | ~3K | ~3K | ~500 | **~5%** | Lightweight stubs, integration-tested via pipeline |
+| `scripts/start_research.py` | 158 | 158 | 32 | **0%** | Pipeline entry point — known gap, integration tests cover |
+| `scripts/run_research.py` | 224 | 197 | 32 | **10%** | CLI wrapper, exercised via shell integration |
+
+**Run yourself**:
+```bash
+PYTHONPATH="${PYTHONPATH:-}:." pytest tests/ \
+  -n 2 \
+  --cov=scripts --cov-branch \
+  --cov-report=term --cov-report=html:htmlcov \
+  --maxfail=20 -q --no-header -p no:cacheprovider
+```
+
+Open `htmlcov/index.html` for line-by-line coverage visualization. Full report
+also written to `.coverage-final.json` for programmatic consumption.
+
+---
+
+## 6. Reproducibility Checklist
 
 Every benchmark above is reproducible. Run:
 
@@ -200,7 +232,7 @@ pytest tests/test_benchmark_econometrics.py -v
 
 ---
 
-## 6. Contributing New Benchmarks
+## 7. Contributing New Benchmarks
 
 We welcome community benchmarks. To add a new benchmark:
 
