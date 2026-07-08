@@ -1,9 +1,9 @@
 # BibTeX Reference Check Report
 
-- .bib files: **2**
-- .tex files: **746**
-- Total \cite commands: **30**
-- Unique keys cited: **20**
+- .bib files: **3**
+- .tex files: **762**
+- Total \cite commands: **36**
+- Unique keys cited: **26**
 
 ❌ **5 undefined reference(s) found:**
 

@@ -561,6 +561,6 @@ if __name__ == "__main__":
             print(f"  ❌ {iss}")
     if score.suggestions:
         print(f"\nSuggestions:")
-        for s in score.suggestions[:5]:
-            print(f"  💡 {s}")
+        for suggestion in score.suggestions[:5]:
+            print(f"  💡 {suggestion}")
     print(f"\nElapsed: {score.elapsed_ms:.1f}ms")
