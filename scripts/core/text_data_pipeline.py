@@ -33,7 +33,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+if TYPE_CHECKING:
+    import requests
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +279,8 @@ class TextScraper:
 
     def __init__(self, session: "requests.Session | None" = None):
         self.session = session or (requests.Session() if _HAS_REQUESTS else None)
-        self.session.headers.update({
+        if self.session is not None:
+            self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         })
@@ -423,19 +426,19 @@ class TextDataPipeline:
         sentiment = self.sentiment.analyze(text)
 
         # 实体提取
-        entities = {}
+        entities: dict[str, Any] = {}
         numbers = self.extractor.extract_financial_numbers(text)
         if numbers:
             entities["financial_numbers"] = numbers
         dates = self.extractor.extract_dates(text)
         if dates:
             entities["dates"] = dates
-        commitments = self.extractor.extract_commitments(text)
+        _commitments = self.extractor.extract_commitments(text)
         self.extractor.extract_key_metrics(text)
 
         # 关键词披露
         key_disclosures = sentiment.get("key_disclosure_highlights", [])
-        key_disclosures.extend(commitments[:3])
+        key_disclosures.extend(_commitments[:3])
 
         return TextRecord(
             source_type=source_type,

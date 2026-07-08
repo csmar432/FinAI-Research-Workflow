@@ -24,6 +24,7 @@ import json
 import sqlite3
 import threading
 import time
+from typing import Any
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -83,7 +84,7 @@ class TimeTravelDebugger:
     4. 重放执行 - 从快照重新执行
     """
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str | None = None):
         if db_path is None:
             db_path = ".cache/debugger.db"
 
@@ -174,7 +175,7 @@ class TimeTravelDebugger:
 
         return trace_id
 
-    def end_trace(self, final_state: dict = None):
+    def end_trace(self, final_state: dict | None = None):
         """结束当前追踪"""
         if not self._current_trace_id:
             return
@@ -250,7 +251,7 @@ class TimeTravelDebugger:
             final_state=json.loads(trace_row[4]) if trace_row[4] else None
         )
 
-    def list_traces(self, agent_id: str = None, limit: int = 20) -> list[dict]:
+    def list_traces(self, agent_id: str | None = None, limit: int = 20) -> list[dict]:
         """列出追踪记录"""
         cursor = self._conn.cursor()
 
@@ -291,8 +292,8 @@ class TimeTravelDebugger:
         agent_id: str,
         state_type: str,
         state_data: dict,
-        metadata: dict = None,
-        parent_id: str = None
+        metadata: dict | None = None,
+        parent_id: str | None = None
     ) -> StateSnapshot:
         """创建状态快照"""
         snapshot = StateSnapshot(
@@ -375,7 +376,7 @@ class TimeTravelDebugger:
 
     def _compute_diff(self, state1: dict, state2: dict) -> dict:
         """计算状态差异"""
-        diff = {
+        diff: dict[str, Any] = {
             "added": {},
             "removed": {},
             "changed": {},
@@ -407,7 +408,7 @@ class TimeTravelDebugger:
         options: list[dict],
         chosen: int,
         reasoning: str,
-        context: dict = None
+        context: dict | None = None
     ) -> DecisionRecord:
         """记录决策"""
         decision = DecisionRecord(
@@ -444,7 +445,7 @@ class TimeTravelDebugger:
 
         return decision
 
-    def get_decisions(self, agent_id: str = None, trace_id: str = None) -> list[DecisionRecord]:
+    def get_decisions(self, agent_id: str | None = None, trace_id: str | None = None) -> list[DecisionRecord]:
         """获取决策记录"""
         cursor = self._conn.cursor()
 
@@ -560,7 +561,7 @@ class TimeTravelDebugger:
         decision_choices = [d.chosen for d in trace.decisions]
 
         # 状态类型分布
-        state_types = {}
+        state_types: dict[str, int] = {}
         for s in trace.snapshots:
             state_types[s.state_type] = state_types.get(s.state_type, 0) + 1
 

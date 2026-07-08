@@ -1,0 +1,24 @@
+{
+  "name": "FinAI Research Workflow",
+  "image": "python:3.12-slim",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "pip install -e . --quiet && python scripts/health_check.py --compact",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.ruffEnabled": true,
+        "editor.formatOnSave": true,
+        "editor.rulers": [100]
+      },
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.python",
+        "mutantdino.resourcemonitor"
+      ]
+    }
+  }
+}

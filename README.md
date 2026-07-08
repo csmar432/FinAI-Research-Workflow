@@ -24,6 +24,7 @@
 [![Install](https://img.shields.io/badge/install-git%20clone%20%26%20pip%20install%20-e%20.-blue)](https://github.com/csmar432/FinAI-Research-Workflow#installation)
 [![GitHub release](https://img.shields.io/github/v/release/csmar432/finai-research-workflow?color=blue)](https://github.com/csmar432/FinAI-Research-Workflow/releases)
 [![GitHub stars](https://img.shields.io/github/stars/csmar432/finai-research-workflow)](https://github.com/csmar432/FinAI-Research-Workflow/stargazers)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open%20in%20Codespaces-526ADF?logo=github)](https://codespaces.new/csmar432/FinAI-Research-Workflow)
 [![arXiv](https://img.shields.io/badge/arXiv-cs.AI-b31b1b.svg)](https://arxiv.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/csmar432/finai-research-workflow/ci.yml?branch=main&label=CI)](https://github.com/csmar432/finai-research-workflow/actions)
 [![docs](https://img.shields.io/github/actions/workflow/status/csmar432/finai-research-workflow/docs.yml?branch=main&label=docs)](https://github.com/csmar432/finai-research-workflow/actions)
@@ -54,6 +55,7 @@
 | **~20 econometric method implementations** | [使用指南.md - 实证分析方法](使用指南.md#8-实证分析方法) |
 | **43 MCP server directories** | [使用指南.md - MCP 数据源](使用指南.md#6-mcp-数据源)；**41 真实实现（含 stdlib HTTP/数据库）+ 2 mock-only (CSMAR/Wind 需机构账号) + 3 opt-in 法律风险（CNKI/Wanfang/中文文献）** |
 | **17 AI Skills** | [knowledge/skills/](knowledge/skills/) |
+| **Benchmark results** | [BENCHMARK.md](BENCHMARK.md) · 5 计量方法精度验证 |
 | **API reference** | [scripts/](scripts/) 目录下的每个模块都含 docstring 和类型注解 |
 | **Troubleshooting** | [使用指南.md - 常见问题](使用指南.md#13-常见问题) |
 
@@ -75,6 +77,22 @@ $ python scripts/agent_pipeline.py --topic "Carbon trading and green innovation"
 - **30 journal templates, English/Chinese/Japanese/German** — JF, JFE, RFS, JAE, Econometrica, 经济研究, 金融研究, 管理世界, 会计研究, 中国工业经济.
 - **18 specialised AI skills** (Claude Code / Cursor / GitHub Copilot) — idea discovery, literature review, novelty check, experiment design, data acquisition, paper drafting, figure generation, LaTeX compilation, review loops.
 - **Human-in-the-loop, never autonomous fabrication** — every stage requires explicit checkpoint approval; data sources are verified before use; no synthetic data without user consent.
+
+## Why Not Just Use ChatGPT?
+
+FinAI is purpose-built for economic & financial research. Here is what it does that general LLMs cannot:
+
+| Capability | ChatGPT / Claude (General) | FinAI (Specialized) |
+|---|---|---|
+| **A-share financial data** | Manual download, error-prone | ✅ 43 MCP servers auto-fetch |
+| **DID with 19 robustness checks** | Generic response | ✅ Cluster-robust SEs, Bacon decomposition, event studies |
+| **JF / 经济研究 LaTeX templates** | Manual formatting | ✅ 30 journal templates, one command |
+| **Causal identification strategy** | Generic suggestions | ✅ Econometrics expert knowledge embedded |
+| **Literature review with provenance** | Copy-paste citations | ✅ Source tracking, citation verification |
+| **Multi-stage pipeline with checkpoints** | One-off answers | ✅ 8-stage pipeline with human approval |
+
+> [!TIP]
+> Start now with zero setup: **[Open in GitHub Codespaces](https://codespaces.new/csmar432/FinAI-Research-Workflow)** (free, 120 hours/month). No install required.
 
 > **For Chinese users:** The most comprehensive guide is **[使用指南.md](使用指南.md)** — a complete 13-chapter manual covering installation, workflows, data sources, econometric methods, paper writing, and FAQ.
 
