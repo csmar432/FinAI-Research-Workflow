@@ -5,10 +5,15 @@ message: |
 type: software
 title: "FinAI Research Workflow"
 version: 1.0.0
-date-released: 2026-06-15
+date-released: 2026-07-08
 url: "https://github.com/csmar432/finai-research"
 repository-code: "https://github.com/csmar432/finai-research"
 repository: "https://github.com/csmar432/finai-research"
+# Zenodo DOI: see https://github.com/csmar432/finai-research/releases/tag/v1.0.0
+# Once the maintainer enables Zenodo GitHub integration at
+# https://zenodo.org/account/settings/github/, the v1.0.0 release
+# will be auto-archived and assigned a DOI; paste the DOI below.
+# doi: 10.5281/zenodo.PENDING
 license: MIT
 keywords:
   - academic-research
