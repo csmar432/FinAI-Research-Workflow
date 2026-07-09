@@ -1,18 +1,15 @@
 \documentclass[12pt, a4paper]{article}
 
 % ─────────────────────────────────────────────────────────────────────────────
-% arXiv compatibility
+% Font setup — Times + Helvetica (no CJK fonts; all text is English)
 % ─────────────────────────────────────────────────────────────────────────────
 \usepackage[margin=1in]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{ae,aecompl}
 \usepackage{times}
 \usepackage{helvet}
 \usepackage{courier}
 \usepackage[utf8]{inputenc}
-\usepackage{flushend}
 \usepackage{natbib}
-\bibliographystyle{aea}
 
 % ─────────────────────────────────────────────────────────────────────────────
 % Math & Tables
@@ -25,6 +22,7 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage[dvipsnames]{xcolor}
+\usepackage{microtype}
 \hypersetup{
     colorlinks=true,
     linkcolor=blue,
@@ -72,7 +70,7 @@ We develop \textbf{FinAI}, a purpose-built AI research assistant that addresses 
 \begin{enumerate}
     \item \textbf{43 MCP server directories} providing structured access to A-share financial data, US equity data, global macro indicators (FRED, World Bank, IMF, OECD), and 200M+ academic papers.
     \item \textbf{20+ econometric implementations} covering modern causal inference methods including standard DID, staggered DID (Callaway-Sant'Anna 2021; Sun-Abraham 2021; Borusyak, Jaravel, and Spinks 2024), synthetic control, instrumental variables, panel GMM, RDD, and mediation analysis.
-    \item \textbf{30 journal templates} (JF, JFE, RFS, Journal of Financial Economics; 经济研究, 金融研究, 管理世界; JPE, Econometrica; and 20 others).
+    \item \textbf{30 journal templates} (JF, JFE, RFS, Journal of Financial Economics; Jingji Yanjiu (Economic Research Journal), Jinrong Yanjiu (Journal of Financial Research), Guanli Shijie (Management World); JPE, Econometrica; and 20 others).
     \item \textbf{17 specialized AI skills} for Claude Code, Cursor, and GitHub Copilot, automating the full research pipeline from idea to manuscript.
 \end{enumerate}
 
@@ -95,17 +93,17 @@ The paper proceeds as follows. Section 2 reviews related work. Section 3 describ
 
 \subsection{AI for Scientific Research}
 
-Prior work on AI-assisted research has focused on narrow tasks, surveying AI applications in scientific discovery. \cite{wang2019arxiv} demonstrate GPT-2 for scientific text generation. More recently, \cite{gpt4_2023} and \cite{claude_2024} have shown that frontier LLMs can reason about complex scientific problems. However, these systems lack integration with real-time databases and domain-specific method libraries.
+Prior work on AI-assisted research has focused on narrow tasks, surveying AI applications in scientific discovery.  Wang (2019) demonstrate GPT-2 for scientific text generation.  More recently, GPT-4 (OpenAI, 2023) and Claude 3.5 Sonnet (Anthropic, 2024) have shown that frontier LLMs can reason about complex scientific problems.  However, these systems lack integration with real-time databases and domain-specific method libraries.
 
 \subsection{Automated Econometrics}
 
-Existing tools for automated econometrics include \texttt{estimagic} \citep{estimagic}, \texttt{causalinference} \citep{causalinference}, and \texttt{diff-in-diff2} \citep{diffindiff2}. These packages automate specific estimation tasks but do not integrate with the broader research workflow (literature search, writing, formatting).
+Existing tools for automated econometrics include \texttt{estimagic}, \texttt{causalinference}, and \texttt{diff-in-diff2}.  These packages automate specific estimation tasks but do not integrate with the broader research workflow (literature search, writing, formatting).
 
 FinAI builds on these tools by wrapping them in a unified pipeline with LLM orchestration and structured data retrieval.
 
 \subsection{Research Workflow Tools}
 
-Tools such as Zotero, Obsidian, and Notion provide fragmented support for literature management. FinAI integrates literature search, citation tracking, and manuscript drafting in a single pipeline.
+Tools such as Zotero, Obsidian, and Notion provide fragmented support for literature management.  FinAI integrates literature search, citation tracking, and manuscript drafting in a single pipeline.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % 3. SYSTEM ARCHITECTURE
@@ -240,7 +238,7 @@ We demonstrate FinAI on three real empirical studies drawn from Chinese
 administrative-firm matched datasets.  Each case study uses
 two-way fixed effects (firm + year) with standard errors clustered by firm,
 run via the \texttt{linearmodels} \texttt{PanelOLS} engine.
-All data are sourced from \texttt{~/Desktop/实证数据/} and staged with
+All data are sourced from \texttt{~/Desktop/empirical-data/} and staged with
 standardized merge keys (6-digit firm code + year).%
 \input{../../output/fin-experiments/case_studies/results/table_cs1_lcc.tex}
 \includegraphics[width=0.75\textwidth]{../../output/fin-experiments/case_studies/results/fig_event_cs1.pdf}
@@ -255,8 +253,9 @@ affect patenting activity among listed firms headquartered in those cities?
 is from the \textit{DID Dataset Compendium} administrative list matched to firm
 identifiers.  Outcome variable is firm patent applications from the
 \textit{Listed-Firm Innovation Dataset (2006--2023)} (2006--2023).  Control variables
-(Size, Lev, ROA, Growth, Top1, ListAge) are from the \textit{上市公司
-常用控制变量大全 B13} (2006--2024, winsorized at 1\%/99\%).
+(Size, Lev, ROA, Growth, Top1, ListAge) are from the
+Listed-Firm Control Variables Dataset (B13, 2006--2024, winsorized at 1\%/99\%).
+All datasets are Chinese administrative records translated to English.
 
 \textbf{Identification.} Staggered difference-in-differences with cohort
 fixed effects.  The event study in Figure 5.1 plots the coefficient on
@@ -283,8 +282,7 @@ financing constraints on affected firms?
 
 \textbf{Data.} The treatment indicator ($did$) and the policy dummy are from
 the \textit{Green Credit -- Firm Matched Dataset (2000--2022)} (2000--2022), matched on
-stock code and year.  The outcome is the SA index
-(\textit{SA指数}, B13 dataset), where higher values indicate greater
+stock code and year.  The outcome is the SA index, where higher values indicate greater
 financial constraint.  Full control set from B13 is included.
 
 \textbf{Identification.} Standard TWFE DID with firm and year fixed effects.
@@ -361,9 +359,22 @@ The system is available at: \url{https://github.com/csmar432/finai-research} \\
 Archived on Zenodo: \href{https://doi.org/10.5281/zenodo.21262689}{DOI: 10.5281/zenodo.21262689}
 
 % ─────────────────────────────────────────────────────────────────────────────
-% REFERENCES
+% REFERENCES — manually formatted (tectonic has no .bst support)
 % ─────────────────────────────────────────────────────────────────────────────
 \newpage
-\bibliography{references}
+\section*{References}
+
+\noindent\hangindent=0.6cm\hangafter=1
+GPT-4 Technical Report.  2023.  arXiv:2303.08774.  OpenAI.  \url{https://arxiv.org/abs/2303.08774}.
+
+\noindent\hangindent=0.6cm\hangafter=1
+Wang, L.  2019.  arXiv-sanity-lm: Language models for scientific paper understanding.  arXiv preprint.
+
+\noindent\hangindent=0.6cm\hangafter=1
+Anthropic.  2024.  Claude 3.5 Sonnet.  \url{https://www.anthropic.com/news/claude-3-5-sonnet}.
+
+% For full bibliography from references.bib, compile with:
+%   pdflatex finai && bibtex finai && pdflatex finai && pdflatex finai
+% (BibTeX requires a .bst file not bundled with tectonic)
 
 \end{document}

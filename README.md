@@ -1,75 +1,60 @@
 # 论文-研报工作流 · FinAI Research Workflow
 
+> **研究主题一句话 → 收到可投稿的 LaTeX 草稿。**
 > **Describe your research topic → receive a submission-ready LaTeX draft.**
->
-> An AI-assisted research workflow for economic and financial research — from idea to LaTeX manuscript draft. Integrates **43 MCP server directories (41 real implementations + 2 mock-only for institutional data + 3 opt-in legal-risk)**, modern causal inference (DID/IV/RDD/PSM/GMM, see dependency notes), LaTeX formatting for 30 journal templates (English/Chinese/Japanese/German), and AI-assisted review loops.
->
-> ⚠️ **Important**: This tool generates manuscript drafts that require human review before submission. All causal identification strategies, statistical results, and citations must be verified by a researcher.
->
-> ⚠️ **Legal Risk Servers (CNKI / Wanfang / Chinese Literature)**: These 3 MCP servers scrape websites that prohibit automated access. **They are disabled by default for ALL users** — including the `full` profile. To use them, you must: (1) read [LEGAL_CONSENT.md](LEGAL_CONSENT.md) carefully, (2) set `CLI_ACCEPT_RISK=cnki,wanfang,chinese-literature` in your environment. Without this variable, these servers are never loaded. Users take full legal responsibility.
-
-> 🔴 **科研诚信 — Mock 数据默认关闭 (2026-06-28)**: 以下 5 个 MCP 服务器返回**模拟/硬编码/公开数据快照**，**默认禁用**，防止用户基于伪造数据发表错误结论：
->
-> - `user_nber_wp` — 返回 3 个编造的 paper_id（w32456/w32098/w31567）+ 硬编码引用计数
-> - `user_bea_data` — 无论 `year` 参数如何，都返回硬编码 GDP（$27.36T）
-> - `user_csmar` — 文件头自承认"提供模拟数据用于演示"
-> - `user_wuhan_stats` / `user_macro_datas` — 公开数据快照（统计局发布，非实时 API）
->
-> **临时启用**（如演示场景）：`export MCP_MOCK_MODE=allow`。**禁止**用于任何拟发表的研究输出。详见 [docs/MOCK_DATA_POLICY.md](docs/MOCK_DATA_POLICY.md)。
 
 ![FinAI Research Workflow Banner](docs/assets/banner.svg)
 
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://github.com/csmar432/finai-research)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Install](https://img.shields.io/badge/install-git%20clone%20%26%20pip%20install%20-e%20.-blue)](https://github.com/csmar432/finai-research#installation)
 [![GitHub release](https://img.shields.io/github/v/release/csmar432/finai-research?color=blue)](https://github.com/csmar432/finai-research/releases)
-[![GitHub stars](https://img.shields.io/github/stars/csmar432/finai-research)](https://github.com/csmar432/finai-research/stargazers)
-[![Open in GitHub Codespaces](https://img.shields.io/badge/Open%20in%20Codespaces-526ADF?logo=github)](https://codespaces.new/csmar432/finai-research)
 [![arXiv](https://img.shields.io/badge/arXiv-cs.AI-b31b1b.svg)](https://arxiv.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/csmar432/finai-research/ci.yml?branch=main&label=CI)](https://github.com/csmar432/finai-research/actions)
-[![docs](https://img.shields.io/github/actions/workflow/status/csmar432/finai-research/docs.yml?branch=main&label=docs)](https://github.com/csmar432/finai-research/actions)
-[![codecov](https://codecov.io/gh/csmar432/finai-research/branch/main/graph/badge.svg)](https://codecov.io/gh/csmar432/finai-research)
-[![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![GitHub stars](https://img.shields.io/github/stars/csmar432/finai-research?style=social)](https://github.com/csmar432/finai-research/stargazers)
-[![Audit 2026-07-04](https://img.shields.io/badge/audit-2026--07--04%20PASSED-brightgreen)](docs/audit/audit-2026-07-04.md)
-[![Coverage 49.72%](https://img.shields.io/badge/coverage-49.72%25-brightgreen)](https://codecov.io/gh/csmar432/finai-research)
-[![Discussions](https://img.shields.io/github/discussions/csmar432/finai-research?color=blueviolet)](https://github.com/csmar432/finai-research/discussions)
+[![Coverage](https://img.shields.io/badge/coverage-49.72%25-brightgreen)](https://codecov.io/gh/csmar432/finai-research)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21262689.svg)](https://doi.org/10.5281/zenodo.21262689)
-
----
-<!--
-[🇨🇳 **中文文档**](README.md) · [🇬🇧 **English Documentation**](README_EN.md)
--->
-
-**Languages**: 🇨🇳 [简体中文](README.md) (默认) · 🇬🇧 [English](README_EN.md)
+[![Discussions](https://img.shields.io/github/discussions/csmar432/finai-research?color=blueviolet)](https://github.com/csmar432/finai-research/discussions)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open%20in%20Codespaces-526ADF?logo=github)](https://codespaces.new/csmar432/finai-research)
+[![Star History](https://api.star-history.com/svg?repos=csmar432/finai-research&type=Timeline)](https://star-history.com/#csmar432/finai-research&Timeline)
 
 ---
 
-## Quick Navigation
-
-| I'm looking for... | Go here |
-|---|---|
-| **🧭 交互式配置向导** | `python scripts/setup_wizard.py --guided` · 首次安装推荐 |
-| **🩺 系统自检** | `python scripts/health_check.py --json` · 验证环境就绪 |
-| **Complete Chinese guide** | [使用指南.md](使用指南.md) · 完整的 13 章中文手册 |
-| **~20 econometric method implementations** | [使用指南.md - 实证分析方法](使用指南.md#8-实证分析方法) |
-| **43 MCP server directories** | [使用指南.md - MCP 数据源](使用指南.md#6-mcp-数据源)；**41 真实实现（含 stdlib HTTP/数据库）+ 2 mock-only (CSMAR/Wind 需机构账号) + 3 opt-in 法律风险（CNKI/Wanfang/中文文献）** |
-| **17 AI Skills** | [knowledge/skills/](knowledge/skills/) |
-| **Benchmark results** | [BENCHMARK.md](BENCHMARK.md) · 5 计量方法精度验证 |
-| **API reference** | [scripts/](scripts/) 目录下的每个模块都含 docstring 和类型注解 |
-| **Troubleshooting** | [使用指南.md - 常见问题](使用指南.md#13-常见问题) |
-
-## 60-Second Demo
+## Quick Start (30 秒上手)
 
 ```bash
-$ python scripts/agent_pipeline.py --topic "Carbon trading and green innovation"
+# 1. 安装
+git clone https://github.com/csmar432/finai-research.git && cd finai-research
+pip install -e ".[extras]"
+
+# 2. 配置 LLM（DeepSeek 直连，免费）
+export DEEPSEEK_API_KEY=sk-xxxx
+
+# 3. 开始研究
+python scripts/agent_pipeline.py --topic "Carbon trading and green innovation"
 ```
 
-![Quickstart](docs/assets/demo-terminal.svg)
+![Quick Demo](docs/assets/demo-terminal.svg)
 
-**From a one-line research question to a structured research plan — time and API costs vary by topic complexity, data availability, and LLM model used.** All eight stages (idea generation → literature review → novelty check → empirical design → data acquisition → analysis → writing → adversarial review) include human-in-the-loop checkpoints.
+**一次输入 → 8 阶段流水线：想法生成 → 文献综述 → 新颖性验证 → 实证设计 → 数据获取 → 分析 → 论文写作 → 对抗性 Review。每阶段需研究者确认。**
+
+---
+
+## 3 个核心能力
+
+| | |
+|---|---|
+| **43 个 MCP 数据源** | A 股财务 / 美股 / 宏观（FRED/IMF/世界银行） / 学术论文（OpenAlex/ArXiv），28 个无需 API Key |
+| **~20 种计量方法** | 标准 DID / 交错 DID（CS/SunAb/Borusyak） / IV / RDD / 合成控制 / 面板 GMM，JF/JFE 级别稳健性检验 |
+| **30 种期刊模板** | JF / JFE / RFS / 经济研究 / 金融研究 / 管理世界，中英日德四国语言 |
+
+> ⚠️ AI 生成的因果识别策略、统计结果和引用必须由研究者独立核实后方可投稿。
+> ⚠️ 5 个模拟数据服务器默认禁用，启用时输出带有 ⚠️ MOCK DATA 标识。
+
+---
+
+**完整文档**: [使用指南.md](使用指南.md) · [CLAUDE.md](CLAUDE.md) · [交互式配置向导](python scripts/setup_wizard.py --guided)
+
+---
+
 
 ## Why FinAI Research Workflow?
 
@@ -675,6 +660,5 @@ If you use FinAI Research Workflow in published research, please cite it as:
 - [**E2ER-project**](https://github.com/bhanneke/E2ER-project) — end-to-end empirical research pipeline
 - [**econ-paper-studio**](https://github.com/gaaiyun/econ-paper-studio) — agent-native CLI for empirical economics
 
-## License
 
 MIT License — see [LICENSE](LICENSE) for the full text.
