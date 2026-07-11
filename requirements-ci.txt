@@ -55,3 +55,4 @@ mcp>=1.0.0
 
 # Lint
 ruff>=0.4.0
+pip-audit
