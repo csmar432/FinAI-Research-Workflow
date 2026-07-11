@@ -80,7 +80,8 @@ def _grep_count(pattern: str, glob: str, root: Path = PROJECT_ROOT) -> tuple[int
 def check_1_pypi_package_exists() -> CheckResult:
     """Audit claim: 'PyPI package finai-research-workflow doesn't exist.'
 
-    We verify by hitting PyPI's JSON API.
+    We verify by hitting PyPI's JSON API. After 2026-07-11 publication
+    the package DOES exist; this check flips its semantics accordingly.
     """
     import urllib.request
     import urllib.error
@@ -89,24 +90,27 @@ def check_1_pypi_package_exists() -> CheckResult:
     try:
         for name in ["finai-research-workflow", "finai_research_workflow"]:
             try:
-                urllib.request.urlopen(
+                with urllib.request.urlopen(
                     f"https://pypi.org/pypi/{name}/json", timeout=5
-                )
-                evidence.append(f"  PyPI {name}: EXISTS")
+                ) as r:
+                    data = json.loads(r.read())
+                version = data.get("info", {}).get("version", "?")
+                evidence.append(f"  PyPI {name} v{version}: EXISTS (published)")
                 return CheckResult(
-                    passed=False,
-                    actual="exists",
-                    expected="not exists",
+                    passed=True,
+                    actual="exists (published)",
+                    expected="exists (published)",
                     evidence=evidence,
                 )
             except urllib.error.HTTPError:
-                evidence.append(f"  PyPI {name}: 404 (not found)")
+                evidence.append(f"  PyPI {name}: 404 (not published)")
             except Exception as e:
                 evidence.append(f"  PyPI {name}: error {e}")
+        # Neither name is published
         return CheckResult(
-            passed=True,
-            actual="not found",
-            expected="not found",
+            passed=False,
+            actual="not published",
+            expected="published",
             evidence=evidence,
         )
     except Exception as e:
