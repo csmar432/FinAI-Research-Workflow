@@ -95,8 +95,8 @@ extras = [
     "uvicorn[standard]>=0.30.0",
     "streamlit>=1.32.0,<2.0",
     "openpyxl>=3.1.0,<4.0",
-]
-
+    "tenacity>=8.2.0,<10.0",  # optional retry decorator (graceful degradation if absent)
+]  # noqa: E501
 rag = [
     "chromadb>=0.4.22,<2.0",
     "faiss-cpu>=1.7.4,<2.0",
