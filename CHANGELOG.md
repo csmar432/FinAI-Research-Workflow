@@ -5,6 +5,41 @@ All notable changes to FinAI Research Workflow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-alpha] - 2026-07-11
+
+### Added
+
+- `mcp_servers/_shared/_version.py`: single source of truth for APP_VERSION/APP_NAME,
+  reads from top-level `pyproject.toml` (skips `mcp_servers/pyproject.toml` sub-package)
+- 3 GitHub Discussion seed posts (#135 release announcement, #136 ideas/arXiv
+  auto-submit, #137 Q&A install) for community seeding
+- `audit_guard.py` Check 16: scans 260+ scripts/**/*.py files for hardcoded
+  `vX.Y.Z` version drift from `[project].version`
+- `tests/test_version_drift.py`: 14 regression tests covering CLI banner, MCP
+  servers (sec_edgar/cryptocompare/newsapi), `gen_architecture_diagrams.py`
+- GitHub Description updated with accurate numbers (43 MCP, 47 methods, 30 templates)
+- 3 GitHub Discussion templates + 4 kinds of category defaults enabled
+
+### Fixed
+
+- `scripts/cli.py` banner: was hardcoded `v1.0.0`, now dynamic from pyproject
+- `scripts/cli.py` `version_cmd`: fallback `"1.0.0"` → 5-tier resolution
+  (pyproject → importlib.metadata → "0.0.0+unknown")
+- `mcp_servers/user_sec_edgar/server.py`: `APP_VERSION = "1.0.0"` → dynamic
+- `mcp_servers/user_cryptocompare/server.py`: same fix
+- `mcp_servers/user_newsapi/server.py`: same fix
+- `scripts/gen_architecture_diagrams.py`: header() default `version="v1.0.0"`
+  → dynamic; inline "v1.0.0 标签" → dynamic
+- `README.md`: "~20 种计量方法" / "~30 Econometric Methods" → "47" (truth)
+- `tests/test_research_directions_advanced.py`: stale docstring "all 12" → 13
+- `.gitignore`: added MANUAL_TASKS.md (local-only runbook)
+
+### Changed
+
+- This is a pre-release (`alpha`) tag — used during the Star Audit follow-up
+  phase. Next stable will be `0.3.0` once DemO GIF + topics + awesome-list
+  promotion complete.
+
 ## [1.0.1] - 2026-07-08
 
 ### Fixed

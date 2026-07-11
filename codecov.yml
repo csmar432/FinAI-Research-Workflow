@@ -1,0 +1,62 @@
+# codecov.yml — Codecov configuration for csmar432/finai-research
+#
+# Auto-configured by audit-2026-07-11 (Phase 4 auto-fix).
+# See MANUAL_TASKS.md #12 for details.
+
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 1
+    wait_for_ci: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...80"
+
+status:
+  project:
+    default:
+      target: 30%
+      threshold: 1%
+      if_ci_failed: error
+      only_pulls: false
+  patch:
+    default:
+      target: 60%
+      threshold: 5%
+  changes:
+    default:
+      target: 70%
+
+# Ignore patterns for non-source files
+ignore:
+  - "tests/**"
+  - "docs/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/conftest.py"
+  - "**/mcp_servers/_shared/**"
+  - "**/legacy/**"
+  - "**/deprecated/**"
+
+# Comment templates
+comment:
+  layout: "header, diff, flags, components, sources, footer"
+  behavior: default
+  require_changes: no
+  require_base: no
+  require_head: yes
+
+# Disable noisy components
+component_management:
+  individual_components:
+    - component_id: research_framework
+      paths:
+        - scripts/research_framework/.*
+    - component_id: mcp_servers
+      paths:
+        - mcp_servers/.*
+    - component_id: cli
+      paths:
+        - scripts/cli.py
