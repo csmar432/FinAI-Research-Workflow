@@ -5,50 +5,28 @@ Generated: verify_bib_dois.py
 ## Summary
 
 - Total entries: 23
-- With DOI: 0 (0.0%)
-- Missing DOI: 23 (100.0%)
+- With DOI: 15 (65.2%)
+- Missing DOI: 8 (34.8%)
+
+## Online validation
+
+- ✅ 10.1016/j.jeconom.2020.12.001
+- ✅ 10.1016/j.jeconom.2020.09.006
+- ✅ 10.1093/restud/rdad074
+- ✅ 10.1016/j.jeconom.2008.09.038
+- ✅ 10.1016/j.jeconom.2021.01.010
+- ✅ 10.1257/aer.20190159
+- ✅ 10.1257/000282802760015658
+- ✅ 10.1162/rest_a_00470
+- ✅ 10.1177/0170840603024003910
+- ✅ 10.1080/20430795.2015.1118917
+- ✅ 10.1287/mnsc.2014.1984
+- ✅ 10.3390/s23052695
+- ✅ 10.2139/ssrn.2526671
+- ✅ 10.1016/j.jbankfin.2010.12.002
+- ✅ 10.1016/j.jfineco.2021.01.010
 
 ## Missing DOI entries
-
-- `[cs2021]` Callaway, Brantly and Sant'Anna, Pedro HC
-  - Title: Difference-in-differences with heterogeneous treatment effects
-  - Year: 2021
-  - Journal: American Economic Review
-
-- `[sa2021]` Sun, Li and Abraham, Sarah
-  - Title: Estimating dynamic treatment effects in event studies with heterogeneous treatment effects
-  - Year: 2021
-  - Journal: Review of Economic Studies
-
-- `[bjs2024]` Borusyak, Jaroslav and Hull, Peter and Spinks, Xavier
-  - Title: Efficient estimation of average treatment effects with staggered adoption of treatments
-  - Year: 2024
-  - Journal: Review of Economic Studies
-
-- `[bai2009]` Bai, Jushan
-  - Title: Panel data models with interactive fixed effects
-  - Year: 2009
-  - Journal: Econometrica
-
-- `[goodman2021]` Goodman-Bacon, Andrew
-  - Title: A decomposition method for evaluating the validity of aggregate-level causal inferences in difference-in-differences
-  - Year: 2021
-  - Journal: American Economic Review
-
-- `[arkhangelsky2021]` Arkhangelsky, Dmitry and Athey, Susan and Hirshberg, David A and Imbens, Guido W and Wager, Stefan
-  - Title: Synthetic difference-in-differences
-  - Year: 2021
-  - Journal: American Economic Review
-
-- `[popp2002]` Popp, David
-  - Title: Induced innovation and energy prices
-  - Year: 2002
-  - Journal: American Economic Review
-
-- `[calel2016]` Calel, Raphael and Dechezlepr{\^e
-  - Title: Environmental policy and directed technological change: evidence from the European carbon market
-  - Year: 2016
-  - Journal: Review of Economics and Statistics
 
 - `[guo2020]` Guo, Feng and Wang, Jingyi and Wang, Fei and Kong, Tao and Zhang, Xuan and Cheng, Zongshi
   - Title: Digital financial inclusion in {China
@@ -89,39 +67,4 @@ Generated: verify_bib_dois.py
   - Title: FSB Roadmap for Addressing Climate-Related Financial Risks
   - Year: 2021
   - Journal: Financial Stability Board
-
-- `[Orlitzky2003]` Orlitzky, Marc and Schmidt, Frank L. and Rynes, Sara L.
-  - Title: Corporate Social and Financial Performance: A Meta-Analysis
-  - Year: 2003
-  - Journal: Organization Studies
-
-- `[Friede2015]` Friede, Gunnar and Busch, Timo and Bassen, Alexander
-  - Title: ESG and Financial Performance: Aggregated Evidence from More Than 2000 Empirical Studies
-  - Year: 2015
-  - Journal: Journal of Sustainable Finance \& Investment
-
-- `[Eccles2014]` Eccles, Robert G. and Ioannou, Ioannis and Serafeim, George
-  - Title: The Impact of Corporate Sustainability on Organizational Processes and Performance
-  - Year: 2014
-  - Journal: Management Science
-
-- `[Choi2023]` Choi, Darwin and Gao, Zhenyu and Jiang, Wei
-  - Title: Attention to Global Warming
-  - Year: 2023
-  - Journal: Review of Financial Studies
-
-- `[Cheng2014]` Cheng, Beiting and Ioannou, Ioannis and Serafeim, George
-  - Title: Corporate Social Responsibility and Access to Finance
-  - Year: 2014
-  - Journal: Strategic Management Journal
-
-- `[Goss2011]` Goss, Allen and Roberts, Gordon S.
-  - Title: The Impact of Corporate Social Responsibility on the Cost of Bank Loans
-  - Year: 2011
-  - Journal: Journal of Banking \& Finance
-
-- `[Flammer2021]` Flammer, Caroline
-  - Title: Corporate Green Bonds
-  - Year: 2021
-  - Journal: Journal of Financial Economics
 
