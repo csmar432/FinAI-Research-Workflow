@@ -5,6 +5,46 @@ All notable changes to FinAI Research Workflow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed (audit_fix_2026_07_12)
+- **T001**: Removed mechanism tests from `scripts/us_esg_regression.py` that
+  constructed `cds_proxy`, `rating_proxy`, and `analyst_cov_proxy` as linear
+  functions of treatment variables (endless tautology — would mechanically
+  re-state the baseline DID coefficient). Table 5 now outputs an "Omitted"
+  notice with reference to future work using genuine IBES / TRACE / S&P data.
+- **T002**: `SyntheticControlEngine.sig` no longer returns heuristic stars
+  based on raw RMSPE ratio thresholds. New `.sig` reads permutation p-value
+  from `inference()`. Legacy heuristic preserved as `.rmspe_ratio_sig`.
+- **T003**: Added `T_post < 5` warning to `process_data()` in
+  `scripts/us_esg_regression.py` per Roth & Sant'Anna (2023, *Biometrika*).
+  Table 3 tablenotes updated with explicit "illustrative, not definitive" caveat.
+- **T004**: Fixed `pyproject.toml` `force-include` paths. Previous config
+  referenced `finai_research_workflow/<dir>` (nonexistent source), causing
+  hatchling to fail with `Forced include not found`. Now correctly points to
+  actual source directories (`config`, `templates`, `knowledge`, `mcp_servers`).
+- **T005**: Added `examples/_template/` skeleton (5 markdown files + README)
+  for users to bootstrap new research projects. Updated `.gitignore` to allow
+  template through.
+- **T006**: Added synthetic test fixtures (`data/sample/`): 250-obs ESG panel,
+  300-obs staggered DID panel, 5-entry BibTeX. README documents they are
+  for offline testing only.
+- **T007**: Added 2 Jupyter notebooks (`notebooks/00_quickstart.ipynb`,
+  `notebooks/01_did_lab.ipynb`) with Angrist-Pischke MHE Ch.4 walk-through.
+- **T008**: Added `scripts/generate_fixtures.py` for reproducible fixture
+  generation. Defaults seed=42 for deterministic output.
+- **T009**: Fixed `README_EN.md` Zenodo DOI badge (`PENDING` → `21262689`)
+  and removed duplicate "Architecture overview" entry.
+- **T010**: Aligned `README_EN.md` structure with `README.md` — added
+  "Why FinAI Research Workflow?", expanded Quality Gates, added comparison
+  table with alternatives.
+
+### Added
+- 16 regression tests across 3 new files:
+  - `tests/test_us_esg_regression_t001_audit.py` (7 tests, T001)
+  - `tests/test_synthetic_control_t002_audit.py` (8 tests, T002)
+  - `tests/test_us_esg_t003_shortpanel.py` (6 tests + 1 skipped, T003)
+
 ## [0.2.0-alpha] - 2026-07-11
 
 ### Added

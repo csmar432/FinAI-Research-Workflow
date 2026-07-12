@@ -41,6 +41,13 @@
     ESG$_{\text{high}}$ = 1 for High-ESG firms (Sustainalytics top tercile), 0 otherwise.
     Post = 1 for years 2022 and beyond (SEC climate disclosure rule proposal).
     Data source: yfinance financial statements (2022--2024).
+    \textbf{Caveat (audit\_fix\_2026\_07\_12):} $T_{\text{post}} = 3$ (2022--2024) is below the
+    $T_{\text{post}} \geq 5$ threshold recommended for stable DID inference. Per
+    Roth \& Sant'Anna (2023, \textit{Biometrika}) and Freyaldenhoven et al. (2024),
+    short post-treatment periods (a) inflate finite-sample bias and (b) reduce
+    power of pre-trend tests. Reported coefficients should be interpreted as
+    illustrative, not as definitive causal estimates. Future work should
+    extend the sample to 2010--2025 to obtain $T_{\text{post}} \geq 5$.
   \end{tablenotes}
   \end{threeparttable}
 \end{table}
