@@ -99,6 +99,7 @@ extras = [
     "streamlit>=1.32.0,<2.0",
     "openpyxl>=3.1.0,<4.0",
     "tenacity>=8.2.0,<10.0",  # optional retry decorator (graceful degradation if absent)
+    "tushare>=1.4.0,<2.0",
 ]  # noqa: E501
 rag = [
     "chromadb>=0.4.22,<2.0",
