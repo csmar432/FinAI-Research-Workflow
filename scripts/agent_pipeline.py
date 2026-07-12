@@ -1537,11 +1537,52 @@ class AgentPipeline:
                 language="zh",
                 use_langgraph=True,
             )
+            # ── v2.1 改进（2026-07-12）────────────────────────────────────
+            # LangGraph 路径历史上只 wrap 返回值，没有真正写 paper 文件。
+            # 这导致 Claude Code 之类的终端用户跑完看到 papers/ 为空。
+            # 修复：把 LangGraph 的 stage_outputs 转交给 ReportGenerator，
+            # 像普通路径一样落盘到 output/papers/。
+            is_complete = bool(lg_result.get("is_complete", True))
+            _lg_paper_tex_path: str | None = None
+            if _REPORT_GEN_AVAILABLE:
+                try:
+                    stage_outputs = lg_result.get("stage_outputs") or {}
+                    paper_content = (
+                        stage_outputs.get("writing")
+                        or stage_outputs.get("outline")
+                        or stage_outputs.get("refinement")
+                    )
+                    if paper_content:
+                        output_dir_path = (
+                            kwargs.get("output_dir")
+                            or self.config.output_dir
+                            or "output/papers/"
+                        )
+                        rg = ReportGenerator(output_dir=output_dir_path)
+                        outline = (
+                            paper_content
+                            if isinstance(paper_content, dict)
+                            else {"content": paper_content}
+                        )
+                        _lg_paper_tex_path = str(rg.generate_paper(
+                            topic=self.config.topic or "",
+                            outline=outline,
+                            data=None,
+                            regressions=None,
+                            references=None,
+                            journal=self.config.venue or "经济研究",
+                            output_dir=output_dir_path,
+                        ))
+                except Exception as e:
+                    _ap_log.getLogger("agent_pipeline").warning(
+                        "LangGraph path: ReportGenerator writing failed: %s", e
+                    )
+
             # Wrap the raw dict result in AgentPipelineResult shape so callers
             # can still consume a structured return value
             _wrap = type("_LGBridgeResult", (), {
                 "config": self.config,
-                "success": lg_result.get("is_complete", True),
+                "success": is_complete,
                 "outline": lg_result.get("stage_outputs", {}).get("outline"),
                 "literature": lg_result.get("stage_outputs", {}).get("literature"),
                 "plotting": lg_result.get("stage_outputs", {}).get("plotting"),
@@ -1551,6 +1592,8 @@ class AgentPipeline:
                 "quality_report": lg_result.get("quality_report"),
                 "elapsed_s": time.time() - start_time,
                 "raw_result": lg_result,
+                "paper_tex_path": _lg_paper_tex_path,
+                "errors": lg_result.get("errors", []),
             })()
             return _wrap  # type: ignore[return-value]
 

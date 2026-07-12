@@ -292,11 +292,11 @@ class FullSandboxExecutor:
                 if result.returncode == 0:
                     installed.append(pkg)
                 else:
-                    logger.warning(
+                    _log.warning(
                         f"[SandboxExecutor] Failed to install '{pkg}': {result.stderr[:200]}"
                     )
             except Exception as e:
-                logger.warning(f"[SandboxExecutor] Exception installing '{pkg}': {e}")
+                _log.warning(f"[SandboxExecutor] Exception installing '{pkg}': {e}")
         return installed
 
     def _run_with_limits(
