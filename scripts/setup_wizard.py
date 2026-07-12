@@ -220,8 +220,13 @@ DIRECTION_REQUIREMENTS: dict[str, DirectionConfig] = {
         direction="a_share",
         label="A股研究（上市公司分析）",
         description="需要 Tushare Pro 账号获取 A 股行情、财务、融资融券数据",
-        required=["DEEPSEEK_API_KEY"],
-        recommended=["TUSHARE_TOKEN", "RELAY_API_KEY"],
+        # v2.1 (2026-07-12): DEEPSEEK_API_KEY 改为 recommended 而非 required。
+        # 理由：在 Cursor/Claude Code/Codex 等 host agent 中运行时，
+        #       host agent 本身就是 LLM（虽然 CLI 进程无法直接调用）。
+        #       缺少 DEEPSEEK 时 pipeline 会降级到 MockTemplateEngine，
+        #       产出 [MOCK] 草稿而非崩溃。
+        required=[],
+        recommended=["DEEPSEEK_API_KEY", "TUSHARE_TOKEN", "RELAY_API_KEY"],
         nice=["BRAVE_SEARCH_API_KEY", "OLLAMA_ENABLED"],
         mcp_servers=["user-tushare", "user-eastmoney-reports", "user-eastmoney-fund", "user-eastmoney-bond", "user-enhanced-finance"]
     ),
@@ -229,8 +234,8 @@ DIRECTION_REQUIREMENTS: dict[str, DirectionConfig] = {
         direction="macro",
         label="宏观经济研究",
         description="需要 Tushare 宏观数据 + 东方财富研报 + 全球宏观数据库",
-        required=["DEEPSEEK_API_KEY"],
-        recommended=["BRAVE_SEARCH_API_KEY", "EODHD_API_KEY"],
+        required=[],
+        recommended=["DEEPSEEK_API_KEY", "BRAVE_SEARCH_API_KEY", "EODHD_API_KEY"],
         nice=["FRED_API_KEY", "RELAY_API_KEY"],
         mcp_servers=["user-wb-data", "user-imf-data", "user-oecd-data", "user-fed-data", "user-financial", "user-enhanced-finance"]
     ),
@@ -238,8 +243,8 @@ DIRECTION_REQUIREMENTS: dict[str, DirectionConfig] = {
         direction="empirical_paper",
         label="实证学术论文",
         description="需要 A 股数据做实证分析 + 网络搜索找文献",
-        required=["DEEPSEEK_API_KEY"],
-        recommended=["TUSHARE_TOKEN", "BRAVE_SEARCH_API_KEY"],
+        required=[],
+        recommended=["DEEPSEEK_API_KEY", "TUSHARE_TOKEN", "BRAVE_SEARCH_API_KEY"],
         nice=["RELAY_API_KEY", "OLLAMA_ENABLED"],
         mcp_servers=["user-tushare", "user-wb-data", "user-financial", "user-bea-data", "user-eastmoney-reports"]
     ),
@@ -247,8 +252,8 @@ DIRECTION_REQUIREMENTS: dict[str, DirectionConfig] = {
         direction="quantitative",
         label="量化投资研究",
         description="需要 Tushare 高频行情 + EODHD 全球市场数据",
-        required=["DEEPSEEK_API_KEY", "TUSHARE_TOKEN"],
-        recommended=["EODHD_API_KEY"],
+        required=["TUSHARE_TOKEN"],  # 数据源必需；LLM 推荐
+        recommended=["DEEPSEEK_API_KEY", "EODHD_API_KEY"],
         nice=["OLLAMA_ENABLED"],
         mcp_servers=["user-tushare", "user-eodhd", "user-enhanced-finance", "user-e2b-mcp"]
     ),
@@ -256,8 +261,8 @@ DIRECTION_REQUIREMENTS: dict[str, DirectionConfig] = {
         direction="financial_report",
         label="金融研究报告撰写",
         description="完整研报流程：数据获取 + 深度分析 + 研报撰写",
-        required=["DEEPSEEK_API_KEY"],
-        recommended=["RELAY_API_KEY", "TUSHARE_TOKEN", "BRAVE_SEARCH_API_KEY"],
+        required=[],
+        recommended=["DEEPSEEK_API_KEY", "RELAY_API_KEY", "TUSHARE_TOKEN", "BRAVE_SEARCH_API_KEY"],
         nice=[],
         mcp_servers=["user-tushare", "user-eastmoney-reports", "user-financial", "user-wb-data"]
     ),
