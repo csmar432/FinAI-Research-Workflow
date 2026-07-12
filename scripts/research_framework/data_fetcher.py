@@ -482,28 +482,28 @@ class DataFetcher:
             return call_mcp_tool("user-yfinance", "get_yf_financials",
                                {"ticker": ticker, "statement_type": statement})
         except MCPCallError as e:
-            _log.debug(f"yfinance financials failed for {ticker}: {e}"); return None
+            _log.warning(f"[_mcp_yf_financials] server=user-yfinance, tool=get_yf_financials, ticker={ticker}, error={e}"); return None
 
     def _mcp_yf_ticker_info(self, ticker: str) -> dict | None:
         try: return call_mcp_tool("user-yfinance", "get_yf_quote", {"ticker": ticker})
-        except MCPCallError as e: _log.debug(f"yfinance info failed for {ticker}: {e}"); return None
+        except MCPCallError as e: _log.warning(f"[_mcp_yf_ticker_info] server=user-yfinance, tool=get_yf_quote, ticker={ticker}, error={e}"); return None
 
     def _mcp_yf_sustainability(self, ticker: str) -> dict | None:
         # yfinance MCP 无 sustainability 工具，使用 get_yf_financials ratios 作为部分替代
         try: return call_mcp_tool("user-yfinance", "get_yf_financials",
                                  {"ticker": ticker, "statement_type": "ratios"})
-        except MCPCallError as e: _log.debug(f"yfinance sustainability failed for {ticker}: {e}"); return None
+        except MCPCallError as e: _log.warning(f"[_mcp_yf_sustainability] server=user-yfinance, tool=get_yf_financials, ticker={ticker}, error={e}"); return None
 
     def _mcp_yf_analyst(self, ticker: str) -> dict | None:
         # yfinance MCP 无 analyst_data 工具，使用 get_yf_earnings 作为分析师预测替代（EPS/营收）
         try: return call_mcp_tool("user-yfinance", "get_yf_earnings", {"ticker": ticker})
-        except MCPCallError as e: _log.debug(f"yfinance analyst failed for {ticker}: {e}"); return None
+        except MCPCallError as e: _log.warning(f"[_mcp_yf_analyst] server=user-yfinance, tool=get_yf_earnings, ticker={ticker}, error={e}"); return None
 
     # ── EODHD macro methods ────────────────────────────────────────────────
     def _mcp_eodhd(self, tool: str, args: dict) -> dict | None:
         """Generic EODHD MCP call."""
         try: return call_mcp_tool("user-eodhd", tool, args)
-        except MCPCallError as e: _log.debug(f"EODHD {tool} failed: {e}"); return None
+        except MCPCallError as e: _log.warning(f"[_mcp_eodhd] server=user-eodhd, tool={tool}, ticker=N/A, error={e}"); return None
 
     def fetch_macro_indicator(self, country: str, indicator: str = "gdp_current_usd",
                                api_token: str | None = None) -> dict | None:
