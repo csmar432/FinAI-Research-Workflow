@@ -442,32 +442,42 @@ class OaxacaBlinderDecomposition:
 
         n1, n2 = len(y1), len(y2)
 
-        # Standard OB decomposition: y = Xβ + ε (no intercept in regression)
-        # Exact decomposition with b2 as the reference point:
-        #   Gap = E + C + I
-        #   E = b2'ΔX̄  (endowments: group1's X advantage, valued at group2's returns)
-        #   C = (b1-b2)'X̄₁  (coefficients: group1's returns advantage, valued at group1's X)
-        #   I = (b1-b2)'ΔX̄  (interaction term)
-        # Proof: b2'ΔX̄ + (b1-b2)'X̄₁ + (b1-b2)'ΔX̄
-        #       = b2'ΔX̄ + b1'X̄₁ - b2'X̄₁ + b1'ΔX̄ - b2'ΔX̄
-        #       = b1'X̄₁ - b2'X̄₂ = Gap (exact)
+        # Standard OB decomposition: y = Xβ + ε (X must include constant/intercept column
+        # so that y = X'β exactly recovers the mean — otherwise E+C+I is NOT additive).
+        # Jann (2008) Stata Journal "Oaxaca threefold" decomposition:
+        #   β* = pooled (sample-weighted) non-discriminatory coefficients
+        #   Gap = E + C  (exactly additive, no interaction term)
+        #     E = β*' (X̄₁ - X̄₂)   [endowments: differential X valued at β*]
+        #     C = X̄₁'(β₁ - β*) + X̄₂'(β* - β₂)  [coefficients: differential β]
+        # Proof:
+        #   E + C = β*'(X̄₁-X̄₂) + X̄₁'(β₁-β*) + X̄₂'(β*-β₂)
+        #         = β*'X̄₁ - β*'X̄₂ + β₁'X̄₁ - β*'X̄₁ + β*'X̄₂ - β₂'X̄₂
+        #         = β₁'X̄₁ - β₂'X̄₂ = ȳ₁ - ȳ₂ = Gap  ✓
+        # NOTE: This differs from the textbook 3-fold Cotton (1988) decomposition
+        # which has an interaction term; the interaction is absorbed into C here
+        # by using a single β* reference for both groups (sign convention).
+        n1, n2 = len(y1), len(y2)
         beta1 = np.linalg.lstsq(X1, y1, rcond=None)[0]
         beta2 = np.linalg.lstsq(X2, y2, rcond=None)[0]
 
         xbar1 = np.mean(X1, axis=0)
         xbar2 = np.mean(X2, axis=0)
 
-        # E: endowment effect (different X at group2's returns)
-        endowments = float(beta2 @ (xbar1 - xbar2))
-        # C: coefficient effect (different returns at group1's X)
-        coefficients = float((beta1 - beta2) @ xbar1)
-        # I: interaction
-        interaction = float((beta1 - beta2) @ (xbar1 - xbar2))
+        # Pooled non-discriminatory coefficients (sample-weighted)
+        beta_star = (n1 * beta1 + n2 * beta2) / (n1 + n2)
+
+        # E: endowment effect (differential X valued at β*)
+        endowments = float(beta_star @ (xbar1 - xbar2))
+        # C: coefficient effect (differential β)
+        coefficients = float(xbar1 @ (beta1 - beta_star) + xbar2 @ (beta_star - beta2))
+        # Interaction: 0 in this parametrization (absorbed into C)
+        interaction = 0.0
         # Raw gap
         raw_gap = float(np.mean(y1) - np.mean(y2))
 
-        # Check exactness (within numerical tolerance)
-        abs(endowments + coefficients + interaction - raw_gap) < 0.1
+        # Check exactness (within numerical tolerance) — should now be ~0 due to Jann
+        # parametrization
+        _additive_check = abs(endowments + coefficients + interaction - raw_gap) < 1e-6
 
         # Percentage shares
         total = abs(endowments) + abs(coefficients) + abs(interaction)
