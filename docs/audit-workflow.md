@@ -1,5 +1,7 @@
 # Audit Workflow — Defending Against LLM-Hallucinated Audit Reports
 
+> Last updated: 2026-07-12 (audit_fix_2026_07_12 — 修正检查数 8 → 17)
+
 ## Problem
 
 LLM-generated audit reports (e.g., the 2026-06-24 v3 audit we received
@@ -22,12 +24,18 @@ have wasted ~3 person-months and broken working code.
 
 ### Layer 1: `scripts/audit_guard.py` (automatic)
 
-Run on every commit via pre-commit. Verifies 8 critical claims:
+Run on every commit via pre-commit. Verifies **17 critical claims** across
+5 categories (T001-T003 research integrity, version consistency, MCP
+registration, test count, API health):
 
 ```bash
-python scripts/audit_guard.py          # 8/8 expected to pass
+python scripts/audit_guard.py          # 17/17 expected to pass
 python scripts/audit_guard.py --json   # for CI consumption
 ```
+
+The check count has grown from 8 (v0.1.x baseline) → 12 (audit-2026-07-04) →
+**17** (audit_fix_2026_07_12), reflecting expanded defense surface as the
+project matured.
 
 If a check fails, **assume the audit claim is wrong** and re-verify
 manually before changing code. The check exists because we already
@@ -73,6 +81,14 @@ After fixing 6 real issues from v3 audit on 2026-06-24, we verified
 the remaining 20 items were false positives. The audit_guard.py
 captures the evidence-collection commands so future audits can be
 triaged in <5 minutes instead of <5 hours.
+
+## Audit guard evolution
+
+| Date | Check count | Audit |
+|------|-------------|-------|
+| 2026-06-24 | 8 | v3 audit baseline |
+| 2026-07-04 | 12 | audit-2026-07-04 (added coverage + version + MCP) |
+| 2026-07-12 | **17** | audit_fix_2026_07_12 (added T001-T003 research integrity anti-patterns) |
 
 ## When audit_guard fails
 
