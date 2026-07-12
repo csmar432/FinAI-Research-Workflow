@@ -782,9 +782,53 @@ class ContentRefinementAgent(BaseAgent):
         return self._halt_registry
 
     def act(self, context: dict[str, Any]) -> dict[str, Any]:
-        draft = context.get("draft", "")
+        # Bug fix 2026-07-12 (T8 audit): prior implementation called
+        # `context.get("draft", "")` but the upstream callers (run_research.py
+        # and orchestrator) pass the full paper draft under the key `"context"`
+        # or `"previous_output"`. The result was `draft == ""`, the LLM was
+        # prompted with literally "## 内容\n <!-- Truncate for token limits -->",
+        # and EVERY pipeline was stuck in an infinite revise loop at the
+        # refinement stage (completed_stages = [] forever).
+        #
+        # Fix: read from a chain of fallback fields. The order reflects what
+        # each caller convention is:
+        #   1. explicit "draft"        (manual tests / direct callers)
+        #   2. "context"               (run_research.py:337 convention)
+        #   3. "previous_output"       (orchestrator convention)
+        #   4. whole input_data as string (last-resort safety net)
+        draft_raw = (
+            context.get("draft")
+            or context.get("context")
+            or context.get("previous_output")
+            or ""
+        )
+        # Coerce to string — agents sometimes pass dicts/objects.
+        if not isinstance(draft_raw, str):
+            import json as _json
+            draft_raw = _json.dumps(draft_raw, ensure_ascii=False, indent=2)
+        draft = draft_raw
         halt_rules = context.get("halt_rules", REVIEW_HALT_RULES)
         chapter = context.get("chapter", "全文")
+
+        # Truncation safety: drafts in this project routinely exceed 30K
+        # chars. Old constant was 3000 chars — too small for any review.
+        # New cap: 12,000 chars (~3K tokens). Still well within LLM context
+        # for both DeepSeek (128K) and Claude (200K), but bounded so prompt
+        # construction stays fast. We trim from the middle, keeping both the
+        # abstract opening and the conclusion so reviewers can sanity-check
+        # both ends.
+        MAX_DRAFT_CHARS = 12000
+        if len(draft) > MAX_DRAFT_CHARS:
+            head = draft[: MAX_DRAFT_CHARS // 2]
+            tail = draft[-MAX_DRAFT_CHARS // 2 :]
+            draft_for_review = (
+                head
+                + f"\n\n... [truncated {len(draft) - MAX_DRAFT_CHARS} chars; "
+                f"see full draft at {context.get('draft_path', '<disk>')}] ...\n\n"
+                + tail
+            )
+        else:
+            draft_for_review = draft
 
         rules_text = "\n".join(
             f"- {rule[0]}（标记: {rule[1]}）"
@@ -797,7 +841,7 @@ class ContentRefinementAgent(BaseAgent):
 章节: {chapter}
 
 ## 内容
-{draft[:3000]}  <!-- Truncate for token limits -->
+{draft_for_review}
 
 ## 审稿规则
 请严格检查以下每一项（违反任一规则必须指出）：
@@ -849,6 +893,19 @@ class ContentRefinementAgent(BaseAgent):
             "model": response.model_used,
             "halt_rules_passed": True,  # LLM-based review
             "halt_rules_source": "llm_judgment",
+            # Audit hooks (T8 audit): expose what we actually reviewed so
+            # the checkpoint audit trail records the source-of-truth.
+            "_audit": {
+                "draft_chars_received": len(draft_raw),
+                "draft_chars_in_prompt": len(draft_for_review),
+                "draft_source_field": (
+                    "draft" if context.get("draft")
+                    else "context" if context.get("context")
+                    else "previous_output" if context.get("previous_output")
+                    else "EMPTY"
+                ),
+                "was_truncated": len(draft_raw) > MAX_DRAFT_CHARS,
+            },
         }
 
     def reflect(self, act_result: dict[str, Any]) -> dict[str, Any]:

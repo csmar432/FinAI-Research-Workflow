@@ -333,8 +333,19 @@ def run_agent_pipeline(topic: str) -> None:
 
         try:
             # 传入完整论文草稿作为上下文
+            # Bug fix 2026-07-12 (T8 audit): prior to this, refinement
+            # received `context="...## Draft Paper\n..."` but ContentRefinementAgent
+            # read `context.get("draft", "")` — a field-name mismatch that left
+            # the LLM reviewing an empty string and forced every paper into
+            # an infinite revise loop. We now pass draft= explicitly AND keep
+            # context= for any other agents that may consume this stage.
             full_context = f"## Outline\n{outline_result}\n\n## Literature Review\n{literature_result}\n\n## Plotting Results\n{plotting_result}\n\n## Draft Paper\n{writing_result}"
-            result = _call_agent_safely(pipeline, "refinement", topic, context=full_context)
+            result = _call_agent_safely(
+                pipeline, "refinement", topic,
+                context=full_context,
+                draft=writing_result,         # explicit draft field
+                chapter="全文",
+            )
             if result:
                 update_node_status(
                     nodes, "refinement", result.get("status", "approved"),
@@ -361,7 +372,14 @@ def run_agent_pipeline(topic: str) -> None:
         traceback.print_exc()
 
 
-def _call_agent_safely(pipeline, agent_name: str, topic: str, context: str = "") -> dict | None:
+def _call_agent_safely(
+    pipeline,
+    agent_name: str,
+    topic: str,
+    context: str = "",
+    draft: str | None = None,            # Bug fix 2026-07-12 (T8)
+    chapter: str | None = None,           # Bug fix 2026-07-12 (T8)
+) -> dict | None:
     """安全调用 agent，避免因 API Key 缺失导致整体崩溃。
 
     Args:
@@ -369,6 +387,13 @@ def _call_agent_safely(pipeline, agent_name: str, topic: str, context: str = "")
         agent_name: agent 名称 (outline/literature/plotting/writing/refinement)
         topic: 研究主题
         context: 前序阶段的输出，作为上下文传递给 agent
+        draft:  (optional) explicit draft field — needed for ContentRefinementAgent
+                which reads `context.get("draft", "")`. If None, falls back to context.
+        chapter: (optional) explicit chapter label for review agents.
+
+    Bug fix 2026-07-12 (T8 audit): previously the refinement stage always
+    received empty draft because callers passed it under "context" but the
+    agent looked it up under "draft". Both fields are now passed explicitly.
     """
     try:
         from scripts.core.orchestrator import PipelineStage
@@ -392,12 +417,16 @@ def _call_agent_safely(pipeline, agent_name: str, topic: str, context: str = "")
 
         import time as _time
         start = _time.time()
-        # 传递 topic 和 context（previous_output）
+        # 传递 topic + context + 任何额外字段 (例如 draft, chapter)
         run_input = {
             "topic": topic,
             "context": context,
             "previous_output": context,
         }
+        if draft is not None:
+            run_input["draft"] = draft
+        if chapter is not None:
+            run_input["chapter"] = chapter
         result = agent.run(run_input)
         elapsed = int((_time.time() - start) * 1000)
 

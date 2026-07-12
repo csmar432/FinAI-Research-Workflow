@@ -1002,6 +1002,127 @@ def _check_health_check_skip_flags() -> CheckResult:
     )
 
 
+def _check_refinement_draft_field_compatibility() -> CheckResult:
+    """T8 audit 2026-07-12: verify ContentRefinementAgent.act() reads
+    the draft from a chain of fallback fields, not just 'draft'.
+
+    Bug fix context: run_research.py and orchestrator pass the full paper
+    draft under the keys 'context' / 'previous_output', but the agent was
+    reading only 'context.get("draft", "")' which always returned empty.
+    The LLM was then prompted with an empty draft + the comment
+    "<!-- Truncate for token limits -->", and ALWAYS returned
+    verdict=revise, leaving completed_stages empty forever.
+    """
+    root = Path(__file__).parent.parent
+    p = root / "scripts" / "core" / "agents" / "paper_agents.py"
+    if not p.exists():
+        return CheckResult(
+            passed=False,
+            expected="paper_agents.py exists",
+            actual="NOT FOUND",
+        )
+    src = p.read_text(encoding="utf-8")
+    # Must be inside ContentRefinementAgent class — find by class declaration
+    class_idx = src.find("class ContentRefinementAgent")
+    if class_idx == -1:
+        return CheckResult(
+            passed=False,
+            expected="ContentRefinementAgent class exists",
+            actual="class not found",
+        )
+    # Slice from class def to next class to scope the check
+    next_class = src.find("\nclass ", class_idx + 1)
+    class_body = src[class_idx:next_class if next_class != -1 else len(src)]
+
+    required_tokens = [
+        'context.get("draft")',
+        'context.get("context")',
+        'context.get("previous_output")',
+    ]
+    missing = [t for t in required_tokens if t not in class_body]
+    if missing:
+        return CheckResult(
+            passed=False,
+            expected="fallback chain (draft/context/previous_output) in ContentRefinementAgent.act()",
+            actual=f"missing tokens: {missing}",
+        )
+    return CheckResult(
+        passed=True,
+        expected="fallback chain (draft/context/previous_output) in ContentRefinementAgent.act()",
+        actual="all 3 fallback fields present",
+    )
+
+
+def _check_refinement_truncation_policy() -> CheckResult:
+    """T9 audit 2026-07-12: verify the refinement agent preserves
+    head+tail when truncating long drafts, with a sane upper cap.
+
+    Bug fix context: prior version used `draft[:3000]` which silently
+    chopped off everything after the abstract — LLM judges never saw the
+    results sections. New policy: cap >= 5000 chars AND must keep BOTH
+    head and tail (head+tail middle-out, not head-only).
+    """
+    root = Path(__file__).parent.parent
+    p = root / "scripts" / "core" / "agents" / "paper_agents.py"
+    if not p.exists():
+        return CheckResult(
+            passed=False,
+            expected="paper_agents.py exists",
+            actual="NOT FOUND",
+        )
+    src = p.read_text(encoding="utf-8")
+    class_idx = src.find("class ContentRefinementAgent")
+    if class_idx == -1:
+        return CheckResult(
+            passed=False,
+            expected="ContentRefinementAgent class exists",
+            actual="class not found",
+        )
+    next_class = src.find("\nclass ", class_idx + 1)
+    class_body = src[class_idx:next_class if next_class != -1 else len(src)]
+
+    # Cap must be >= 5000 (was 3000)
+    import re as _re
+    cap_match = _re.search(r"MAX_DRAFT_CHARS\s*=\s*(\d+)", class_body)
+    if not cap_match:
+        return CheckResult(
+            passed=False,
+            expected="MAX_DRAFT_CHARS constant defined",
+            actual="not found",
+        )
+    cap = int(cap_match.group(1))
+    if cap < 5000:
+        return CheckResult(
+            passed=False,
+            expected="MAX_DRAFT_CHARS >= 5000",
+            actual=f"got {cap} (too small — will still cut off results sections)",
+        )
+
+    # Must keep both head and tail (look for both indexing patterns)
+    head_used = bool(_re.search(r"draft\[:\s*MAX_DRAFT_CHARS\s*//\s*2\s*\]", class_body))
+    tail_used = bool(_re.search(r"draft\[-MAX_DRAFT_CHARS\s*//\s*2\s*:\]", class_body))
+    if not (head_used and tail_used):
+        return CheckResult(
+            passed=False,
+            expected="truncation keeps BOTH head and tail (middle-out)",
+            actual=f"head_used={head_used}, tail_used={tail_used}",
+        )
+
+    # Old broken pattern `draft[:3000]` must NOT exist in class body
+    if "draft[:3000]" in class_body:
+        return CheckResult(
+            passed=False,
+            expected="old `draft[:3000]` head-only truncation removed",
+            actual="still present — reviewers still only see abstracts",
+        )
+
+    return CheckResult(
+        passed=True,
+        expected="MAX_DRAFT_CHARS >= 5000 + middle-out truncation",
+        actual=f"cap={cap}, head+tail preserved",
+    )
+
+
 def check_16_version_drift() -> CheckResult:
     """Audit claim: 'Multiple files hardcode APP_VERSION = "1.0.0" or banner v1.0.0'.
 
@@ -1380,6 +1501,26 @@ CHECKS: list[AuditCheck] = [
         "Verify scripts/health_check.py main() exposes both flags so operators "
         "can suppress paid-MCP warnings when intentionally absent",
         lambda: _check_health_check_skip_flags(),
+    ),
+    # T8 audit 2026-07-12: paper_pipeline refinement stage field-name compatibility
+    AuditCheck(
+        22,
+        "Refinement agent reads draft from compatible fields",
+        "Verify ContentRefinementAgent.act() reads from a fallback chain of "
+        "fields (draft/context/previous_output), not just 'draft'. "
+        "Without this, run_research.py passing context= would leave draft='' "
+        "and the LLM would judge an empty paper — every pipeline stuck in "
+        "infinite revise loop.",
+        lambda: _check_refinement_draft_field_compatibility(),
+    ),
+    # T9 audit 2026-07-12: paper_pipeline refinement stage truncation cap
+    AuditCheck(
+        23,
+        "Refinement prompt preserves head+tail when truncating long drafts",
+        "Verify ContentRefinementAgent.act() truncates drafts at >= 5000 chars "
+        "AND keeps both head and tail (so reviewer sees abstract + conclusion), "
+        "instead of hard head-only truncation at 3000 chars.",
+        lambda: _check_refinement_truncation_policy(),
     ),
 ]  # noqa: E501
 
