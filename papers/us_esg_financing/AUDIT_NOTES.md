@@ -2,7 +2,7 @@
 
 > **Status:** RESERVED FOR HUMAN AUTHOR (do NOT cite without verification)
 > **Generated:** 2026-07-11 by Cursor audit (zero modifications to paper text)
-> **Companion to:** [`../AUDIT.md`](../AUDIT.md) (full audit details)
+> **Companion to:** [`./AUDIT.md`](./AUDIT.md) (full audit details)
 
 This paper's headline claim — that high-ESG U.S. energy firms experienced
 reduced financing constraints following the SEC climate disclosure shock
@@ -180,6 +180,6 @@ empirical directionality the pipeline detected.
   performance and corporate financing constraints" --journal "经济研究"`
 - Sample execution: `output/event_runs/macro/20260622_231344_macro/`
   (now deprecated — newer runs in `output/event_runs/.../`)
-- Companion paper source: [`../latex/esg_financing_paper.tex`](../latex/esg_financing_paper.tex)
+- Companion paper source: [`./latex/esg_financing_paper.tex`](./latex/esg_financing_paper.tex)
 
-For audit details, see [`../AUDIT.md`](../AUDIT.md).
+For audit details, see [`./AUDIT.md`](./AUDIT.md).
