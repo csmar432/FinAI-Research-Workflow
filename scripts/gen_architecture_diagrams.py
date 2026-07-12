@@ -5,7 +5,7 @@ gen_architecture_diagrams.py
 
   01_architecture_overview.svg   端到端体系架构（高层鸟瞰）
   02_skill_system_map.svg       17 个 skill 体系
-  03_mcp_ecosystem_map.svg      44 个 MCP server 生态
+  03_mcp_ecosystem_map.svg      {{MCP_COUNT}} 个 MCP server 生态
   04_research_pipeline.svg      8 步研究流水线
   05_deployment_data_flow.svg   部署/数据流
 
@@ -22,6 +22,15 @@ import os
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", ".github", "demo")
 os.makedirs(OUT_DIR, exist_ok=True)
+
+# ─── MCP 数量（真相源: scripts/count_mcp.py）─────────────────────────
+# v2.1 (2026-07-12): 此前硬编码 44 (drift)，改为运行时同步 count_mcp.py 的结果。
+try:
+    from scripts.count_mcp import count_mcp_directories as _cad
+    MCP_COUNT = _cad()
+except Exception:
+    # 兜底：43 个（当前 ground truth）
+    MCP_COUNT = 43
 
 # ─── 主题与样式 ──────────────────────────────────────────────────────
 BG = "#0a0e1a"
@@ -208,7 +217,7 @@ def gen_01_architecture_overview() -> str:
     # Layer 5: Data & Infra
     x += layer_w + gap
     parts.append(section(x, y_top, layer_w, layer_h, "⑤ 数据与基础设施", "#10b981"))
-    parts.append(node(x+30, y_top+40, layer_w-60, 80, "44 MCP Servers", "完整金融数据", COL_DATA))
+    parts.append(node(x+30, y_top+40, layer_w-60, 80, f"{MCP_COUNT} MCP Servers", "完整金融数据", COL_DATA))
     parts.append(node(x+30, y_top+140, layer_w-60, 70, "4 层 Fallback", "MCP → lib → HTTP → synthetic", COL_DATA))
     parts.append(node(x+30, y_top+230, layer_w-60, 70, "27 计量方法", "DID/IV/RD/GMM", COL_DATA))
     parts.append(node(x+30, y_top+320, layer_w-60, 70, "20+ 图表预设", "≥300 DPI", COL_DATA))
@@ -253,7 +262,7 @@ def gen_02_skill_system_map() -> str:
         ]),
         ("② 研究设计阶段", "#10b981", [
             ("fin-experiment-design", "实证方案设计", "DID/IV/RD/PSM"),
-            ("fin-data-acquisition", "数据获取 + 脚本", "44 MCP 数据源"),
+            ("fin-data-acquisition", "数据获取 + 脚本", f"{MCP_COUNT} MCP 数据源"),
         ]),
         ("③ 论文写作阶段", "#f59e0b", [
             ("fin-paper-plan", "大纲生成", "34 期刊模板"),
@@ -301,8 +310,8 @@ def gen_02_skill_system_map() -> str:
 # 图 3: MCP Ecosystem Map
 # ═══════════════════════════════════════════════════════════════════
 def gen_03_mcp_ecosystem_map() -> str:
-    """44 个 MCP server 分类。"""
-    title = "图 3: 44 MCP 数据生态 (MCP Ecosystem Map)"
+    f"""{MCP_COUNT} 个 MCP server 分类。"""
+    title = f"图 3: {MCP_COUNT} MCP 数据生态 (MCP Ecosystem Map)"
     subtitle = "8 类别：学术 / A股 / 美股 / 宏观 / 新闻 / 工具 / 加密 / 区块链"
 
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" font-family="{FONT}">']
@@ -387,7 +396,7 @@ def gen_04_research_pipeline() -> str:
         ("2", "文献综述", "MCP 检索", COL_DATA),
         ("3", "新颖性验证", "顶刊查重", COL_DATA),
         ("4", "实证设计", "DID/IV/RD", COL_PROCESS),
-        ("5", "数据获取", "44 MCP", COL_DATA),
+        ("5", "数据获取", f"{MCP_COUNT} MCP", COL_DATA),
         ("6", "论文写作", "LaTeX", COL_PROCESS),
         ("7", "对抗 Review", "多轮严格", COL_CONTROL),
     ]
@@ -494,7 +503,7 @@ def gen_05_deployment_data_flow() -> str:
     dx = cx + cw + 30
     dw = WIDTH - dx - 60
     parts.append(section(dx, ay, dw, ah, "D. 数据与输出 (Data &amp; Output)", "#10b981"))
-    parts.append(node(dx+20, ay+40, dw-40, 70, "44 MCP Servers", "金融数据", COL_DATA))
+    parts.append(node(dx+20, ay+40, dw-40, 70, f"{MCP_COUNT} MCP Servers", "金融数据", COL_DATA))
     parts.append(node(dx+20, ay+130, dw-40, 70, "4 层 Fallback", "MCP→lib→HTTP→synth", COL_DATA))
     parts.append(node(dx+20, ay+220, dw-40, 70, "data/ 目录", "用户上传/缓存", COL_DATA))
     parts.append(node(dx+20, ay+310, dw-40, 70, "output/", "LaTeX/PDF/图表", COL_DATA))

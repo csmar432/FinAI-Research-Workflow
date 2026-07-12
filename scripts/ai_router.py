@@ -1310,8 +1310,19 @@ class AIRouter:
         tried_str = " → ".join(fallback_tried)
         if self._mock_fallback is not None:
             _log.warning(
-                "All LLM backends failed (tried: %s). Falling back to MockTemplateEngine.",
+                "[LLM FALLBACK] All LLM backends failed (tried: %s). "
+                "Falling back to MockTemplateEngine — outputs will be [MOCK] templates, "
+                "NOT real LLM-generated content. Set DEEPSEEK_API_KEY or start Ollama for real results.",
                 tried_str
+            )
+            # v2.1 (2026-07-12) 额外向 stderr 输出一条显式提示，避免 silent degradation.
+            import sys as _sys
+            print(
+                "\n⚠️  [LLM FALLBACK] All LLM backends failed. "
+                "Using MockTemplateEngine — output is structured templates, NOT real LLM text.\n"
+                "    Tried: " + tried_str + "\n"
+                "    Fix: export DEEPSEEK_API_KEY or start `ollama serve` and rerun.\n",
+                file=_sys.stderr,
             )
             mock_result = self._mock_fallback.generate(
                 task=actual_task.value,

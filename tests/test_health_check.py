@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from unittest import mock
@@ -60,8 +61,12 @@ class TestMask:
 
 
 class TestReadEnv:
-    def test_read_env_basic(self, tmp_path):
+    def test_read_env_basic(self, tmp_path, monkeypatch):
+        """_read_env 应当解析文件内容并优先于 os.environ。"""
         from scripts.health_check import _read_env
+
+        # 屏蔽测试不需要的 os.environ 副作用（隔离 env 后）
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
 
         env_file = tmp_path / ".env"
         env_file.write_text("FOO=bar\nBAZ=qux\n# comment\n FOO2 = spaced \n")
@@ -71,14 +76,61 @@ class TestReadEnv:
         assert env["BAZ"] == "qux"
         assert env["FOO2"] == "spaced"
 
-    def test_read_env_missing_file(self, tmp_path):
+    def test_read_env_missing_file(self, tmp_path, monkeypatch):
+        """_read_env 在文件缺失时回退到 os.environ 的 API key 相关变量。
+
+        v2.1 改进（2026-07-12）：Claude Code / Codex / Docker 等环境没有 .env 文件，
+        但 API key 通过 shell export 设置。_read_env 必须能从 os.environ 读到。
+        """
         from scripts.health_check import _read_env
+
+        # 屏蔽测试不需要的 os.environ 副作用（确保结果可断言）
+        for prefix in ("DEEPSEEK_", "OPENAI_", "ANTHROPIC_", "RELAY_",
+                       "TUSHARE_", "CSMAR_", "WIND_", "FRED_", "EODHD_",
+                       "BRAVE_", "NEWSAPI_"):
+            monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+            for k in list(os.environ):
+                if k.startswith(prefix):
+                    monkeypatch.delenv(k, raising=False)
 
         env = _read_env(tmp_path / "nonexistent")
         assert env == {}
 
-    def test_read_env_comments_and_empty(self, tmp_path):
+    def test_read_env_falls_back_to_os_environ(self, tmp_path, monkeypatch):
+        """v2.1：文件缺失时，os.environ 中的 API key 应作为基线回退。"""
         from scripts.health_check import _read_env
+
+        # 先清空所有相关 key，再注入已知值
+        for prefix in ("DEEPSEEK_", "OPENAI_", "ANTHROPIC_", "RELAY_",
+                       "TUSHARE_", "CSMAR_", "WIND_", "FRED_", "EODHD_",
+                       "BRAVE_", "NEWSAPI_"):
+            for k in list(os.environ):
+                if k.startswith(prefix):
+                    monkeypatch.delenv(k, raising=False)
+
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-mocked-key")
+        env = _read_env(tmp_path / "nonexistent")
+        assert env.get("DEEPSEEK_API_KEY") == "sk-test-mocked-key"
+        # 非 API key 变量不应回退
+        monkeypatch.setenv("PATH", "/some/path")
+        env = _read_env(tmp_path / "nonexistent")
+        assert "PATH" not in env
+
+    def test_read_env_file_overrides_os_environ(self, tmp_path, monkeypatch):
+        """v2.1：文件中的 key 应覆盖 os.environ 中的同名变量。"""
+        from scripts.health_check import _read_env
+
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-from-shell")
+
+        env_file = tmp_path / ".env"
+        env_file.write_text("DEEPSEEK_API_KEY=sk-from-file\n")
+
+        env = _read_env(env_file)
+        assert env["DEEPSEEK_API_KEY"] == "sk-from-file"
+
+    def test_read_env_comments_and_empty(self, tmp_path, monkeypatch):
+        from scripts.health_check import _read_env
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
 
         env_file = tmp_path / ".env"
         env_file.write_text("# only comment\n\nFOO=bar\n  \nBAZ=qux\n")

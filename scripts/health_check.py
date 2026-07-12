@@ -42,7 +42,34 @@ from pathlib import Path
 from typing import Optional
 
 # ── Load .env before any other module reads environment variables ─────────────
-_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+def _find_project_root() -> Path:
+    """智能定位项目根目录。
+
+    v2.1 改进（2026-07-12）：site-packages 场景。
+    当脚本被 `pip install -e .` 链接到 site-packages 时，
+    Path(__file__).parent.parent 是 site-packages 的父目录，不是项目根。
+    采用从该目录向上搜索包含 pyproject.toml / .git / .env 的最浅目录的策略。
+
+    Returns:
+        找到的项目根目录；如果找不到则退化到原 logic 的结果。
+    """
+    file_here = Path(__file__).resolve()
+    start = file_here.parent.parent  # <scripts>/..
+    if (start / "pyproject.toml").exists() or (start / ".git").exists():
+        return start
+    cwd = Path.cwd().resolve()
+    if (cwd / "pyproject.toml").exists() or (cwd / ".git").exists() or (cwd / ".env").exists():
+        return cwd
+    # Walk up from scripts/ looking for pyproject.toml
+    cur = file_here
+    for _ in range(8):  # max 8 levels
+        cur = cur.parent
+        if (cur / "pyproject.toml").exists() or (cur / ".git").exists():
+            return cur
+    return start  # fallback
+
+
+_PROJECT_ROOT = _find_project_root()
 try:
     from dotenv import load_dotenv
     load_dotenv(_PROJECT_ROOT / ".env", override=False)
@@ -200,18 +227,36 @@ def _detect_platform() -> str:
 
 
 def _read_env(path: Path) -> dict[str, str]:
-    env = {}
-    if not path.exists():
-        return env
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" in line:
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip()
-    return env
+    """读取 env 文件，与已有 os.environ 合并（env 文件覆盖同名变量）。
+
+    v2.1 改进（2026-07-12）：同时回退到 os.environ。
+    Claude Code / Codex / Docker 等场景下用户会把 API key 通过 shell export 设置，
+    但脚本可能从 site-packages 调用，工作目录或 _PROJECT_ROOT 都看不到 .env 文件。
+    修复前：必须手动写 .env 才能让 health_check / agent_pipeline 看到 key。
+    修复后：读取 os.environ 中所有与 API key 相关的变量作为基线，env 文件覆盖之。
+    """
+    merged: dict[str, str] = {}
+
+    # 1) 从 os.environ 取基线（覆盖关键 LLM/数据源 key）
+    for k in os.environ:
+        if k.startswith(("DEEPSEEK_", "OPENAI_", "ANTHROPIC_", "RELAY_",
+                         "TUSHARE_", "CSMAR_", "WIND_", "FRED_", "EODHD_",
+                         "BRAVE_", "NEWSAPI_")):
+            v = os.environ[k]
+            if v:  # 仅记录非空值
+                merged[k] = v
+
+    # 2) 读取 env 文件（覆盖 os.environ）
+    if path.exists():
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    merged[k.strip()] = v.strip()
+    return merged
 
 
 def _mask(s: str) -> str:
