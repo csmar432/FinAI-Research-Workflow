@@ -827,6 +827,34 @@ def check_16_version_drift() -> CheckResult:
         r"v(?P<v2>[0-9]+\.[0-9]+\.[0-9]+)\s*·",
         r'= "v(?P<v3>[0-9]+\.[0-9]+\.[0-9]+)"',
     ]
+    import re as _re
+
+    # Get canonical version
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    if not pyproject.exists():
+        return CheckResult(
+            passed=True,
+            actual="no pyproject.toml",
+            expected="consistent",
+            evidence=[],
+        )
+    text = pyproject.read_text()
+    m = _re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    if not m:
+        return CheckResult(
+            passed=False,
+            actual="pyproject.toml has no version",
+            expected="version line present",
+            evidence=[],
+        )
+    canonical = m.group(1)  # e.g. "0.2.0-alpha"
+
+    # Files to scan for hardcoded version drift
+    scan_patterns = [
+        r'APP_VERSION\s*=\s*"(?P<v1>[0-9]+\.[0-9]+\.[0-9]+)"',
+        r"v(?P<v2>[0-9]+\.[0-9]+\.[0-9]+)\s*·",
+        r'= "v(?P<v3>[0-9]+\.[0-9]+\.[0-9]+)"',
+    ]
     combined_re = _re.compile("|".join(scan_patterns))
 
     drift_files: list[tuple[str, str, int]] = []
@@ -895,6 +923,111 @@ def check_16_version_drift() -> CheckResult:
         actual="0 drift (all hardcoded versions match pyproject)",
         expected="0 drift",
         evidence=evidence,
+    )
+
+
+# ────────────────────────────────────────────────────────────────────
+# Check 17: Anti-pattern detection (T001 / T002 / T003 audit_fix_2026_07_12)
+# ────────────────────────────────────────────────────────────────────
+
+
+def check_17_no_research_integrity_anti_patterns() -> CheckResult:
+    """Audit claim: 'No mechanism-tautology, no heuristic-sig, no short-panel DID silence.'
+
+    Defense: scan key research modules for known anti-patterns that would
+    constitute academic integrity issues (or statistical misleading):
+
+    T001 (mechanism tautology): us_esg_regression.py must NOT construct
+        proxy variables as linear functions of treatment variables.
+    T002 (heuristic significance): synthetic_control.py .sig property must
+        NOT use raw RMSPE ratio heuristic (must use permutation p-value).
+    T003 (short-panel silence): us_esg_regression.py must emit warning when
+        T_post < 5 (Roth & Sant'Anna 2023).
+
+    Triggers PASS if NONE of the anti-patterns are detected, FAIL otherwise.
+    """
+    import re as _re
+    findings: list[str] = []
+
+    # ── T001 check ─────────────────────────────────────────────────
+    t001_path = PROJECT_ROOT / "scripts" / "us_esg_regression.py"
+    if t001_path.exists():
+        text = t001_path.read_text(encoding="utf-8")
+        # The 3 tautological constructions:
+        tautology_patterns = [
+            (r'df_mech\["analyst_cov_proxy"\]\s*=\s*df_mech\["ln_assets"\]\s*\*\s*2\.8',
+             "T001: analyst_cov_proxy = ln_assets * 2.8 tautology"),
+            (r'df_mech\["cds_proxy"\]\s*=\s*120\s*-\s*42',
+             "T001: cds_proxy = 120 - 42 * esg_high tautology"),
+            (r'df_mech\["rating_proxy"\]\s*=\s*4\s*\+\s*1\.5',
+             "T001: rating_proxy = 4 + 1.5 * esg_high tautology"),
+        ]
+        for pattern, desc in tautology_patterns:
+            if _re.search(pattern, text):
+                findings.append(f"us_esg_regression.py: {desc}")
+        # Positive: audit_fix marker must be present
+        if "audit_fix_2026_07_12" not in text:
+            findings.append("us_esg_regression.py: missing audit_fix_2026_07_12 marker")
+
+    # ── T002 check ─────────────────────────────────────────────────
+    t002_path = PROJECT_ROOT / "scripts" / "research_framework" / "synthetic_control.py"
+    if t002_path.exists():
+        text = t002_path.read_text(encoding="utf-8")
+        # Find .sig property block
+        sig_match = _re.search(
+            r"    @property\n    def sig\(self\) -> str:\n(.*?)(?=\n    @property|\n    def \w)",
+            text, _re.DOTALL,
+        )
+        if sig_match:
+            sig_body = sig_match.group(1)
+            # If sig body references "rmspe_ratio" without "_sig" suffix → heuristic
+            cleaned = sig_body.lower().replace("rmspe_ratio_sig", "")
+            if "rmspe_ratio" in cleaned:
+                findings.append(
+                    "synthetic_control.py: .sig property still uses RMSPE ratio heuristic (T002 not fixed)"
+                )
+            # .sig must reference permutation
+            if "permutation" not in sig_body.lower():
+                findings.append(
+                    "synthetic_control.py: .sig property does not reference permutation p-value (T002 not fixed)"
+                )
+        else:
+            findings.append("synthetic_control.py: cannot locate .sig property")
+        # Must have rmspe_ratio_sig (legacy) accessor
+        if "def rmspe_ratio_sig" not in text:
+            findings.append("synthetic_control.py: missing legacy rmspe_ratio_sig accessor")
+        # Must have audit_fix marker
+        if "audit_fix_2026_07_12" not in text:
+            findings.append("synthetic_control.py: missing audit_fix_2026_07_12 marker")
+
+    # ── T003 check ─────────────────────────────────────────────────
+    if t001_path.exists():
+        text = t001_path.read_text(encoding="utf-8")
+        if "n_post < 5" not in text and "n_post &lt; 5" not in text:
+            findings.append(
+                "us_esg_regression.py: missing short-panel DID warning (T003 not fixed)"
+            )
+        # Must cite Roth & Sant'Anna
+        if "Roth" not in text or "Sant'Anna" not in text and "Sant" not in text:
+            findings.append(
+                "us_esg_regression.py: missing Roth & Sant'Anna (2023) citation (T003 not fixed)"
+            )
+
+    if findings:
+        return CheckResult(
+            passed=False,
+            actual=f"{len(findings)} anti-pattern finding(s)",
+            expected="0 anti-patterns",
+            evidence=findings[:10],
+        )
+
+    return CheckResult(
+        passed=True,
+        actual="0 anti-patterns (T001/T002/T003 audit fixes intact)",
+        expected="0 anti-patterns",
+        evidence=["T001: mechanism tautology removed",
+                  "T002: .sig uses permutation p-value",
+                  "T003: short-panel DID warning present"],
     )
 
 
@@ -999,6 +1132,13 @@ CHECKS: list[AuditCheck] = [
         "No hardcoded version drift",
         "Defense for 2026-07-11 audit: scan scripts/**/*.py for hardcoded 'vX.Y.Z' literals that drift from pyproject.toml [project].version",
         check_16_version_drift,
+    ),
+    AuditCheck(
+        17,
+        "No research integrity anti-patterns",
+        "Defense for audit_fix_2026_07_12: detect (T001) mechanism tautology in us_esg_regression, "
+        "(T002) RMSPE-ratio heuristic sig in synthetic_control, (T003) silent short-panel DID",
+        check_17_no_research_integrity_anti_patterns,
     ),
 ]  # noqa: E501
 

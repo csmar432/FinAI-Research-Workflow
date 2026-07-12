@@ -40,6 +40,9 @@ data/charts/
 data/finance/
 data/pipeline_drafts/
 data/review_cache/
+# T006 audit_fix_2026_07_12: 例外 data/sample/ 是合成 fixture, 入仓
+!data/sample/
+!data/sample/**
 !data/national_province_data_2026.json
 
 # 动态实验目录：未来新增的 .json 不追踪（已追踪的 policy_database.json 保留）
@@ -154,8 +157,12 @@ htmlcov/
 *.swp
 *.py.bak
 
-# Notebooks
-notebooks/
+# Notebooks (个人 notebook 默认忽略, 仅显式白名单入仓)
+# T007 audit_fix_2026_07_12: 仓库自带的教学 notebook 通过 ! 显式白名单。
+notebooks/_user_*/
+notebooks/.ipynb_checkpoints/
+!notebooks/00_quickstart.ipynb
+!notebooks/01_did_lab.ipynb
 
 # Streamlit
 .streamlit/
@@ -200,7 +207,11 @@ MANUAL_TASKS.md
 *.local.md
 
 # examples/ — 案例脚本依赖 DEEPSEEK_API_KEY 且质量参差，不上传
-examples/
+# 例外: examples/_template/ 是骨架模板 (无 API key 调用, 无真实数据), 入仓
+# 让用户能基于此创建自己的研究项目 (T005 audit_fix_2026_07_12)。
+examples/*
+!examples/_template/
+!examples/_template/**
 
 # MCP servers — 保留代码和元数据，忽略运行时生成文件
 mcp_servers/*/server.log

@@ -162,6 +162,67 @@ class SCEstimationResult:
 
     @property
     def sig(self) -> str:
+        """Significance stars based on permutation p-value (Abadie et al. 2010).
+
+        Returns "", "***", "**", or "*" based on the placebo permutation test
+        stored in ``additional["inference"]["permutation"]["p_value"]``.
+
+        T002 audit_fix_2026_07_12: Previously this returned heuristic stars based
+        on raw RMSPE ratio thresholds (ratio > 20 / 10 / 5 / 2), which is NOT a
+        valid statistical inference. Run ``engine.inference()`` first to populate
+        the permutation p-value; otherwise ``sig`` returns "" with a warning.
+
+        For the legacy heuristic (ratio-based) marker, see ``rmspe_ratio_sig``.
+        """
+        import warnings
+        perm = (
+            self.additional.get("inference", {})
+            .get("permutation", {})
+        )
+        p_val = perm.get("p_value", None)
+        if p_val is None:
+            warnings.warn(
+                "[SCEstimationResult.sig] No permutation p-value found. "
+                "Run engine.inference() first to obtain placebo p-value. "
+                "Returning empty string. (T002 audit_fix_2026_07_12: sig no "
+                "longer uses raw RMSPE ratio heuristic.)",
+                UserWarning,
+                stacklevel=2,
+            )
+            return ""
+        # Map p-value to significance stars (academic standard)
+        if p_val < 0.01:
+            return "***"
+        elif p_val < 0.05:
+            return "**"
+        elif p_val < 0.10:
+            return "*"
+        return ""
+
+    @property
+    def permutation_pvalue(self) -> float:
+        """Convenience accessor for the permutation p-value from inference().
+
+        Returns ``float("nan")`` if inference() has not been run yet.
+        """
+        return float(
+            self.additional.get("inference", {})
+            .get("permutation", {})
+            .get("p_value", float("nan"))
+        )
+
+    @property
+    def rmspe_ratio_sig(self) -> str:
+        """LEGACY: heuristic significance stars based on raw RMSPE ratio.
+
+        T002 audit_fix_2026_07_12: This is the OLD heuristic that was removed
+        from the default ``.sig`` property because it is NOT a valid statistical
+        inference. Per Abadie et al. (2010, JASA), proper synthetic control
+        inference requires placebo permutation tests, not raw RMSPE ratio
+        thresholds. This legacy accessor is preserved ONLY for backward
+        compatibility with code that explicitly wants the heuristic. DO NOT use
+        in published tables or for inference claims.
+        """
         ratio = self.rmspe_ratio
         if ratio > 20: return "***"
         elif ratio > 10: return "**"

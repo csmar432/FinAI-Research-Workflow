@@ -273,6 +273,27 @@ def process_data(df: pd.DataFrame) -> pd.DataFrame:
     df["post"] = (df["year"] >= 2022).astype(int)
     df["did"]  = df["esg_high"] * df["post"]
 
+    # T003 audit_fix_2026_07_12: short-panel DID bias warning.
+    # Per Roth & Sant'Anna (2023, Biometrika) and Freyaldenhoven et al. (2024),
+    # short post-treatment periods (< 5) inflate finite-sample bias and reduce
+    # pre-trend test power. Emit explicit warning so researchers do not interpret
+    # the baseline coefficients as definitive causal estimates.
+    n_post = df.loc[df["post"] == 1, "year"].nunique()
+    n_pre = df.loc[df["post"] == 0, "year"].nunique()
+    if n_post < 5:
+        import warnings as _w
+        _w.warn(
+            f"[us_esg_regression] Short-panel DID warning (audit_fix_2026_07_12): "
+            f"T_post={n_post} (years {[int(y) for y in sorted(df.loc[df['post']==1, 'year'].unique())]}) "
+            f"is below the recommended minimum of 5. Per Roth & Sant'Anna (2023, Biometrika) "
+            f"and Freyaldenhoven et al. (2024), this inflates finite-sample bias and reduces "
+            f"power of pre-trend tests. Reported coefficients should be interpreted as "
+            f"illustrative, not definitive causal estimates. Consider extending the sample "
+            f"to obtain T_post >= 5.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     # Winsorize
     def winsorize(series):
         q01, q99 = series.quantile([0.01, 0.99])
@@ -457,71 +478,26 @@ if __name__ == "__main__":
     t4_df = pd.DataFrame(t4_rows)
     t4_df.to_markdown(TABLE_DIR / "table4_heterogeneity.md", index=False)
 
-    # ── Mechanism Tests ──
+    # ── Mechanism Tests (omitted in v2 — see audit_fix_2026_07_12) ─────────
+    # 2026-07-12 audit fix: 之前的 Table 5 mechanism tests 使用了真实变量的
+    # 线性函数作为 proxy (例如 cds_proxy = 120 - 42 * esg_high - 8 * post),
+    # 这是 endless tautology — 不能识别任何真实机制, 仅能机械重复 DID 系数。
+    # 此版本完全删除 mechanism tests, 改为在论文 narrative discussion 中
+    # 提示未来研究用真实 IBES / TRACE / S&P ratings 数据重新检验。
     print("\n" + "=" * 60)
     print("TABLE 5 — Mechanism Tests")
     print("=" * 60)
-
-    df_mech = df.copy()
-    df_mech["esg_high_post"] = df_mech["esg_high"] * df_mech["post"]
-
-    mech_tests = [
-        ("Analyst Coverage", "ln_assets", "analyst_cov_proxy"),
-        ("CDS Spread (bps)", "cds_proxy", "cds_proxy"),
-        ("Credit Rating", "rating_proxy", "rating_proxy"),
-    ]
-
-    # Proxy mechanism variables from real data (no hardcoded random data)
-    df_mech["analyst_cov_proxy"] = df_mech["ln_assets"] * 2.8  # real log-asset proxy
-    df_mech["analyst_cov_proxy"] = df_mech["analyst_cov_proxy"].clip(5, 30)
-    df_mech["cds_proxy"] = 120 - 42 * df_mech["esg_high"] - 8 * df_mech["post"]
-    df_mech["cds_proxy"] = df_mech["cds_proxy"].clip(40, 280)
-    df_mech["rating_proxy"] = 4 + 1.5 * df_mech["esg_high"] + 0.8 * df_mech["post"]
-    df_mech["rating_proxy"] = df_mech["rating_proxy"].clip(1, 10)
-
+    print("  ⚠️  Table 5 omitted in v2 (audit_fix_2026_07_12)")
+    print("  原因: 早期版本 (Table 5 mechanism tests) 使用真实变量 (esg_high,")
+    print("        post, ln_assets) 的线性函数构造机制 proxy (analyst_cov_proxy,")
+    print("        cds_proxy, rating_proxy), 是 endless tautology — 不能识别任何")
+    print("        真实因果机制, 仅会机械重复 baseline DID 系数。")
+    print("  替代: 未来工作用 IBES analyst coverage / TRACE CDS spreads /")
+    print("        S&P credit ratings 等真实来源重新检验机制 hypothesis。")
     t5_rows = []
-    for label, y_var, xname in mech_tests:
-        sub = df_mech.dropna(subset=[y_var] + X_VARS[:3])
-        X_full = pd.concat([
-            sub[[xname, "esg_high", "post"] + X_VARS[3:]].astype(float),
-            pd.get_dummies(sub["ticker"], prefix="firm", drop_first=True).astype(float),
-            pd.get_dummies(sub["year"], prefix="yr", drop_first=True).astype(float)
-        ], axis=1)
-        X_full = sm.add_constant(X_full).fillna(0)
-        model = sm.OLS(sub[y_var].astype(float).values, X_full.values).fit()
-        xnames_full = list(X_full.columns)
-        if xname in xnames_full:
-            idx = xnames_full.index(xname)
-            c = model.params[idx]; s = model.bse[idx]; p = model.pvalues[idx]
-        else:
-            c = s = p = np.nan
-        stars = sig_marker(p)
-        # LaTeX 转义：变量名 _proxy → \_proxy（_ 是 LaTeX 特殊字符）
-        var_tex = xname.replace("_", r"\_")
-        # LaTeX 转义：*** → \textsuperscript{***}（避免 ** 被解析为注释符）
-        sig_tex = {
-            "***": r"\textsuperscript{***}",
-            "**": r"\textsuperscript{**}",
-            "*": r"\textsuperscript{*}",
-        }
-        coef_tex = f"{c:.4f}"
-        # 添加 stars（用 tex 安全版本）
-        for raw, tex in sig_tex.items():
-            if stars == raw:
-                coef_tex += tex
-                break
-        t5_rows.append({
-            "Mechanism": label,
-            "Variable": var_tex,
-            "Coef": coef_tex,
-            "SE": f"({s:.4f})",
-            "p-value": f"{p:.4f}",
-            "N": len(sub),
-        })
-        print(f"  {label:<20s}: coef={c:.4f}{stars}  se={s:.4f}  p={p:.4f}")
-
-    t5_df = pd.DataFrame(t5_rows)
-    t5_df.to_markdown(TABLE_DIR / "table5_mechanisms.md", index=False)
+    pd.DataFrame(columns=["Mechanism", "Variable", "Coef", "SE", "p-value", "N"]).to_markdown(
+        TABLE_DIR / "table5_mechanisms.md", index=False
+    )
 
     # ── Descriptive Stats ──
     print("\n" + "=" * 60)
@@ -663,36 +639,45 @@ if __name__ == "__main__":
 """
 
     def _generate_table5_tex() -> str:
-        """Table 5: Mechanism Tests。"""
-        body_rows = []
-        for r in t5_rows:
-            # 6 列: Mechanism | Variable | Coef | SE | p-value | N (llrrrr)
-            body_rows.append(
-                f"    {r['Mechanism']} & {r['Variable']} & {r['Coef']} & {r['SE']} & {r['p-value']} & {r['N']} \\\\"
-            )
-        body = "\n".join(body_rows)
-        return r"""\begin{table}[htbp]
-  \centering
-  \caption{Mechanism Tests: ESG Reduces Information Asymmetry and Enhances Creditor Confidence}
-  \label{tab:mechanisms}
-  \begin{threeparttable}
-  \begin{tabular}{llrrrr}
-    \toprule
-    \textbf{Mechanism} & \textbf{Variable} & \textbf{Coef} & \textbf{SE} & \textbf{p-value} & \textbf{N} \\
-    \midrule
-""" + body + r"""
-    \bottomrule
-  \end{tabular}
-  \begin{tablenotes}
-    \footnotesize
-    \item \textit{Notes:} Panel A (Information Asymmetry): Analyst Coverage proxy = ln(Total Assets); CDS Spread proxy = base rate minus ESG and post-shock effects. Panel B (Creditor Confidence): Credit Rating proxy = baseline + ESG premium + post-period uplift. \textsuperscript{***} $p<0.01$, \textsuperscript{**} $p<0.05$, \textsuperscript{*} $p<0.10$. Mechanism proxies derived from observable balance-sheet variables.
-  \end{tablenotes}
-  \end{threeparttable}
-\end{table}
-"""
+        """Table 5: Mechanism Tests (omitted in v2 — see audit_fix_2026_07_12).
 
-    table3_tex = _generate_table3_tex()
-    table4_tex = _generate_table4_tex()
+        Reason: 早期版本使用了真实变量的线性函数作为机制 proxy (例如
+        cds_proxy = 120 - 42 * esg_high - 8 * post), 这是 endless tautology —
+        不能识别任何真实机制, 仅能机械重复 baseline DID 系数。属于学术诚信问题。
+
+        本函数保留 LaTeX 框架供未来用真实数据 (IBES / TRACE / S&P ratings) 重做
+        时直接修改 fill 区域。当前只输出 omitted 通知, 不生成机制表格。
+        """
+        return (
+            r"\begin{table}[htbp]\n"
+            r"  \centering\n"
+            r"  \caption{Mechanism Tests (Omitted in v2 \textemdash{} see audit\_fix\_2026\_07\_12)}\n"
+            r"  \label{tab:mechanisms}\n"
+            r"  \begin{threeparttable}\n"
+            r"  \begin{tabular}{p{0.85\linewidth}}\n"
+            r"    \toprule\n"
+            r"    \textbf{Status} \\\n"
+            r"    \midrule\n"
+            r"    \textbf{Omitted.} The mechanism tests reported in earlier versions of this paper\n"
+            r"    used linear functions of the treatment variables (e.g., $\mathrm{cds\_proxy} = 120 - 42\cdot\mathrm{esg\_high} - 8\cdot\mathrm{post}$)\n"
+            r"    as proxies for analyst coverage, CDS spreads, and credit ratings.\n"
+            r"    These constructions are mechanical tautologies that merely re-state the baseline\n"
+            r"    DID coefficient and do not identify any underlying causal mechanism.\n"
+            r"\n"
+            r"    Future work should re-examine the mechanism hypothesis using genuine data\n"
+            r"    sources: IBES analyst coverage, TRACE CDS spreads, and S\&P/Moody credit\n"
+            r"    ratings. We thank the editor and reviewers for raising this concern. \\\n"
+            r"    \bottomrule\n"
+            r"  \end{tabular}\n"
+            r"  \begin{tablenotes}\n"
+            r"    \footnotesize\n"
+            r"    \item \textit{Notes:} This table is intentionally empty. Earlier versions of\n"
+            r"    Table 5 are documented in \texttt{AUDIT\_2026\_06\_10.md} and the GitHub\n"
+            r"    issue tracker for reproducibility.\n"
+            r"  \end{tablenotes}\n"
+            r"  \end{threeparttable}\n"
+            r"\end{table}\n"
+        )
     table5_tex = _generate_table5_tex()
 
     (LATEX_TABLES_DIR / "table3_did.tex").write_text(table3_tex, encoding="utf-8")

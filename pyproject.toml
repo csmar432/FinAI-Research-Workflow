@@ -213,11 +213,15 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
-# 数据/资源目录必须显式 include，否则 wheel 不含
-"config" = "finai_research_workflow/config"
-"templates" = "finai_research_workflow/templates"
-"knowledge" = "finai_research_workflow/knowledge"
-"mcp_servers" = "finai_research_workflow/mcp_servers"
+# 数据/资源目录必须显式 include，否则 wheel 不含。
+# T004 audit_fix_2026_07_12: 之前的 force-include 把 src 重定向到
+# `finai_research_workflow/<dir>` (不存在的路径), 会导致 hatchling 报
+# `Forced include not found` 错误。修正: 直接强制 include 源路径,
+# wheel 中保持同样的目录结构 (例如 import scripts.audit_guard 仍能 work)。
+"config" = "config"
+"templates" = "templates"
+"knowledge" = "knowledge"
+"mcp_servers" = "mcp_servers"
 
 [tool.hatch.build.targets.sdist]
 include = [

@@ -16,7 +16,7 @@
 [![docs](https://img.shields.io/github/actions/workflow/status/csmar432/finai-research/docs.yml?branch=main&label=docs)](https://github.com/csmar432/finai-research/actions)
 [![codecov](https://codecov.io/gh/csmar432/finai-research/branch/main/graph/badge.svg)](https://codecov.io/gh/csmar432/finai-research)
 <!-- Zenodo DOI badge: 真实发布到 Zenodo 后替换占位符。 -->
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.PENDING.svg)](https://doi.org/10.5281/zenodo.PENDING)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21262689.svg)](https://doi.org/10.5281/zenodo.21262689)
 [![GitHub stars](https://img.shields.io/github/stars/csmar432/finai-research?style=social)](https://github.com/csmar432/finai-research/stargazers)
 
 [🇨🇳 **中文文档**](README.md) · [🇬🇧 **English Documentation**](#)
@@ -33,9 +33,7 @@
 |---|---|
 | **One-line publish script** | `python scripts/release.py` |
 | **API reference** | [scripts/](scripts/) modules with type hints and docstrings |
-| **Architecture overview** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | **17 AI skills** | [knowledge/skills/](knowledge/skills/) |
-| **Architecture overview** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | **Troubleshooting FAQ** | [FAQ.md](FAQ.md) |
 | **Chinese comprehensive guide** | [使用指南.md](使用指南.md) (1049 lines, 13 chapters) |
 
@@ -274,6 +272,40 @@ recover known coefficients from synthetic data with known DGP:
 - **Kleibergen-Paap F** > 10 (instrument strength)
 
 Run with: `pytest tests/test_numerical_correctness.py -v`
+
+---
+
+## ✨ Why FinAI Research Workflow?
+
+- **Built for economists, not generic AI demos** — every default is calibrated for the *Journal of Finance* / *经济研究* standard (DID with heterogeneous treatment effects, cluster-robust SEs at firm level, 19 robustness checks, parallel-trend plots).
+- **43 MCP server directories** — covers A-share financials, US equities, global macro (FRED/World Bank/IMF/OECD/BEA), and 400M+ academic papers (OpenAlex). 41 directories have full Python implementations; 2 are mock-only (user-csmar, user-wind require institutional accounts); 3 are opt-in legal-risk (CNKI, Wanfang, Chinese Literature). Free alternatives exist via `user-financial` (akshare) and `user-yfinance`.
+- **47 econometric method modules, not just OLS** — standard DID, event study, Bacon decomposition, staggered DID (Callaway-Sant'Anna/Sun-Abraham/Borusyak/Goodman-Bacon), synthetic control, instrumental variables, panel GMM, RDD, mediation, and more.
+- **30 journal templates** (EN/ZH/JP/DE) — JF, JFE, RFS, Econometrica, 经济研究, 金融研究, 管理世界, JPE, RES, AEJ Applied, ZWiSt — all with bilingual (English/Chinese) section headings.
+- **Reproducibility first** — every step has a script, every script has a `--seed` flag, every output has data provenance (source, timestamp, hash).
+
+---
+
+## 🚦 Quality Gates
+
+This project maintains 3 layers of defense against LLM-generated
+audit reports containing hallucinated claims:
+
+| Layer | Mechanism | Catches |
+|-------|-----------|---------|
+| 1 | `scripts/audit_guard.py` (17 deterministic checks) | Fake badges, stale metrics, missing tests, version drift |
+| 2 | pre-commit hook (5 cheap checks <3s) | Regression on critical state |
+| 3 | Manual verification protocol | Anything that survives layers 1–2 |
+
+---
+
+## ⚖️ Comparison with Alternatives
+
+| Tool | Strength | FinAI Difference |
+|------|----------|------------------|
+| **ChatGPT / Claude Code (bare)** | Broad knowledge | No replication; no MCP live data; no journal templates |
+| **Stata + ado packages** | Battle-tested | Manual-only; no LLM-assisted review; no auto-LaTeX |
+| **R + tidyverse** | Rich econometric ecosystem | Same limitations as Stata |
+| **FinAI Research Workflow** | **End-to-end pipeline with MCP data + journal templates + adversarial review** | — |
 
 ---
 

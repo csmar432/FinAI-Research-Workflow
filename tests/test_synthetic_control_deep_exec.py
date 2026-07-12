@@ -82,24 +82,54 @@ class TestSCEstimationResultFields:
         assert r.additional["intercept"] == 0.5
 
     def test_sig_property_heavy(self):
+        """T002 audit_fix_2026_07_12: .sig no longer uses RMSPE heuristic.
+
+        Without inference(), .sig must return "" (with a warning).
+        The legacy heuristic is exposed as .rmspe_ratio_sig.
+        """
+        import warnings as _w
         r = SCEstimationResult(treat_unit="a", treat_period=2000, rmspe_ratio=25.0)
-        assert r.sig == "***"
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            assert r.sig == ""
+        # Legacy heuristic still works via .rmspe_ratio_sig
+        assert r.rmspe_ratio_sig == "***"
 
     def test_sig_property_moderate(self):
+        """T002: see test_sig_property_heavy for context."""
+        import warnings as _w
         r = SCEstimationResult(treat_unit="a", treat_period=2000, rmspe_ratio=8.0)
-        assert r.sig == "*"
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            assert r.sig == ""
+        assert r.rmspe_ratio_sig == "*"
 
     def test_sig_property_light(self):
+        """T002: see test_sig_property_heavy for context."""
+        import warnings as _w
         r = SCEstimationResult(treat_unit="a", treat_period=2000, rmspe_ratio=6.0)
-        assert r.sig == "*"
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            assert r.sig == ""
+        assert r.rmspe_ratio_sig == "*"
 
     def test_sig_property_marginal(self):
+        """T002: see test_sig_property_heavy for context."""
+        import warnings as _w
         r = SCEstimationResult(treat_unit="a", treat_period=2000, rmspe_ratio=3.0)
-        assert r.sig == r"$\dagger$"
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            assert r.sig == ""
+        assert r.rmspe_ratio_sig == r"$\dagger$"
 
     def test_sig_property_none(self):
+        """T002: see test_sig_property_heavy for context."""
+        import warnings as _w
         r = SCEstimationResult(treat_unit="a", treat_period=2000, rmspe_ratio=1.5)
-        assert r.sig == ""
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            assert r.sig == ""
+        assert r.rmspe_ratio_sig == ""
 
     def test_to_dict(self):
         r = SCEstimationResult(treat_unit="california", treat_period=1989,
