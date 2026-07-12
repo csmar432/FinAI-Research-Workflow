@@ -22,6 +22,8 @@ Borusyak）、IV、面板 GMM、合成控制、空间回归。19 类稳健性检
 【防伪】HITL 闸门：每步必须研究者确认，AI 生成的伪造结果进不到投稿。
 
 【开源】MIT 协议。永久免费，不卖 SaaS。
+DOI: 10.5281/zenodo.21262689
+PyPI: https://pypi.org/project/finai-research-workflow/
 
 ⚠️ 所有 AI 生成的统计结果/引用必须由人工复核后投稿。
 
@@ -36,11 +38,12 @@ GitHub: https://github.com/csmar432/finai-research
 
 微博支持 9 张图。准备：
 
-1. **architecture-diagram.svg** (项目 .github/demo/ 下)
+1. **architecture-diagram.svg** (项目 `.github/demo/` 下)
    完整流水线架构图
-2. **demo.gif** (项目 .github/demo/ 下)
+2. **demo.gif** (项目 `.github/demo/` 下, 录制脚本 `scripts/_record_demo.sh`)
    终端实际录制 (100×30 terminal, ~6 sec)
-3. **PR screenshot** — 4 个 GitHub PR 已开的截图
+3. **PR screenshot** — 4 个 awesome-list PR DRAFT 已准备
+   (`docs/manual/awesome_list_prs/PR-02..05`), 提交后截图
 
 ## 提交步骤
 

@@ -22,21 +22,25 @@ docs/assets/
 
 ## 升级为 GIF（待执行）
 
-### 方案 A：asciinema + agg（推荐）
+### 方案 A：asciinema + agg（推荐，一键脚本）
+
+**全新**: 项目自带一键脚本 `scripts/_record_demo.sh` (含依赖检测 + 自动验证 + 提交提示).
 
 ```bash
-# 安装 asciinema
+# 1. 安装依赖 (首次, 30s)
 brew install asciinema
-
-# 录制研究流程（≤ 15 秒）
-asciinema rec demo.cast \
-  --title "FinAI Research Workflow Demo" \
-  --command "python scripts/start_research.py --topic 'carbon trading innovation' --stage idea-discovery"
-
-# 转换为 GIF
 pip install agg
-agg demo.cast docs/assets/demo.gif --theme monokai
+
+# 2. 一键录制 (脚本会提示, 10 min 总耗时)
+./scripts/_record_demo.sh
+
+# 3. 验证输出
+file .github/demo/demo.gif    # GIF image data, version 89a
+ls -lh .github/demo/demo.gif  # ≤ 200 KB
+sips -g pixelWidth .github/demo/demo.gif  # ≤ 800 px
 ```
+
+详细文档见 `scripts/_record_demo.sh.md`.
 
 ### 方案 B：Kap（macOS 屏幕录制）
 
@@ -115,4 +119,4 @@ sips -g pixelWidth -g pixelHeight docs/assets/demo.gif
 
 ---
 
-**执行人**: 待用户授权（需选择 A/B/C 方案之一并录制）
+**执行人**: 用户手动 (授权后执行 `scripts/_record_demo.sh`)

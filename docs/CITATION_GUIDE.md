@@ -17,13 +17,13 @@
   month     = jul,
   version   = {0.2.0-alpha},
   url       = {https://github.com/csmar432/finai-research},
-  doi       = {10.5281/zenodo.PENDING},  % NOTE: PENDING. Replace after Zenodo release (https://zenodo.org)
+  doi       = {10.5281/zenodo.21262689},
   note      = {43 MCP data sources, 47 econometric methods, 17 AI skills, 30 journal templates}
 }
 ```
 
-> **Note**: When the project is archived to Zenodo, the DOI placeholder above
-> will be replaced with the real DOI. Until then, cite using the GitHub URL.
+> **Note**: Zenodo DOI 已分配: `10.5281/zenodo.21262689`.
+> 仓库每次 GitHub Release 自动重新存档 (DOI 主体保持不变, 版本号后缀递增).
 
 ## 2. APA (7th edition)
 
@@ -139,5 +139,6 @@ copies or substantial portions of the Software.
 
 | Date | Change |
 |------|--------|
+| 2026-07-12 | A5 fix: DOI placeholder `zenodo.PENDING` → 真实 `10.5281/zenodo.21262689` |
 | 2026-07-12 | 修正版本号 (0.1.0 → 0.2.0-alpha)、月 (jun → jul)、计数 (44/42/44 → 43/47/30)、加 IEEE/GB-T-7714 |
 | 2026-06-28 | 初版 (4 个引用样式) |

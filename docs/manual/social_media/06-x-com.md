@@ -30,7 +30,7 @@ Tushare/yfinance → Stata/R → BibTeX → Overleaf → AI assistants
 Every handoff has a cost. Every step has a human-in-the-loop friction.
 
 We tried to compress it into one CLI command:
-`python scripts/cli.py pipeline --topic X`
+`python scripts/agent_pipeline.py --topic X`
 ```
 
 ### 推 3 / 5 (Solution)
@@ -66,13 +66,16 @@ cost-effective than SaaS. The workflow IS the value.
 ### 推 5 / 5 (Call to action + disclaimer)
 
 ```
-4 upstream awesome-list PRs already submitted (3 auto-accepted by
-bot, awaiting maintainer review):
+4 upstream awesome-list PRs are drafted (DRAFT status, awaiting
+submission via web UI):
 
-→ matteocourthoud/awesome-causal-inference#14
-→ wilsonfreitas/awesome-quant#468
-→ academic/awesome-datascience#654
-→ emptymalei/awesome-research#111
+→ matteocourthoud/awesome-causal-inference
+→ wilsonfreitas/awesome-quant
+→ academic/awesome-datascience
+→ emptymalei/awesome-research
+
+DOI: 10.5281/zenodo.21262689
+PyPI: https://pypi.org/project/finai-research-workflow/
 
 ⚠️ Every AI-generated regression result and citation MUST be verified
 by the human researcher before submission. The tool enforces HITL
