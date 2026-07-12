@@ -3,7 +3,7 @@
 > 综合项目设计理念（"研究主题一句话 → 论文草稿"，人类在环，科研诚信第一），
 > 覆盖 **P0 学术诚信 → P1 可复现 → P2 文档 → P3 架构 → P4 测试 → P5 增长** 6 个优先级。
 >
-> 最后更新：2026-07-12 · 创建于 2026-07-12 (commit `5ed1538`) · **状态更新于 commit `3fa084e`** (P0 + P1 + P2 + check 17 全部完成)
+> 最后更新：2026-07-12 · 创建于 2026-07-12 (commit `5ed1538`) · **状态更新于 commit `c159edc`** (P0-A/B + P1-2 + P2-1 全部完成，P1-1 评估后取消)
 >
 > **Legend**:
 > - `[ ]` Pending · `[~]` In Progress · `[x]` Completed · `[!]` Blocked / Need user confirm
@@ -11,23 +11,51 @@
 
 ---
 
-## ✅ 完成总结 (commit `3fa084e`)
+## ✅ 完成总结 (commit `c159edc` — 实证模块深度审计)
 
 | 优先级 | 已完成 | 总数 | 状态 |
 |---|---|---|---|
-| P0 (学术诚信) | T001, T002, T003, T004 | 4/4 | ✅ 100% |
-| P1 (可复现) | T005, T006, T007, T008 | 4/4 | ✅ 100% |
-| P2 (文档) | T009, T010, T011 | 3/4 | 🟡 88% |
-| P4 (测试) | audit_guard check 17 | 1/1 | ✅ 100% |
-| **合计** | **14 项完备修复** | — | — |
+| P0 (代码 bug) | P0-A (dispatch), P0-B (Bacon) | 2/2 | ✅ 100% |
+| P1 (架构) | P1-2 (orphan engines), P1-1 (cancelled) | 1/2 | 🟡 50% |
+| P2 (代码质量) | P2-1 (significance consistency) | 1/2 | 🟡 50% |
+| **合计** | **4 项完备修复** + **1 项审计取消** | — | — |
 
 ### 测试统计
-- **新增 21 个回归测试** (T001=7, T002=8, T003=6), 全部通过
-- **更新 5 个既有 SC 测试** 以反映 T002 新 sig 语义
+- **新增 34 个回归测试** (P0-A=5, P0-B=5, P1-2=17, P2-1=7), 全部通过
+- **完整测试套件**: 8044+ 通过, 0 回归
 - **audit_guard.py: 17/17 checks 全通过**
-- **含 0 MOCK DATA**
 
-### 关键变更 (commit `3fa084e`)
+### P0-A: `_main_dispatch` 默认 full 不可达 (🔴 P0)
+**Bug**: 之前只调度 `design`/`review` 模式; `--mode full` (默认) 静默 fall-through, 函数返回 None.
+**修复**: 重写为显式 `if args.mode == "full": ... elif ...` 链, 未知模式返回 1.
+**测试**: `tests/test_pipeline_dispatch_p0_audit.py` (5 测试)
+
+### P0-B: Bacon decomposition T 列向量化 (🔴 P0)
+**Bug**: `T = (data[time_var] >= data[unit_var].map(lambda u: t_i if u == uid_i else t_j))` 在整数 Series 上调用 lambda,语义错误.
+**修复**: 构建 per-unit 字典 `{uid_i: t_i, uid_j: t_j}`, 然后 `.map()`.
+**测试**: `tests/test_modern_did_bacon_p0_audit.py` (5 测试)
+
+### P1-2: 11 个 orphan econometric engine 接入 RobustnessRunner (🟡 P1)
+**问题**: 47 个 method 模块中只有 ~10% 可达.
+**修复**: `RobustnessRunner.run_method_specific(method, df)` 调度 11 个引擎:
+`rdd, lp_did, ife, synthetic_did, panel_quantile, panel_threshold, spatial, panel_var, garch, tvp_var, cox_ph`
+**优雅降级**: 缺失依赖 → `status='skipped'` (不崩溃).
+**幂等性**: `(method, id(df), kw)` 缓存.
+**测试**: `tests/test_orphan_engines_p1_audit.py` (17 测试)
+**CLI**: `python scripts/research_framework/pipeline.py --list-methods`
+
+### P2-1: significance_mark 一致性检查 (🟢 P2)
+**审计**: `scripts.core.formatters.significance_mark` 与 `scripts.research_framework.base._stars` 在 *** / ** / * / '' 上保持一致; p<0.10 边缘差异 (`.` vs `$\dagger$`) 是有意为之, 为向后兼容.
+**测试**: `tests/test_significance_centralization_p2_audit.py` (7 测试)
+
+### P1-1: 取消 — 删除重复模块 (🟢 P2 → 取消)
+**初判**: 审计建议删除 `vuong_test.py`, `leamer_sensitivity.py`, `mediation.py` 作为 `vuong_kob.py`, `finance_sensitivity.py`, `mediation_test.py` 的重复.
+**复核**: 每个所谓"重复"实际包含独有类 (`ClarkeTest`, `ClarkeTestEN`, `LeamerSensitivity`, `BoundingResult`, `DynamicPanelDiagnostics`, `vuong_different_controls`, 等), canonical 版本中不存在.
+**决策**: 保留全部 6 个模块. 删除已被 `git restore` 撤销. 50+ 测试未受影响.
+
+---
+
+## ✅ 完成总结 (commit `3fa084e` — 前一轮 P0-P2 审计)
 - 删除 `us_esg_regression.py` 中所有 mechanism proxy 线性构造
 - `synthetic_control.py` `.sig` 改读 permutation p-value (legacy 改名为 `.rmspe_ratio_sig`)
 - `us_esg_regression.py` 加 short-panel DID warning (T_post < 5)
