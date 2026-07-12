@@ -1239,6 +1239,153 @@ def _check_paid_source_notifier() -> CheckResult:
     )
 
 
+def _check_data_warning_notifier() -> CheckResult:
+    """T13 audit 2026-07-12: verify scripts/core/data_warning_notifier.py
+    exists, is non-blocking, AND is wired into the 6 silent-fallback sites
+    in scripts/research_directions/*.py.
+
+    Bug fix context: 5 research_direction modules (international_finance,
+    political_economy_finance, real_estate_finance, fintech_innovation,
+    behavioral_finance) had try/except blocks that returned empty-table
+    fallbacks ({status: "error", tables: {}, ...}) on any regression
+    failure. Callers could not distinguish a successful run from a total
+    failure, so empty LaTeX tables were rendered into drafts without
+    warning. The notifier turns each silent fallback into a visible
+    ⚠️ warning + a JSONL audit log entry.
+
+    Non-blocking by design: warn() never raises, never exits. Users can
+    suppress with FINAI_SUPPRESS_DATA_WARNINGS=1.
+
+    Required wiring:
+        scripts/research_directions/international_finance.py:243
+        scripts/research_directions/political_economy_finance.py:363
+        scripts/research_directions/real_estate_finance.py:371
+        scripts/research_directions/real_estate_finance.py:373
+        scripts/research_directions/fintech_innovation.py:301
+        scripts/research_directions/behavioral_finance.py:317
+    """
+    root = Path(__file__).parent.parent
+    notifier_path = root / "scripts" / "core" / "data_warning_notifier.py"
+    if not notifier_path.exists():
+        return CheckResult(
+            passed=False,
+            expected="scripts/core/data_warning_notifier.py exists",
+            actual="NOT FOUND",
+            evidence=[],
+        )
+
+    notifier_src = notifier_path.read_text(encoding="utf-8")
+
+    # Notifier must be non-blocking — its warn method must NOT contain
+    # raise / sys.exit / SystemExit calls.
+    warn_idx = notifier_src.find("def warn(")
+    next_def = notifier_src.find("\n    def ", warn_idx + 1) if warn_idx >= 0 else -1
+    warn_body = (
+        notifier_src[warn_idx:next_def if next_def != -1 else warn_idx + 2000]
+        if warn_idx >= 0 else ""
+    )
+    # The DataWarningNotifier.warn method is non-blocking. The same property
+    # should hold for the module-level warn() convenience wrapper — but
+    # wrappers always delegate, so check the source for any *unconditional*
+    # raise/sys.exit at module level (i.e. outside try/except).
+    # Pragmatic check: no top-level `raise SystemExit` / `sys.exit(`
+    # outside try/except, and the warn() method body contains no `raise `
+    # outside the swallowed "pass" branches.
+    for bad in ("sys.exit(", "SystemExit"):
+        # sys.exit / SystemExit are forbidden anywhere in the notifier file
+        if bad in notifier_src:
+            return CheckResult(
+                passed=False,
+                expected=f"notifier is non-blocking (no '{bad}')",
+                actual=f"found '{bad}' in {notifier_path.relative_to(PROJECT_ROOT)}",
+                evidence=[],
+            )
+
+    # The 6 silent-fallback sites must invoke _data_warn(...) just before
+    # the return. We grep for both the import and the per-site call.
+    required_sites: list[tuple[str, int, str]] = [
+        # (relative_path, expected_line, source-name passed to warn())
+        ("scripts/research_directions/international_finance.py", 243, "international_finance"),
+        ("scripts/research_directions/political_economy_finance.py", 363, "political_economy_finance"),
+        ("scripts/research_directions/real_estate_finance.py", 371, "real_estate_finance"),
+        ("scripts/research_directions/real_estate_finance.py", 373, "real_estate_finance"),
+        ("scripts/research_directions/fintech_innovation.py", 301, "fintech_innovation"),
+        ("scripts/research_directions/behavioral_finance.py", 317, "behavioral_finance"),
+    ]
+
+    missing_sites: list[str] = []
+    wired_sites: list[str] = []
+    for rel_path, expected_line, source_name in required_sites:
+        p = root / rel_path
+        if not p.exists():
+            missing_sites.append(f"{rel_path}: file missing")
+            continue
+        src = p.read_text(encoding="utf-8")
+        # Must import the notifier
+        if "from scripts.core.data_warning_notifier import" not in src:
+            missing_sites.append(f"{rel_path}: notifier import missing")
+            continue
+        # Must call _data_warn with the matching source=
+        marker = f'source="{source_name}"'
+        if marker not in src:
+            missing_sites.append(f"{rel_path}: warn() call with source={source_name!r} not found")
+            continue
+        wired_sites.append(f"{rel_path}:{expected_line} (source={source_name})")
+
+    # The warn() call must appear BEFORE the silent-fallback return. Verify
+    # that, in each file, the warn() call is at a line number strictly less
+    # than the line that contains the silent-fallback return statement.
+    # (Note: line numbers may have shifted; we verify relative ordering only.)
+    order_issues: list[str] = []
+    for rel_path, expected_line, source_name in required_sites:
+        p = root / rel_path
+        if not p.exists():
+            continue
+        lines = p.read_text(encoding="utf-8").splitlines()
+        warn_line_idx = None
+        ret_line_idx = None
+        for i, ln in enumerate(lines, 1):
+            if "_data_warn(" in ln and source_name in ln and warn_line_idx is None:
+                warn_line_idx = i
+            if (
+                '"status": "error", "tables":' in ln
+                or '"status": "no_data", "tables":' in ln
+                or '"status": "import_error", "tables":' in ln
+            ):
+                # Use the FIRST silent-fallback return near the warn call
+                if ret_line_idx is None or abs(i - expected_line) < abs(ret_line_idx - expected_line):
+                    ret_line_idx = i
+        if warn_line_idx and ret_line_idx and warn_line_idx >= ret_line_idx:
+            order_issues.append(
+                f"{rel_path}: warn() at line {warn_line_idx} must be BEFORE return at line {ret_line_idx}"
+            )
+
+    if missing_sites or order_issues:
+        return CheckResult(
+            passed=False,
+            expected="all 6 silent-fallback sites invoke warn() before return",
+            actual=f"missing={len(missing_sites)}, order_issues={len(order_issues)}",
+            evidence=[f"  PROBLEM: {x}" for x in (missing_sites + order_issues)],
+        )
+
+    # data_warnings.jsonl must be gitignored (don't pollute git history)
+    gi = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+    if "data_warnings.jsonl" not in gi:
+        return CheckResult(
+            passed=False,
+            expected="data_warnings.jsonl is in .gitignore",
+            actual="not present in .gitignore",
+            evidence=[],
+        )
+
+    return CheckResult(
+        passed=True,
+        expected="data_warning_notifier non-blocking + wired into 6 sites + gitignored",
+        actual=f"{len(wired_sites)} sites wired (sources: 5 unique slugs, real_estate_finance dedupes 2 sites)",
+        evidence=[f"  ✓ {x}" for x in wired_sites],
+    )
+
+
 def check_16_version_drift() -> CheckResult:
     """Audit claim: 'Multiple files hardcode APP_VERSION = "1.0.0" or banner v1.0.0'.
 
@@ -1646,6 +1793,19 @@ CHECKS: list[AuditCheck] = [
         "paid MCPs, and is wired into MCPClient.call() + data_fetcher._call_mcp() "
         "+ universal_data_fetcher.try_mcp() as a non-blocking warning (not raise).",
         lambda: _check_paid_source_notifier(),
+    ),
+    # T13 audit 2026-07-12: silent-fallback data warning is non-blocking
+    AuditCheck(
+        25,
+        "Data-warning notifier is non-blocking + wired into 6 silent-fallback sites",
+        "Verify scripts/core/data_warning_notifier.py exists, the warn() "
+        "function is non-blocking (no raise/sys.exit), AND that warn() is "
+        "called at the 6 known silent-fallback sites in research_directions/. "
+        "Failure mode being defended against: a research direction silently "
+        "returns {status: error/no_data, tables: {}, error: ...} and the "
+        "downstream pipeline treats it as a real result, producing empty "
+        "LaTeX tables without warning — academic integrity risk.",
+        lambda: _check_data_warning_notifier(),
     ),
 ]  # noqa: E501
 

@@ -22,6 +22,8 @@ from scripts.research_directions import (
     get_registry,
 )
 
+from scripts.core.data_warning_notifier import warn as _data_warn
+
 _log = logging.getLogger(__name__)
 
 
@@ -298,6 +300,12 @@ class FintechInnovationDirection(BaseResearchDirection):
                 "error": f"Missing dependency: {str(exc)}",
             }
         except Exception as exc:
+            _data_warn(
+                category="research_direction",
+                source="fintech_innovation",
+                reason=f"run_regressions 顶层异常: {exc}",
+                site="scripts/research_directions/fintech_innovation.py:301",
+            )
             return {"status": "error", "tables": {}, "error": str(exc)}
 
     def format_tables(self, reg_results: dict) -> dict[str, str]:

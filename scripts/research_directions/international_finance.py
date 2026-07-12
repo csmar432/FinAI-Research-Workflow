@@ -21,6 +21,8 @@ from scripts.research_directions import (
     get_registry,
 )
 
+from scripts.core.data_warning_notifier import warn as _data_warn
+
 
 class InternationalFinanceDirection(BaseResearchDirection):
     """
@@ -239,7 +241,13 @@ class InternationalFinanceDirection(BaseResearchDirection):
 
         try:
             df = pd.DataFrame(df)
-        except Exception:
+        except Exception as exc:
+            _data_warn(
+                category="research_direction",
+                source="international_finance",
+                reason=f"pd.DataFrame 构造失败: {exc}",
+                site="scripts/research_directions/international_finance.py:243",
+            )
             return {"status": "no_data", "tables": {}}
 
         tables: dict = {}
