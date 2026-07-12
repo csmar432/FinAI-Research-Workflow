@@ -5,16 +5,19 @@
   2. 环境变量 os.environ（最常见）
   3. .env 文件（开发 fallback）
 
-用法：
+用法（v2.1）— DEEPSEEK_API_KEY 是可选的，不是必需：
     from scripts.keychain_manager import get_secret
-    api_key = get_secret("DEEPSEEK_API_KEY")
+    api_key = get_secret("DEEPSEEK_API_KEY")  # 可返回空字符串
     if not api_key:
-        raise ValueError("DEEPSEEK_API_KEY not configured")
+        # 在 host agent (Cursor/Claude Code/Codex) 模式下，
+        # host agent 本身有 LLM，pipeline 会降级到 MockTemplateEngine。
+        # 这里仅记录到日志，不再 raise。
+        logger.warning("DEEPSEEK_API_KEY 未配置，将使用 host agent 或 MockTemplateEngine")
 
 环境：
-    macOS   — 使用 security CLI (需要 scripts.keychain_setup 先注册)
-    Linux   — 自动跳过 Keychain，从 env/.env 读取
-    Windows — 自动跳过 Keychain，从 env/.env 读取
+  macOS   — 使用 security CLI (需要 scripts.keychain_setup 先注册)
+  Linux   — 自动跳过 Keychain，从 env/.env 读取
+  Windows — 自动跳过 Keychain，从 env/.env 读取
 """
 
 from __future__ import annotations

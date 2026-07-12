@@ -479,6 +479,56 @@ def _check_llm(verify: bool = False) -> tuple[bool, str, list[ProblemItem]]:
                     severity="medium",
                 ))
 
+    # ── Ollama 本地模型（v2.1: 无需 API Key）────────────────────────────────
+    # 不读 .env，只查 ollama 是否在本地 11434 运行。
+    ollama_ok = False
+    try:
+        ok, msg = _probe_url("http://127.0.0.1:11434/api/tags", timeout=3)
+        if ok:
+            ollama_ok = True
+            available.append("Ollama (本地 ✅)")
+        else:
+            problems.append(ProblemItem(
+                category=ProblemCategory.NETWORK,
+                name="OLLAMA_LOCAL",
+                name_zh="Ollama 本地模型",
+                message="Ollama 未运行（http://127.0.0.1:11434 无响应）",
+                fix_steps=[
+                    "1. 安装: brew install ollama (macOS) 或 https://ollama.com/download (Win/Linux)",
+                    "2. 拉取模型: ollama pull llama3.3",
+                    "3. 启动服务: ollama serve",
+                    "4. 或设置 DEEPSEEK_API_KEY / RELAY_API_KEY 使用云端 LLM",
+                ],
+                severity="low",
+            ))
+    except Exception:
+        pass
+
+    # ── Host Agent 委托检测（v2.1: Cursor / Claude Code / Codex）──────────────
+    # 注意：这里仅记录到 problems 作为 information-level 警告，**不**进入 available。
+    # 因为 CLI 进程无法直接调用 host agent 的 LLM；检测到 host agent 不等于
+    # LLM 真的可用。pipeline.run 在 llm_available=False 时会降级到
+    # MockTemplateEngine，host agent 端可看到 [MOCK] 草稿并补全。
+    host_platform = _detect_platform()
+    if host_platform in ("cursor", "claude_code", "codex"):
+        problems.append(ProblemItem(
+            category=ProblemCategory.NETWORK,
+            name="HOST_AGENT_CONTEXT",
+            name_zh="Host Agent 上下文",
+            message=(
+                f"检测到 host agent: {host_platform}。"
+                "CLI 进程无法直接调用 host agent 的 LLM；"
+                "pipeline 将降级到 MockTemplateEngine。"
+                "如需真 LLM，请配置 DEEPSEEK_API_KEY 或运行 ollama serve。"
+            ),
+            fix_steps=[
+                "1. 配置 DEEPSEEK_API_KEY（推荐）— 见 .env.example",
+                "2. 或运行 `ollama serve` 启动本地模型",
+                "3. 或接受 [MOCK] 草稿 — host agent 端可看到并补全内容",
+            ],
+            severity="low",
+        ))
+
     # ── 汇总 ────────────────────────────────────────────────────────────
     if available:
         status = "，".join(available)
@@ -487,7 +537,7 @@ def _check_llm(verify: bool = False) -> tuple[bool, str, list[ProblemItem]]:
     if ds_key and any(p.category == ProblemCategory.NETWORK for p in problems):
         return False, "❌ LLM 不可用（网络问题）", problems
 
-    return False, "❌ 没有可用的 LLM", problems
+    return False, "❌ 没有可用的 LLM（请配置 DEEPSEEK_API_KEY 或启动 ollama serve）", problems
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1502,25 +1502,38 @@ class AgentPipeline:
         start_time = time.time()
 
         # ── Pre-flight configuration check ─────────────────────────────────────────
-        # Raise PipelineConfigurationError instead of silently degrading so callers
-        # can catch it programmatically (the class existed since 2024 but was never used).
+        # v2.1 改进（2026-07-12）：不要因为 LLM 不可用就 raise 阻断。
+        # 之前的设计在 Claude Code / Codex / Cursor 等 host agent 场景下会阻断整个
+        # pipeline（错误："LLM 不可用，无法进行论文写作和分析"），但这些场景下：
+        #   1. host agent 本身就是 LLM，能提供 LLM 能力（虽然 CLI 进程无法直接调用）
+        #   2. 用户可能用本地 Ollama 但 health_check 网络抖动误报
+        #   3. MockTemplateEngine 仍可生成结构化草稿，至少让 pipeline 跑通落盘
+        # 新行为：降级到 MockTemplateEngine，stderr 显式 [LLM FALLBACK] 提示，
+        #         绝不静默退化（CLAUDE.md 核心原则 #3）。
         from scripts.health_check import run_diagnostic
         try:
             diag = run_diagnostic()
         except Exception:
             diag = None
 
-        if diag is not None and not diag.llm_available:
-            raise PipelineConfigurationError(
-                "LLM 不可用，无法进行论文写作和分析。",
-                details={
-                    "problem": "LLM configuration error",
-                    "fix_steps": [
-                        "检查 DEEPSEEK_API_KEY / OPENAI_API_KEY 环境变量",
-                        "确认网络可以访问 LLM API 端点",
-                        "参考 .env.example 配置 API Key",
-                    ],
-                },
+        self._llm_actually_available = bool(diag and diag.llm_available)
+        if not self._llm_actually_available:
+            import sys as _sys
+            _reason = (
+                "未配置 DEEPSEEK_API_KEY / RELAY_API_KEY 且 Ollama 未运行。"
+                if diag is None or not diag.llm_status
+                else f"原因：{diag.llm_status[:200]}"
+            )
+            print(
+                "\n⚠️  [LLM FALLBACK] 本次 pipeline 将降级到 MockTemplateEngine。\n"
+                "    产出物仍可落盘到 output/papers/，但内容是模板（带 [MOCK] 前缀），\n"
+                "    不是真实 LLM 生成。请配置 DEEPSEEK_API_KEY 或运行 `ollama serve`\n"
+                "    后重跑以获得真 LLM 输出。\n"
+                f"    诊断：{_reason}\n"
+                "    说明：如果你正在 Cursor / Claude Code / Codex 等 host agent 中\n"
+                "    运行，host agent 本身有 LLM，但 CLI 进程无法直接调用它——\n"
+                "    需要通过 MCP 反向调用或 host agent 端补全 LLM 反馈。\n",
+                file=_sys.stderr,
             )
 
         self._ensure_initialized()

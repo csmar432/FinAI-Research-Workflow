@@ -51,7 +51,7 @@ def check_llm_keys() -> list[CheckItem]:
 
     items = []
     keys = {
-        "DEEPSEEK_API_KEY": "DeepSeek（中文写作/分析，必需）",
+        "DEEPSEEK_API_KEY": "DeepSeek（中文写作/分析，可选）",
         "RELAY_API_KEY": "Relay（英文写作/GPT/Claude，可选）",
         "OLLAMA_ENABLED": "Ollama（本地模型，无网时兜底）",
     }

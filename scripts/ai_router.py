@@ -1316,14 +1316,17 @@ class AIRouter:
                 tried_str
             )
             # v2.1 (2026-07-12) 额外向 stderr 输出一条显式提示，避免 silent degradation.
+            # v2.1.1 (2026-07-12) 加 once 标志：每个 AIRouter 实例只打一次，避免噪音刷屏
             import sys as _sys
-            print(
-                "\n⚠️  [LLM FALLBACK] All LLM backends failed. "
-                "Using MockTemplateEngine — output is structured templates, NOT real LLM text.\n"
-                "    Tried: " + tried_str + "\n"
-                "    Fix: export DEEPSEEK_API_KEY or start `ollama serve` and rerun.\n",
-                file=_sys.stderr,
-            )
+            if not getattr(self, "_fallback_warned_once", False):
+                self._fallback_warned_once = True
+                print(
+                    "\n⚠️  [LLM FALLBACK] All LLM backends failed. "
+                    "Using MockTemplateEngine — output is structured templates, NOT real LLM text.\n"
+                    "    Tried: " + tried_str + "\n"
+                    "    Fix: export DEEPSEEK_API_KEY or start `ollama serve` and rerun.\n",
+                    file=_sys.stderr,
+                )
             mock_result = self._mock_fallback.generate(
                 task=actual_task.value,
                 topic=user_input[:100],
