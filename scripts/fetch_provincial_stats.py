@@ -314,7 +314,10 @@ def fetch_bulletin_content(url: str) -> str | None:
                 if "charset=" in ct:
                     charset = ct.split("charset=")[-1].split(";")[0].strip()
                 return raw.decode(charset, errors="replace")
-        except Exception:
+        except Exception as exc:
+            _log.warning(
+                f"silent except in fallback decode path (insecure SSL retry): {type(exc).__name__}: {exc}"
+            )
             pass
     except Exception as e:
         _log.debug(f"urllib failed for {url}: {e}")

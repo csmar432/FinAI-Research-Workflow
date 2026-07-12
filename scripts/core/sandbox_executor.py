@@ -23,6 +23,7 @@ __all__ = [
 
 import ast
 import json
+import logging
 import os
 import resource
 import subprocess
@@ -32,6 +33,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+_log = logging.getLogger(__name__)
 
 # ─── Result Dataclass ──────────────────────────────────────────────────────────
 
@@ -376,11 +379,17 @@ class FullSandboxExecutor:
                         flag = f.read().strip()
                     if flag == "1":
                         return_code = 1
-                except Exception:
+                except Exception as exc:
+                    _log.warning(
+                        f"silent except in _run_with_limits (read success flag): {type(exc).__name__}: {exc}"
+                    )
                     pass
                 try:
                     os.unlink(success_file)
-                except Exception:
+                except Exception as exc:
+                    _log.warning(
+                        f"silent except in _run_with_limits (unlink success file): {type(exc).__name__}: {exc}"
+                    )
                     pass
 
             # Estimate memory from resource (best-effort)
@@ -388,7 +397,10 @@ class FullSandboxExecutor:
             try:
                 usage = resource.getrusage(resource.RUSAGE_CHILDREN)
                 mem_mb = usage.ru_maxrss / 1024
-            except Exception:
+            except Exception as exc:
+                _log.warning(
+                    f"silent except in _run_with_limits (getrusage): {type(exc).__name__}: {exc}"
+                )
                 pass
 
             return self._truncate_output(stdout), self._truncate_output(stderr), return_code, mem_mb
@@ -398,7 +410,10 @@ class FullSandboxExecutor:
         finally:
             try:
                 Path(wrapper_path).unlink(missing_ok=True)
-            except Exception:
+            except Exception as exc:
+                _log.warning(
+                    f"silent except in _run_with_limits (cleanup wrapper): {type(exc).__name__}: {exc}"
+                )
                 pass
 
     def _build_wrapper(

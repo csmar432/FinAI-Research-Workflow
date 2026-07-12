@@ -414,9 +414,17 @@ class HaltRulesRegistry:
                             violations.append(
                                 f"{check.get('description', pattern)}: {val} outside range {rng}"
                             )
-                    except ValueError:
+                    except ValueError as exc:
+                        _logger().warning(
+                            f"silent except in _check_data_freshness (regex match float cast): "
+                            f"{type(exc).__name__}: {exc}"
+                        )
                         pass
-            except re.error:
+            except re.error as exc:
+                _logger().warning(
+                    f"silent except in _check_data_freshness (regex compile): "
+                    f"{type(exc).__name__}: {exc}"
+                )
                 pass
 
         if violations:
@@ -847,7 +855,10 @@ class HaltRulesRegistry:
                                 break
                             except ValueError:
                                 continue
-                    except Exception:
+                    except Exception as exc:
+                        _logger().warning(
+                            f"silent except in _check_data_freshness (forecast/period format loop): {type(exc).__name__}: {exc}"
+                        )
                         pass  # Skip if date parsing fails
 
             elif ctype == "release_after_period":
@@ -869,7 +880,10 @@ class HaltRulesRegistry:
                                 break
                             except ValueError:
                                 continue
-                    except Exception:
+                    except Exception as exc:
+                        _logger().warning(
+                            f"silent except in _check_data_freshness (release_after_period): {type(exc).__name__}: {exc}"
+                        )
                         pass
 
         if violations:
@@ -902,7 +916,11 @@ class HaltRulesRegistry:
                         violations.append(
                             f"{date_field} is {age / 86400:.0f} days old (max {max_age / 86400:.0f})"
                         )
-                except (ValueError, OSError):
+                except (ValueError, OSError) as exc:
+                    _logger().warning(
+                        f"silent except in _check_data_freshness (date parse): "
+                        f"{type(exc).__name__}: {exc}"
+                    )
                     pass
 
         if violations:
@@ -1084,7 +1102,10 @@ class HaltRulesRegistry:
                 eco_passed, eco_msg = self._check_econometric_quality(content, rule)
                 if not eco_passed:
                     violations.append(f"Econometric validation failed: {eco_msg}")
-            except Exception:
+            except Exception as exc:
+                _logger().warning(
+                    f"silent except in _check_econometric_quality wrapper: {type(exc).__name__}: {exc}"
+                )
                 pass  # Do not fail the whole check due to econometrics errors
 
         if violations:
@@ -1695,7 +1716,11 @@ class HaltRulesRegistry:
             if key.lower().replace("_", "") == field_name.lower().replace("_", ""):
                 try:
                     return float(data[key])
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as exc:
+                    _logger().debug(
+                        f"silent except in _extract_field (float cast for {field_name}={key!r}): "
+                        f"{type(exc).__name__}: {exc}"
+                    )
                     pass
         return None
 
