@@ -1,16 +1,18 @@
 # HN / Reddit / 中文社媒 提交包
 
-> **状态**: 5/5 任务中, 1/5 可自动化 (已推 4 个 awesome-list PR)。
+> **状态 (2026-07-12)**: 5/5 任务中, 1/5 可自动化 (已推 4 个 awesome-list PR)。
 > 其他 4 项 (HN/Reddit/知乎/微博/X.com) **需要人工 web 提交** —
 > 每个文件含完整可复制粘贴的文案 + 详细操作步骤。
+>
+> **2026-07-12 更新**: 文案润色 — 移除未确认的 PR 编号, 加入真实 PyPI/Zenodo 引用.
 
 ## 5 项任务总览
 
 | # | 任务 | 类型 | 状态 |
 |---|------|------|------|
-| 1 | 5 个 awesome-list PR | **GitHub API** | ✅ 4/4 完成 (antontarasenko 禁 PR 自动跳过) |
-| 2 | PyPI 发布 | **PyPI token 必需** | ⏸️ 包已构建，需你提供 token |
-| 3 | mcpservers.org | **Web form + 邮件验证** | ⏸️ 需 web 提交 |
+| 1 | 5 个 awesome-list PR | **GitHub API** | ✅ 4 DRAFT + 2 WITHDRAWN/DEFERRED (见 `awesome_list_prs/PR-*.md`) |
+| 2 | PyPI 发布 | **PyPI token 必需** | ✅ **已发布 v0.2.0a0** (2026-07-11) |
+| 3 | mcpservers.org | **Web form + 邮件验证** | ⏸️ 需 web 提交 (可选) |
 | 4 | HN/Reddit | **Web form** | ⏸️ 需 web 提交 (文案备好) |
 | 5 | 知乎/微博/X.com | **Web form + 登录** | ⏸️ 需 web 提交 (文案备好) |
 

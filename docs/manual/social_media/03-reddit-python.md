@@ -6,8 +6,7 @@
 ## 标题
 
 ```
-FinAI Research Workflow — End-to-end empirical research pipeline
-(43 MCP data sources, 47 econometric methods, 30 journal templates)
+FinAI Research Workflow — End-to-end AI pipeline for empirical econ research (43 MCP sources, 47 methods, 30 journals)
 ```
 
 ## Flair
@@ -26,7 +25,8 @@ doing empirical research: **FinAI Research Workflow** — a single-CLI
 pipeline from research topic to submission-ready LaTeX draft.
 
 GitHub: https://github.com/csmar432/finai-research
-PyPI: coming soon (PR-07 pending)
+PyPI: https://pypi.org/project/finai-research-workflow/ (v0.2.0a0)
+DOI: 10.5281/zenodo.21262689
 
 ## The Python ecosystem this project touches
 
@@ -51,9 +51,9 @@ PyPI: coming soon (PR-07 pending)
    produced the underlying number. If a reviewer asks "where does
    this coefficient come from?", you can answer in one command.
 
-3. **Deterministic + reproducible**: `python scripts/cli.py
-   pipeline --topic X --seed 42` produces the same draft (modulo
-   LLM temperature). This is rare in AI-assisted research tools.
+3. **Deterministic + reproducible**: `python scripts/agent_pipeline.py
+   --topic X --seed 42` produces the same draft (modulo LLM
+   temperature). This is rare in AI-assisted research tools.
 
 ## What I'd love feedback on
 
@@ -76,11 +76,9 @@ Python 3.10+, FastAPI for orchestrator, pytest (399 test files,
 7824 test functions), ruff for linting, GitHub Actions for CI.
 OpenSSF Scorecard gold tier. MIT licensed.
 
-4 upstream PRs:
-- matteocourthoud/awesome-causal-inference#14
-- wilsonfreitas/awesome-quant#468
-- academic/awesome-datascience#654
-- emptymalei/awesome-research#111
+(Upstream awesome-list PRs are tracked in
+`docs/manual/awesome_list_prs/PR-*.md` — status ranges from DRAFT to
+WITHDRAWN; please check before citing specific PR numbers.)
 
 Happy to take questions or PRs.
 ```

@@ -7,8 +7,7 @@
 ## 标题
 
 ```
-[P] FinAI Research Workflow — End-to-end empirical research pipeline
-(43 MCP data sources, 47 econometric methods, 30 journal templates)
+[P] FinAI Research Workflow — End-to-end AI pipeline for empirical research
 ```
 
 ## Flair (必选)
@@ -28,39 +27,42 @@ empirical research topic (e.g. "carbon trading and green innovation")
 into a submission-ready LaTeX draft.
 
 GitHub: https://github.com/csmar432/finai-research
+PyPI: https://pypi.org/project/finai-research-workflow/
 
 ## What it does
 
-`python scripts/cli.py pipeline --topic "your topic"` runs:
+`python scripts/agent_pipeline.py --topic "your topic"` runs:
 
-1. **Idea generation** (8-12 candidates, novelty-checked against JF/
-   JFE/RFS/arXiv/NBER).
-2. **Literature review** via OpenAlex (400M+ papers) + ArXiv +
-   Semantic Scholar MCP servers.
-3. **Empirical design** (DID/IV/RDD/PSM) with 19-class automated
-   robustness testing.
-4. **Data acquisition** via 43 MCP servers (28 free, no API key):
+1. **Idea generation** — 8-12 candidates, novelty-checked against
+   JF/JFE/RFS/arXiv/NBER.
+2. **Literature review** — OpenAlex (400M+ papers) + ArXiv +
+   Semantic Scholar MCP servers with citation graphs.
+3. **Empirical design** — DID/IV/RDD/PSM with 19-class automated
+   robustness (cluster-robust SE, Bacon decomposition, event study).
+4. **Data acquisition** — 43 MCP servers (28 free, no API key):
    A-share via Tushare/akshare, US via yfinance, global macro via
    FRED/IMF/World Bank, papers via OpenAlex/ArXiv.
-5. **Paper drafting** in 30 journal templates (JF/JFE/RFS, 经济研究,
+5. **Paper drafting** — 30 journal templates (JF/JFE/RFS/JPE, 经济研究,
    金融研究, 管理世界).
-6. **Adversarial review** loop (GPT-4o + Claude + Gemini).
+6. **Adversarial review** — 3-layer LLM loop (GPT-4o + Claude + Gemini).
 
 ## What's relevant to ML researchers
 
-- Modern staggered DID (Callaway-Sant'Anna, Sun-Abraham, Borusyak)
-  — proper handling of heterogeneous treatment effects in
-  observational panel data.
-- Causal ML: Doubly-Robust Learners, Causal Forests, Meta-Learners
+- **Modern staggered DID** (Callaway-Sant'Anna, Sun-Abraham, Borusyak) —
+  proper handling of heterogeneous treatment effects in observational
+  panel data.
+- **Causal ML** — Doubly-Robust Learners, Causal Forests, Meta-Learners
   integrated alongside traditional econometrics.
-- All MCP servers are stdlib HTTP + local DB — no proprietary SDK
+- **Provenance tracking** on every data fetch — auditable byte-level
+  lineage.
+- **All MCP servers are stdlib HTTP + local DB** — no proprietary SDK
   lock-in. You can audit every byte.
 
 ## What it is NOT
 
 - Not a "do my research" tool. Every regression result and citation
-  must be verified by the human researcher before submission.
-  HITL gates enforce checkpoints but don't eliminate responsibility.
+  must be verified by the human researcher before submission. HITL
+  gates enforce checkpoints but don't eliminate responsibility.
 - Not a chat interface. It's a deterministic pipeline with explicit
   provenance tracking.
 
@@ -73,12 +75,6 @@ inference, time-series, or applied ML. PRs welcome.
 
 Tech: Python 3.10+, FastAPI, linearmodels, diff-in-diff2, matplotlib.
 License: MIT. No telemetry. No SaaS.
-
-4 upstream awesome-list PRs submitted as of posting:
-- https://github.com/matteocourthoud/awesome-causal-inference/pull/14
-- https://github.com/wilsonfreitas/awesome-quant/pull/468
-- https://github.com/academic/awesome-datascience/pull/654
-- https://github.com/emptymalei/awesome-research/pull/111
 
 Happy to answer technical questions.
 ```
