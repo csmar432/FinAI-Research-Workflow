@@ -22,6 +22,8 @@ from scripts.research_directions import (
     get_registry,
 )
 
+from scripts.core.data_warning_notifier import warn as _data_warn
+
 logger = logging.getLogger(__name__)
 
 
@@ -368,8 +370,20 @@ class RealEstateFinanceDirection(BaseResearchDirection):
             return results
 
         except ImportError as exc:
+            _data_warn(
+                category="research_direction",
+                source="real_estate_finance",
+                reason=f"依赖包缺失: {exc}",
+                site="scripts/research_directions/real_estate_finance.py:371",
+            )
             return {"status": "import_error", "tables": {}, "error": str(exc)}
         except Exception as exc:
+            _data_warn(
+                category="research_direction",
+                source="real_estate_finance",
+                reason=f"run_regressions 顶层异常: {exc}",
+                site="scripts/research_directions/real_estate_finance.py:373",
+            )
             return {"status": "error", "tables": {}, "error": str(exc)}
 
     def _event_study_placeholder(self) -> dict:

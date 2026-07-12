@@ -21,6 +21,8 @@ from scripts.research_directions import (
     get_registry,
 )
 
+from scripts.core.data_warning_notifier import warn as _data_warn
+
 
 # ── Table cell formatting helpers ─────────────────────────────────────────────
 
@@ -360,6 +362,12 @@ class PoliticalEconomyFinanceDirection(BaseResearchDirection):
             return {"status": "success", "tables": tables}
 
         except Exception as exc:
+            _data_warn(
+                category="research_direction",
+                source="political_economy_finance",
+                reason=f"run_regressions 顶层异常: {exc}",
+                site="scripts/research_directions/political_economy_finance.py:363",
+            )
             return {"status": "error", "tables": {}, "error": str(exc)}
 
     def format_tables(self, reg_results: dict) -> dict[str, str]:

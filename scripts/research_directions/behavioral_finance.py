@@ -21,6 +21,8 @@ from scripts.research_directions import (
     get_registry,
 )
 
+from scripts.core.data_warning_notifier import warn as _data_warn
+
 
 class BehavioralFinanceDirection(BaseResearchDirection):
     """
@@ -314,6 +316,12 @@ class BehavioralFinanceDirection(BaseResearchDirection):
                 "error": "statsmodels not available",
             }
         except Exception as exc:
+            _data_warn(
+                category="research_direction",
+                source="behavioral_finance",
+                reason=f"run_regressions 顶层异常: {exc}",
+                site="scripts/research_directions/behavioral_finance.py:317",
+            )
             return {"status": "error", "tables": {}, "error": str(exc)}
 
     def format_tables(self, reg_results: dict) -> dict[str, str]:

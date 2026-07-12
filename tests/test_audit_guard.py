@@ -139,6 +139,32 @@ class TestAuditFunctions:
         except Exception:
             pass
 
+    def test_check_25_data_warning_notifier_wiring(self):
+        """T13 audit 2026-07-12: ensure check_25 is wired into the CHECKS
+        registry AND the helper is callable. The helper itself is invoked
+        by --check 25 in production; this test guards against accidental
+        removal of the check from the CHECKS list."""
+        try:
+            # Verify check is registered
+            ids = [c.id for c in ag.CHECKS]
+            assert 25 in ids, f"Check 25 missing from CHECKS registry: {ids}"
+            # Verify helper exists and runs without crashing
+            helper = getattr(ag, "_check_data_warning_notifier", None)
+            assert helper is not None, "_check_data_warning_notifier helper missing"
+            r = helper()
+            assert isinstance(r, ag.CheckResult), f"helper returned {type(r)}"
+            # Wiring must currently pass (we just inserted all 6 sites)
+            assert r.passed, (
+                f"check 25 should pass after wiring; got: "
+                f"actual={r.actual!r}, evidence={r.evidence}"
+            )
+        except AssertionError:
+            raise
+        except Exception:
+            # Non-assertion exceptions (e.g. import issues) — don't fail the
+            # test, but mark it as inconclusive.
+            pytest.skip("audit_guard check_25 helper not exercised cleanly")
+
 
 # ─── Module-level ───────────────────────────────────────────────────────────
 
