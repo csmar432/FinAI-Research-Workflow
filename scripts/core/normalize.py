@@ -196,6 +196,21 @@ def setup_reproducible_env(*, seed: int = 42, verbose: bool = False) -> None:
 
 
 LIMITATIONS = """
+
+
+__all__ = [
+    "normalize_path",
+    "normalize_line_endings",
+    "normalize_line_endings_bytes",
+    "normalize_datetime",
+    "normalize_json_dumps",
+    "normalize_json_dump",
+    "normalize_csv_writer",
+    "normalize_random_seed",
+    "setup_reproducible_env",
+    "print_limitations",
+    "LIMITATIONS",
+]
 Cross-platform byte-identical output — KNOWN LIMITATIONS (T3 audit 2026-07-12):
 
 1. **PDF byte-identity** is impossible with tectonic / xelatex because:

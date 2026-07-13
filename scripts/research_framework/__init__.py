@@ -384,6 +384,37 @@ from .vuong_test import (
     vuong_linear_vs_logit,
 )
 
+# W1-W4 gates (design doc / data checker / negative result / ref validator / manuscript quality)
+from .data_source_candidates import (
+    DataSourceCandidate,
+    CandidateScore,
+    SourceAvailability,
+    DataSourceCandidateRegistry,
+    CandidateRegistryResult,
+    build_registry,
+)
+from .design_doc import DesignDocVersioning, DesignSnapshot, new_versioning
+from .negative_result_handler import (
+    NegativeResultHandler,
+    NegativeResultVerdict,
+    RequiredAction,
+    assess_result,
+)
+from .reference_validator import (
+    ReferenceValidator,
+    ReferenceReport,
+    ReferenceEntry,
+    RefIssue,
+    validate_references,
+)
+from .manuscript_quality_gate import (
+    ManuscriptQualityGate,
+    QualityReport,
+    QualityIssue,
+    SectionStat,
+    check_manuscript,
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 __all__ = [
     # Provenance

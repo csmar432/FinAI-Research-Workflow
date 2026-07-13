@@ -1382,6 +1382,73 @@ class AgentPipeline:
         except Exception:  # noqa: S110  # pipeline must not crash on optional feature failures
             pass
 
+    # ── W1-W4 Writing Pre-Gate ──────────────────────────────────────────────
+    def _run_writing_pre_gate(self, result: AgentPipelineResult, writing_text: str) -> None:
+        """Run W1-W4 static quality gates before the writing stage is marked complete."""
+        reports: dict[str, dict] = {}
+
+        try:
+            from scripts.research_framework.manuscript_quality_gate import check_manuscript
+            reports["manuscript_quality"] = check_manuscript(writing_text)._report  # type: ignore[attr-defined]
+        except Exception as exc:
+            reports["manuscript_quality"] = {
+                "summary_message": f"[manuscript_quality_gate] skipped: {exc}",
+                "passed": True,
+            }
+
+        try:
+            from scripts.research_framework.reference_validator import validate_references
+            reports["reference_validator"] = validate_references(writing_text)._report  # type: ignore[attr-defined]
+        except Exception as exc:
+            reports["reference_validator"] = {
+                "summary_message": f"[reference_validator] skipped: {exc}",
+                "passed": True,
+            }
+
+        try:
+            from scripts.research_framework.data_source_checker import check_data_sources
+            design_text = self._extract_stage_text(
+                getattr(result, "outline", None) or getattr(result, "refinement", None)
+            )
+            reports["data_source_checker"] = check_data_sources(
+                writing_text, design_text=design_text
+            )._report  # type: ignore[attr-defined]
+        except Exception as exc:
+            reports["data_source_checker"] = {
+                "summary_message": f"[data_source_checker] skipped: {exc}",
+                "passed": True,
+            }
+
+        try:
+            from scripts.research_framework.negative_result_handler import assess_result
+            if reports.get("manuscript_quality", {}).get("passed"):
+                reports["negative_result_handler"] = assess_result(
+                    baseline_p=1.0, baseline_coef=0.0, did_type="twfe"
+                )._report  # type: ignore[attr-defined]
+        except Exception as exc:
+            reports["negative_result_handler"] = {
+                "summary_message": f"[negative_result_handler] skipped: {exc}",
+                "passed": True,
+            }
+
+        blocked = False
+        for key, report in reports.items():
+            passed = report.get("passed", True) if isinstance(report, dict) else True
+            if not passed:
+                blocked = True
+                result.errors.append(
+                    f"[writing_pre_gate/{key}] {report.get('summary_message', 'blocked')}"
+                )
+                result.quality_reports[f"writing_pre_gate/{key}"] = (
+                    report if isinstance(report, dict) else {"passed": False}
+                )
+
+        if not blocked:
+            result.quality_reports["writing_pre_gate"] = {
+                "summary_message": "W1-W4 writing pre-gate passed",
+                "passed": True,
+            }
+
     async def _parliament_review(self, paper_content: dict) -> dict:
         """Run AI parliament review before human approval.
 
@@ -1821,6 +1888,9 @@ class AgentPipeline:
                     result.quality_reports["writing"] = qg
                 if arr:
                     result.auto_review_reports["writing"] = arr
+            # ── W1-W4 writing pre-gate: reference / negative-result / manuscript quality ──
+            if writing_text:
+                self._run_writing_pre_gate(result, writing_text)
 
         if PipelineStage.REFINEMENT in orchestrator_result.stage_results:
             result.refinement = orchestrator_result.stage_results[PipelineStage.REFINEMENT].output

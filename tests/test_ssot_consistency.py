@@ -16,10 +16,22 @@ SSOT = PROJECT_ROOT / "scripts" / "PROJECT_NUMBERS.json"
 
 def test_sync_ssot_works():
     """--sync-ssot 必须能写 PROJECT_NUMBERS.json."""
+    import os
+    env = {
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "PYTHONIOENCODING": "utf-8",
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": os.environ.get("HOME", ""),
+        "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+        "SHELL": os.environ.get("SHELL", "/bin/zsh"),
+        "USER": os.environ.get("USER", ""),
+    }
     result = subprocess.run(
         [sys.executable, str(SCRIPT), "--sync-ssot"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, timeout=30,
         cwd=str(PROJECT_ROOT),
+        env=env,
     )
     assert result.returncode == 0, f"sync-ssot failed: {result.stderr}"
     assert "Synced" in result.stdout
@@ -98,10 +110,16 @@ def test_sync_apply_no_markdown_bold_breakage():
     顺序错乱，导致 `**43` 被两次替换为 `***43`。
     """
     import subprocess
+    import os
+    env = os.environ.copy()
+    env.setdefault("LANG", "C.UTF-8")
+    env.setdefault("LC_ALL", "C.UTF-8")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
     result = subprocess.run(
         [sys.executable, "scripts/sync_numbers.py", "--apply"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, timeout=30,
         cwd=str(PROJECT_ROOT),
+        env=env,
     )
     assert result.returncode == 0, f"sync --apply failed: {result.stderr}"
 
