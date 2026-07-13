@@ -854,6 +854,9 @@ class AgentPipelineResult:
     auto_review_reports: dict[str, dict] = field(default_factory=dict)
     # 自动生成的 DID 诊断图表路径列表
     did_chart_paths: list = field(default_factory=list)
+    # 是否因 LLM 不可用而降级到 MockTemplateEngine（pipeline 已执行但产出物为 mock）
+    llm_fallback_used: bool = False
+    llm_status: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -863,6 +866,8 @@ class AgentPipelineResult:
                 "research_field": self.config.research_field,
             },
             "success": self.success,
+            "llm_fallback_used": self.llm_fallback_used,
+            "llm_status": self.llm_status,
             "total_latency_ms": self.total_latency_ms,
             "outline": self.outline,
             "literature": {
@@ -1660,9 +1665,16 @@ class AgentPipeline:
 
             # Wrap the raw dict result in AgentPipelineResult shape so callers
             # can still consume a structured return value
+            _llm_fallback_lg = not self._llm_actually_available
             _wrap = type("_LGBridgeResult", (), {
                 "config": self.config,
                 "success": is_complete,
+                "llm_fallback_used": _llm_fallback_lg,
+                "llm_status": (
+                    "未配置 DEEPSEEK_API_KEY / RELAY_API_KEY 且 Ollama 未运行。"
+                    if _llm_fallback_lg
+                    else "DeepSeek/Relay/Ollama"
+                ),
                 "outline": lg_result.get("stage_outputs", {}).get("outline"),
                 "literature": lg_result.get("stage_outputs", {}).get("literature"),
                 "plotting": lg_result.get("stage_outputs", {}).get("plotting"),
@@ -1718,6 +1730,29 @@ class AgentPipeline:
             if hasattr(self.config, k):
                 setattr(self.config, k, v)
 
+        # ── P1-3: 方向锁定 — 读取 REFINED_DESIGN.md 作为全局 anchor ─────────────
+        # 如果存在 REFINED_DESIGN.md，则将其内容注入 input_data 传递给所有阶段，
+        # 防止各阶段独立生成不同方向的内容（两 AI 漂移问题）。
+        _direction_lock: dict = {}
+        _design_paths = [
+            Path("output/REFINED_DESIGN.md"),
+            Path("REFINED_DESIGN.md"),
+            self.config.output_dir and Path(str(self.config.output_dir)) / "REFINED_DESIGN.md",
+        ]
+        for _dp in _design_paths:
+            if _dp and _dp.exists():
+                try:
+                    _text = _dp.read_text(encoding="utf-8")
+                    if len(_text) > 100:
+                        _direction_lock = {"REFINED_DESIGN": _text, "_design_path": str(_dp)}
+                        import logging as _dl_log
+                        _dl_log.getLogger("agent_pipeline").info(
+                            "Direction lock loaded from %s (%d chars)", _dp, len(_text)
+                        )
+                except Exception:  # noqa: S110
+                    pass
+                break
+
         # Build pipeline steps
         steps = self._build_pipeline_steps()
         # Store steps for potential HITL resume
@@ -1730,6 +1765,7 @@ class AgentPipeline:
             "field": self.config.research_field,
             "idea": self.config.idea,
             "template": self.config.template,
+            **_direction_lock,  # inject anchor to prevent direction drift
         }
 
         try:
@@ -1799,11 +1835,19 @@ class AgentPipeline:
         )
 
         # Extract results
+        _llm_fallback = not self._llm_actually_available
+        _llm_status_msg = (
+            "未配置 DEEPSEEK_API_KEY / RELAY_API_KEY 且 Ollama 未运行。"
+            if diag is None or not diag.llm_status
+            else (diag.llm_status or "LLM unavailable")[:200]
+        )
         result = AgentPipelineResult(
             config=self.config,
             orchestrator_result=orchestrator_result,
             total_latency_ms=(time.time() - start_time) * 1000,
             success=orchestrator_result.success,
+            llm_fallback_used=_llm_fallback,
+            llm_status=_llm_status_msg,
         )
 
         # Aggregate step-level errors into result.errors
@@ -2067,15 +2111,45 @@ class AgentPipeline:
                 steps, orchestrator_result
             )
 
+        # ── P0-3: 字数校验 — 防止论文过短 ─────────────────────────────────
+        # 检查 writing 阶段输出是否达到最低字数要求（中文 CSSCI 通常 ≥8000 字）
+        _wc = result.writing.get("total_word_count", 0) if isinstance(result.writing, dict) else 0
+        if _wc > 0 and _wc < 3000:
+            import sys as _sys_wc
+            _warn_msg = (
+                f"\n⚠️  [字数警告] 论文正文仅 {_wc} 字，低于最低要求 3000 字。\n"
+                f"    建议增加引言、文献综述或机制分析章节内容。\n"
+                f"    如需完整论文草稿，请配置 DEEPSEEK_API_KEY 后重跑。\n"
+            )
+            print(_warn_msg, file=_sys_wc.stderr)
+            result.errors.append(f"[字数] 正文仅 {_wc} 字，低于 3000 字最低要求")
+
+        # ── P1-2: PDF 编译状态 — 缺少工具链时报错而非静默跳过 ───────────
+        _pdf_err = [e for e in result.errors if "[PDF]" in e]
+        if _pdf_err and self._llm_actually_available:
+            # LLM 生成了内容但 PDF 编译失败，打印警告
+            import sys as _sys_pdf
+            print(
+                f"\n⚠️  [PDF] {' '.join(_pdf_err)}\n"
+                f"    请安装 LaTeX 工具链（Mac: brew install --cask mactex；Linux: apt install texlive-full）\n"
+                f"    .tex 文件已生成，可手动编译。\n",
+                file=_sys_pdf.stderr,
+            )
+
         # ── Canvas 可视化完成提示 ─────────────────────────────────────
-        done_count = sum(
+        _done_count = sum(
             1 for s in orchestrator_result.stage_results.values()
             if getattr(s, "status", None) == "approved"
         )
-        total_count = len(steps)
+        _total_count = len(steps)
+        _canvas_detail = f"总耗时: {(time.time() - start_time):.1f}s"
+        if self._llm_actually_available:
+            _canvas_detail += " | LLM: 可用"
+        else:
+            _canvas_detail += " | ⚠️ LLM: Mock 降级（内容为模板，非真实论文）"
         _print_canvas_hint(
-            f"研究工作流已完成！({done_count}/{total_count} 阶段)",
-            f"总耗时: {(time.time() - start_time):.1f}s | 可视化: http://localhost:8502"
+            f"研究工作流已完成！({_done_count}/{_total_count} 阶段)",
+            _canvas_detail,
         )
 
         return result
@@ -2462,7 +2536,21 @@ class AgentPipeline:
             orchestrator_result=orchestrator_result,
             total_latency_ms=0.0,  # incremental
             success=orchestrator_result.success,
+            llm_fallback_used=not self._llm_actually_available,
+            llm_status=(
+                "未配置 DEEPSEEK_API_KEY / RELAY_API_KEY 且 Ollama 未运行。"
+                if not self._llm_actually_available
+                else "DeepSeek/Relay/Ollama"
+            ),
         )
+
+        for stage, stage_result in orchestrator_result.stage_results.items():
+            stage_error = getattr(stage_result, 'error', None) or getattr(stage_result, 'err', None)
+            stage_status = getattr(stage_result, 'status', None)
+            if stage_error:
+                result.errors.append(f"[{stage}] {stage_error}")
+            elif stage_status in ("failed", "error"):
+                result.errors.append(f"[{stage}] stage failed with status={stage_status}")
 
         if PipelineStage.WRITING in orchestrator_result.stage_results:
             result.writing = orchestrator_result.stage_results[PipelineStage.WRITING].output

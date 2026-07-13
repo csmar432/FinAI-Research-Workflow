@@ -835,7 +835,71 @@ class ContentRefinementAgent(BaseAgent):
             for rule in halt_rules
         )
 
-        prompt = f"""你是一位严厉但公正的学术期刊审稿人。请对以下论文章节进行审稿。
+        # ── P2-1: 接通多轮 AIParliament 多角色审稿 ───────────────────────────────────
+        # 原来：单一通用审稿人（单角色、单轮）
+        # 改进：6人议会辩论（Chair + Engineering + Finance + Methodology + Statistics + Writing）
+        # 每个角色专注一个维度，避免单一审稿人视角偏差
+        # 执行 N 轮辩论（R=PARLIAMENT_ROUNDS，默认3轮），与 pipeline 的 5 stages 解耦
+        _parliament_rounds = int(os.environ.get("PARLIAMENT_REVIEW_ROUNDS", "3"))
+        _parliament_result: dict = {}
+        _parliament_review_used = False
+
+        try:
+            from scripts.core.ai_parliament import AIParliament
+            _parliament = AIParliament(gateway=getattr(self, "gateway", None))
+            # AIParliament.debate() 是 async，需要用 asyncio.run
+            import asyncio as _asyncio
+            # 构造 paper dict（AIParliament 期望的格式）
+            _paper_for_parliament: dict = {
+                "title": context.get("topic", chapter),
+                "content": draft_for_review,
+                "abstract": "",
+            }
+            _verdict_obj = _asyncio.run(
+                _parliament.debate(_paper_for_parliament, rounds=_parliament_rounds)
+            )
+            _parliament_result = {
+                "verdict": _verdict_obj.recommendation,
+                "individual_scores": _verdict_obj.individual_scores,
+                "debate_rounds": len(_verdict_obj.rounds) if _verdict_obj.rounds else 0,
+                "overall_comments": getattr(_verdict_obj, "summary", str(_verdict_obj)),
+            }
+            _parliament_review_used = True
+        except Exception as _pe:
+            # Parliament 失败时降级到原有单审稿人（不阻断 pipeline）
+            import logging as _pa_log
+            _pa_log.getLogger("ContentRefinementAgent").warning(
+                "AIParliament review failed (%s), falling back to single-reviewer: %s",
+                type(_pe).__name__, _pe,
+            )
+            _parliament_result = {}
+
+        # 如果 Parliament 成功，用其结果；否则用单审稿人
+        if _parliament_review_used and _parliament_result:
+            _scores = _parliament_result.get("individual_scores", {})
+            _all_vals = [v for v in _scores.values() if isinstance(v, (int, float))]
+            _avg = sum(_all_vals) / len(_all_vals) if _all_vals else 5.0
+            _overall = round(_avg * 2, 1)  # 5分制 → 10分制
+            if _parliament_result.get("verdict") in ("accept", "weak_accept"):
+                _verdict_str = "approve"
+            elif _parliament_result.get("verdict") == "revision":
+                _verdict_str = "revise"
+            else:
+                _verdict_str = "revise"
+            review = {
+                "verdict": _verdict_str,
+                "violations": [],
+                "overall_comments": _parliament_result.get("overall_comments", ""),
+                "scores": {
+                    "clarity": _overall,
+                    "technical_quality": _overall,
+                    "citation_quality": _overall,
+                    "overall": _overall,
+                },
+            }
+        else:
+            # 单审稿人降级（当 Parliament 不可用时）
+            prompt = f"""你是一位严厉但公正的学术期刊审稿人。请对以下论文章节进行审稿。
 
 ## 待审稿章节
 章节: {chapter}
@@ -875,26 +939,31 @@ class ContentRefinementAgent(BaseAgent):
 }}
 ```"""
 
-        response = self._generate(prompt, format_json=True)
+            response = self._generate(prompt, format_json=True)
 
-        try:
-            review = self._parse_json_response(response.response)
-        except ValueError:
-            review = {
-                "verdict": "revise",
-                "violations": [{"rule": "格式错误", "issue": "无法解析审稿结果", "suggestion": "请重试"}],
-                "overall_comments": "审稿过程出错",
-                "scores": {"overall": 5},
-            }
+            try:
+                review = self._parse_json_response(response.response)
+            except ValueError:
+                review = {
+                    "verdict": "revise",
+                    "violations": [{"rule": "格式错误", "issue": "无法解析审稿结果", "suggestion": "请重试"}],
+                    "overall_comments": "审稿过程出错",
+                    "scores": {"overall": 5},
+                }
 
         return {
             "review": review,
             "chapter": chapter,
-            "model": response.model_used,
-            "halt_rules_passed": True,  # LLM-based review
+            "model": response.model_used if not _parliament_review_used else "AIParliament",
+            "halt_rules_passed": True,
             "halt_rules_source": "llm_judgment",
-            # Audit hooks (T8 audit): expose what we actually reviewed so
-            # the checkpoint audit trail records the source-of-truth.
+            # P2-1: 暴露多轮审稿信息
+            "_parliament": {
+                "used": _parliament_review_used,
+                "rounds": _parliament_result.get("debate_rounds", 0) if _parliament_review_used else 0,
+                "individual_scores": _parliament_result.get("individual_scores", {}) if _parliament_review_used else {},
+            },
+            # Audit hooks
             "_audit": {
                 "draft_chars_received": len(draft_raw),
                 "draft_chars_in_prompt": len(draft_for_review),
