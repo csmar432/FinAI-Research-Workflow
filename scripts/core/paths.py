@@ -24,6 +24,12 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+__all__ = [
+    "resolve_project_root",
+    "env_path",
+    "find_env_file",
+]
+
 _PACKAGE_NAME = "finai-research-workflow"
 
 
