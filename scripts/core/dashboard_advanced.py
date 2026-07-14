@@ -654,7 +654,7 @@ def render_error_log():
             ])
 
             if not df_timeline.empty:
-                df_timeline = df_timeline.set_index("时间").resample("H").sum().reset_index()
+                df_timeline = df_timeline.set_index("时间").resample("h").sum().reset_index()
 
                 fig_line = px.line(
                     df_timeline,
