@@ -1243,3 +1243,4 @@ class TestEndToEnd:
         jsonl_observer.metrics.inc("phase_total", 1)
         text = jsonl_observer.export_prometheus()
         assert "phase_total 1.0" in text
+

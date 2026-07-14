@@ -67,7 +67,15 @@ def _make_error_gateway(error_message="boom"):
 
 def _run(coro):
     """Run an awaitable synchronously."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
