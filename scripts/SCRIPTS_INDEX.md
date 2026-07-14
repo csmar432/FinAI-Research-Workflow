@@ -15,7 +15,7 @@
 | 🧭 Research Directions (`scripts/research_directions/`) | 15 | 研究方向领域 |
 | 🧪 Tests (`tests/`) | 433 | 测试文件 |
 | 🔌 MCP Servers (`mcp_servers/user_*/`) | 43 | MCP 数据源 |
-| **合计（仅 Python 文件）** | **707** | 不含 MCP / docs / tests fixtures |
+| **合计（仅 Python 文件）** | **713** | 不含 MCP / docs / tests fixtures |
 
 > 自动生成于 2026-07-14
 ---
