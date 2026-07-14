@@ -474,8 +474,10 @@ class WeakInstrumentTest:
         try:
             # 残差对Z回归（含常数）求R²
             Z_with_const = np.column_stack([np.ones(n), Z_arr])
-            _, ssr_full, _ = np.linalg.lstsq(Z_with_const, residuals, rcond=None)[:3]
-            tss = np.sum((residuals - np.mean(residuals))**2)
+            lstsq_result = np.linalg.lstsq(Z_with_const, residuals, rcond=None)
+            # lstsq returns (x, residuals, rank, s); residuals may be empty if rank is full
+            ssr_full = float(lstsq_result[1].sum()) if len(lstsq_result[1]) > 0 else 0.0
+            tss = float(np.sum((residuals - np.mean(residuals))**2))
             r_sq = 1 - ssr_full / tss if tss > 0 else 0.0
         except np.linalg.LinAlgError:
             return {
@@ -1064,9 +1066,10 @@ class HeteroskedasticityTest:
             X_vif = np.column_stack([np.ones(len(y_vif)), X_vif])
 
             try:
-                beta, ssr, rank = np.linalg.lstsq(X_vif, y_vif, rcond=None)[:3]
-                y_vif - X_vif @ beta
-                tss = np.sum((y_vif - np.mean(y_vif))**2)
+                lstsq_vif = np.linalg.lstsq(X_vif, y_vif, rcond=None)
+                ssr = float(lstsq_vif[1].sum()) if len(lstsq_vif[1]) > 0 else 0.0
+                y_vif - X_vif @ lstsq_vif[0]
+                tss = float(np.sum((y_vif - np.mean(y_vif))**2))
                 r2 = 1 - ssr / tss if tss > 0 else 0.0
                 vif = 1 / (1 - r2) if r2 < 1 else float("inf")
             except np.linalg.LinAlgError:
