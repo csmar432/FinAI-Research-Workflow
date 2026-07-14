@@ -1066,9 +1066,10 @@ class HeteroskedasticityTest:
             X_vif = np.column_stack([np.ones(len(y_vif)), X_vif])
 
             try:
-                beta, ssr, rank = np.linalg.lstsq(X_vif, y_vif, rcond=None)[:3]
-                y_vif - X_vif @ beta
-                tss = np.sum((y_vif - np.mean(y_vif))**2)
+                lstsq_vif = np.linalg.lstsq(X_vif, y_vif, rcond=None)
+                ssr = float(lstsq_vif[1].sum()) if len(lstsq_vif[1]) > 0 else 0.0
+                y_vif - X_vif @ lstsq_vif[0]
+                tss = float(np.sum((y_vif - np.mean(y_vif))**2))
                 r2 = 1 - ssr / tss if tss > 0 else 0.0
                 vif = 1 / (1 - r2) if r2 < 1 else float("inf")
             except np.linalg.LinAlgError:
