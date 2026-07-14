@@ -6,6 +6,7 @@ StreamingPipeline (init + supports_streaming), and the streaming-to-SSE helpers.
 
 from __future__ import annotations
 
+import asyncio
 import builtins
 import json
 import sys
@@ -14,6 +15,18 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+def _drain_async(gen):
+    """Drain an async generator into a list."""
+    chunks: list = []
+
+    async def _collect():
+        async for item in gen:
+            chunks.append(item)
+
+    asyncio.run(_collect())
+    return chunks
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -26,6 +39,7 @@ try:
         StreamingConfig,
         create_sse_response,
         StreamingPipeline,
+        stream_to_httpx,
     )
 except Exception as _exc:
     pytest.skip(f"streaming not importable: {_exc}", allow_module_level=True)

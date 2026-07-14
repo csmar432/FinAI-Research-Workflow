@@ -868,6 +868,7 @@ class TestToolCallMiddlewareCall:
             rate_window=60.0,
             rate_limit_per_server=True,
             cache_dir=None,  # disable cache so rate-limit check always runs
+            max_rate_wait=0.05,  # don't actually wait — fail fast
         )
         r1 = mw.call("server-a", "t", {"k": "v"})
         assert r1.success is True
@@ -886,6 +887,7 @@ class TestToolCallMiddlewareCall:
             rate_window=60.0,
             rate_limit_per_server=False,  # global bucket
             cache_dir=None,
+            max_rate_wait=0.05,  # don't actually wait — fail fast
         )
         r1 = mw.call("server-a", "t", {})
         assert r1.success is True
