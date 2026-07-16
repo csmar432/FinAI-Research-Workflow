@@ -225,7 +225,9 @@ class JournalTemplate:
         try:
             for i in range(passes):
                 result = subprocess.run(
-                    [engine, "-interaction=nonstopmode", str(tex_path)],
+                    [engine, "-interaction=nonstopmode",
+                     f"-output-directory={tex_path.parent}",
+                     str(tex_path)],
                     capture_output=True,
                     text=True,
                     timeout=90,

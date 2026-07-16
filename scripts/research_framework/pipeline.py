@@ -22,6 +22,7 @@ The pipeline:
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -47,6 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 # ── DOF Check ──
+SEED = 42  # reproducibility for demo panel
 def check_dof(df, x_vars, firm_col, year_col, use_firm_fe, use_year_fe):
     n_obs = len(df); n_reg = len(x_vars); n_fe = 0
     if use_firm_fe and firm_col in df.columns: n_fe += df[firm_col].nunique()-1

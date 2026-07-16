@@ -186,17 +186,24 @@ class WorkflowVisualizer:
     Usage:
         viz = WorkflowVisualizer()
 
-        # Generate from orchestrator steps
-        dot = viz.to_dot(pipeline_steps)
+        # Add nodes and edges
+        viz.add_node("outline", "OutlineAgent")
+        viz.add_edge("outline", "literature")
 
-        # Generate from execution trace
-        mermaid = viz.to_mermaid(pipeline_result)
+        # Generate DOT representation (no args needed)
+        dot = viz.to_dot()
+
+        # Generate Mermaid diagram
+        mermaid = viz.to_mermaid()
 
         # Save as interactive HTML
-        viz.to_html(pipeline_result, output_path="workflow.html")
+        html_path = viz.to_html(output_path="workflow.html")
 
-        # Overlay execution trace
-        viz.overlay_trace(result, dot)
+        # Save as modern HTML with D3.js
+        modern_html = viz.to_modern_html(output_path="workflow_modern.html")
+
+        # Overlay execution trace from PipelineResult
+        viz.overlay_trace(pipeline_result)
     """
 
     def __init__(self):
