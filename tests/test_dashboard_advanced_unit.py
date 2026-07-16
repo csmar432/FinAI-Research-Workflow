@@ -229,16 +229,29 @@ class _StubPlotly:
 def dashboard_module():
     """Import scripts.core.dashboard_advanced with streamlit/plotly mocked."""
 
-    # Always install/replace stubs in sys.modules (under xdist, sys.modules may
-    # already contain a streamlit from the parent fixture setup).
+    import importlib
+
+    # Install stubs BEFORE the module is imported (or re-loaded).
     sys.modules["streamlit"] = _build_streamlit_stub()
 
     _plotly = _StubPlotly()
     sys.modules["plotly"] = _plotly
     sys.modules["plotly.express"] = _plotly.express
 
-    # Import the module under test (and any new deps it pulls in).
-    from scripts.core import dashboard_advanced as mod  # noqa: WPS433
+    # Handle the case where another test file (e.g. test_core_dashboard_advanced.py)
+    # imports dashboard_advanced before this fixture runs.
+    # importlib.reload() re-executes the module body (so 'st' is re-bound to stub).
+    # Keep the module in sys.modules — reload() requires it.
+    if "scripts.core.dashboard_advanced" in sys.modules:
+        # Remove ONLY sub-modules; the parent stays for reload().
+        for _k in list(sys.modules):
+            if _k.startswith("scripts.core.dashboard_advanced."):
+                del sys.modules[_k]
+        from scripts.core import dashboard_advanced as mod  # noqa: WPS433
+        mod = importlib.reload(mod)
+    else:
+        from scripts.core import dashboard_advanced as mod  # noqa: WPS433
+
     return mod
 
 
