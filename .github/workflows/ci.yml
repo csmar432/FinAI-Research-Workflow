@@ -148,9 +148,15 @@ jobs:
             --cov=scripts --cov-branch \
             --tb=long --timeout=120 --maxfail=1 -rfE \
             -v 2>&1 | tee pytest-unified.log
+        # audit-2026-07-21 P0-3: Empty DEEPSEEK/RELAY keys are safer for CI
+        # than dummy_key values:
+        #   - dummy_key would trigger network calls in scripts/interactive_paper_pipeline.py
+        #     get_llm_response() → call_deepseek() → api.deepseek.com (60s timeout)
+        #   - tests that read env vars use monkeypatch.setenv/delenv, so they're unaffected
+        #   - scripts/cli.py finai-doctor just checks key presence; empty == "not configured"
         env:
-          DEEPSEEK_API_KEY: dummy_key
-          RELAY_API_KEY: dummy_key
+          DEEPSEEK_API_KEY: ""
+          RELAY_API_KEY: ""
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v7
@@ -207,9 +213,15 @@ jobs:
         run: |
           set -o pipefail
           pytest tests/test_checkpoint.py tests/test_event_monitor.py --tb=long -v 2>&1 | tee pytest-cs.log
+        # audit-2026-07-21 P0-3: Empty DEEPSEEK/RELAY keys are safer for CI
+        # than dummy_key values:
+        #   - dummy_key would trigger network calls in scripts/interactive_paper_pipeline.py
+        #     get_llm_response() → call_deepseek() → api.deepseek.com (60s timeout)
+        #   - tests that read env vars use monkeypatch.setenv/delenv, so they're unaffected
+        #   - scripts/cli.py finai-doctor just checks key presence; empty == "not configured"
         env:
-          DEEPSEEK_API_KEY: dummy_key
-          RELAY_API_KEY: dummy_key
+          DEEPSEEK_API_KEY: ""
+          RELAY_API_KEY: ""
       - name: Upload pytest log
         if: always()
         uses: actions/upload-artifact@v7
