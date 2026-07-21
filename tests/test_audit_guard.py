@@ -132,10 +132,22 @@ class TestAuditFunctions:
             pass
 
     def test_check_15_pypi_deps_exist(self):
+        # audit-2026-07-21: this test serial-visits PyPI 30 times.
+        # In network-restricted envs (CI sandbox, no-proxy), each request
+        # can take 5s+ and the cumulative time exceeds 10s pytest-timeout.
+        # Mock urllib to avoid real network calls.
+        from unittest.mock import patch, MagicMock
+
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = lambda s, *a: False
+        mock_resp.status = 200
+
         try:
-            if hasattr(ag, "check_15_pypi_deps_exist"):
-                r = ag.check_15_pypi_deps_exist()
-                assert isinstance(r, ag.CheckResult)
+            with patch("urllib.request.urlopen", return_value=mock_resp):
+                if hasattr(ag, "check_15_pypi_deps_exist"):
+                    r = ag.check_15_pypi_deps_exist()
+                    assert isinstance(r, ag.CheckResult)
         except Exception:
             pass
 

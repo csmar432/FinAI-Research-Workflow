@@ -315,3 +315,29 @@ papers/finai_methodology/
 papers/us_esg_financing/AUDIT*.md
 papers/us_esg_financing/REFINED_DESIGN.md
 
+# ── audit-2026-07-21: 27 个未追踪文件 (.gitignore 缺口) ──────────────────
+# 覆盖率临时文件 (pytest --cov-report=json / 调试)
+core_cov.json
+core_cov_backup.json
+cov_tmp.json
+full_cov.json
+ncov.json
+new_cov.json
+sandbox_cov.json
+scripts_cov.json
+se_cov.json
+.coverage_ci
+# HITL 历史 / MCP 付费源警告
+hitl_history.jsonl
+paid_source_warnings.jsonl
+# MCP 调用日志 (tool_calls tool 运行时生成)
+data/tool_calls/*.jsonl
+!data/tool_calls/.gitkeep
+# 论文 docx 输出
+papers/us_esg_financing/*.docx
+# 本地草稿项目目录 (用户实验)
+projects/*
+!projects/.gitkeep
+# 嵌套 git 目录 (.papers_git 是 paper versioning 子模块)
+.papers_git/
+
