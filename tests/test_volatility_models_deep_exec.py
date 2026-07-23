@@ -16,8 +16,10 @@ Extends tests/test_volatility_models_exec.py with coverage of:
 """
 
 from __future__ import annotations
+import numpy as np
 
 import sys
+import os
 from pathlib import Path
 
 import pytest
@@ -27,7 +29,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    import numpy as np
     import pandas as pd
 
     from scripts.research_framework.volatility_models import (

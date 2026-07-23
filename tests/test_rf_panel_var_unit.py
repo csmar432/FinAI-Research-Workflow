@@ -1,6 +1,8 @@
 """Unit tests for scripts/research_framework/panel_var.py."""
 from __future__ import annotations
 
+import numpy as np
+
 import sys
 from pathlib import Path
 

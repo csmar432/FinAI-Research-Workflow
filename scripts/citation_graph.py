@@ -37,6 +37,7 @@ except ImportError:
     _REQUESTS_AVAILABLE = False
 
 # P5-6 audit-2026-07-23: 模块级 Session
+# _SESSION 始终有定义,即使 requests 没装也只是 stub(显式 RuntimeError)
 if _REQUESTS_AVAILABLE:
     try:
         from requests.adapters import HTTPAdapter as _HTTPAdapter
@@ -45,7 +46,12 @@ if _REQUESTS_AVAILABLE:
         _SESSION.mount("http://", _adapter)
         _SESSION.mount("https://", _adapter)
     except Exception:   # noqa: S110
-        _SESSION = requests
+        _SESSION = requests  # fallback: 用 requests 模块本身 (requests.get/post 仍可用)
+else:   # pragma: no cover
+    class _NoHTTP:
+        def __getattr__(self, name):
+            raise RuntimeError("requests not installed; HTTP calls unavailable")
+    _SESSION = _NoHTTP()
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 

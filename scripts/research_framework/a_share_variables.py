@@ -52,14 +52,20 @@ import pandas as pd
 
 # P5-6 audit-2026-07-23: 模块级 Session
 try:
-    import requests
+    import requests as _requests
     from requests.adapters import HTTPAdapter as _HTTPAdapter
-    _SESSION = requests.Session()
+    _SESSION = _requests.Session()
     _adapter = _HTTPAdapter(pool_connections=10, pool_maxsize=10)
     _SESSION.mount("http://", _adapter)
     _SESSION.mount("https://", _adapter)
 except Exception:   # noqa: S110
-    _SESSION = None
+    # 退化: 用 requests 模块本身（仍可调用 .get/.post，仅丢 keep-alive）
+    _SESSION = _requests if "_requests" in dir() else None  # type: ignore[assignment]
+    if _SESSION is None:   # pragma: no cover
+        class _NoHTTP:
+            def __getattr__(self, name):
+                raise RuntimeError("requests not installed; HTTP calls unavailable")
+        _SESSION = _NoHTTP()
 
 warnings.filterwarnings("ignore")
 

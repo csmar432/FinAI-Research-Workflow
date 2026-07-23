@@ -11,7 +11,9 @@ reduce pre-trend test power. These tests assert:
 """
 
 from __future__ import annotations
+import numpy as np
 
+import re
 import sys
 from pathlib import Path
 
@@ -94,7 +96,6 @@ class TestProcessDataWarns:
     """
     def test_short_post_emits_warning(self):
         import pandas as pd
-        import numpy as np
         import warnings
 
         df = pd.DataFrame({

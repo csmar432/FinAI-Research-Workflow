@@ -46,8 +46,14 @@ try:
     _SESSION = _requests_mod.Session()
     _adapter = _HTTPAdapter(pool_connections=10, pool_maxsize=10)
     _SESSION.mount("https://", _adapter)
+    _SESSION.mount("http://", _adapter)
 except Exception:   # noqa: S110
-    _SESSION = _requests_mod if "_requests_mod" in dir() else None  # type: ignore[assignment]  # fallback
+    _SESSION = _requests_mod if "_requests_mod" in dir() else None  # type: ignore[assignment]
+    if _SESSION is None:   # pragma: no cover
+        class _NoHTTP:
+            def __getattr__(self, name):
+                raise RuntimeError("requests not installed; HTTP calls unavailable")
+        _SESSION = _NoHTTP()
 
 try:
     import chromadb
@@ -403,7 +409,7 @@ class LiteratureVectorStore:
 
         # Fallback: 使用 OpenAI API
         try:
-            import os
+            import os, requests
             api_key = os.getenv("OPENAI_API_KEY", "")
             if api_key:
                 return self._openai_embed(texts, api_key)
@@ -417,7 +423,7 @@ class LiteratureVectorStore:
 
     def _openai_embed(self, texts: list[str], api_key: str) -> list[list[float]]:
         """通过 OpenAI API 获取 embedding。"""
-        # P5-6 audit-2026-07-23: 复用模块级 _SESSION（keep-alive + 连接池）
+        # P5-6 audit-2026-07-23: 复用模块级 _SESSION（keep-alive + 连接池复用）
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         embeddings = []
         for i in range(0, len(texts), 100):

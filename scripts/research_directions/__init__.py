@@ -48,15 +48,22 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-# P5-6 audit-2026-07-23: 模块级 Session,keep-alive
+# P5-6 audit-2026-07-23: 模块级 Session, keep-alive + 连接池复用
 try:
-    import requests
+    import requests as _requests
     from requests.adapters import HTTPAdapter as _HTTPAdapter
-    _SESSION = requests.Session()
+    _SESSION = _requests.Session()
     _adapter = _HTTPAdapter(pool_connections=10, pool_maxsize=10)
     _SESSION.mount("https://", _adapter)
+    _SESSION.mount("http://", _adapter)
 except Exception:   # noqa: S110
-    _SESSION = None
+    # 退化: 用 requests 模块本身 (requests.get/post 仍可用)
+    _SESSION = _requests if "_requests" in dir() else None  # type: ignore[assignment]
+    if _SESSION is None:   # pragma: no cover
+        class _NoHTTP:
+            def __getattr__(self, name):
+                raise RuntimeError("requests not installed; HTTP calls unavailable")
+        _SESSION = _NoHTTP()
 
 
 _log = logging.getLogger(__name__)

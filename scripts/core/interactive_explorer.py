@@ -26,6 +26,8 @@ from __future__ import annotations
 import json
 import logging
 import math
+
+import numpy as np
 from dataclasses import dataclass, field
 
 __all__ = [
@@ -59,6 +61,7 @@ except ImportError:
     make_subplots = None
 
 try:
+    import streamlit as st
     _starlight_available = True
 except ImportError:
     _log.warning("streamlit not available. Run 'pip install streamlit plotly' to enable the app.")

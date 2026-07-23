@@ -47,6 +47,7 @@ except ImportError:
 
 # P5-6 audit-2026-07-23: 模块级共享 Session — keep-alive + pool 复用
 # pool_connections/pool_maxsize=10 与 audit 建议一致
+# _SESSION 始终有定义: 若 requests 不可用,设为带 getattr 哨兵的 stub
 if _REQUESTS_AVAILABLE:
     try:
         from requests.adapters import HTTPAdapter as _HTTPAdapter
@@ -56,6 +57,11 @@ if _REQUESTS_AVAILABLE:
         _SESSION.mount("https://", _adapter)
     except Exception:   # noqa: S110
         _SESSION = requests  # fallback: 直接调用 requests.get/post（无 keep-alive）
+else:   # pragma: no cover
+    class _NoHTTP:
+        def __getattr__(self, name):
+            raise RuntimeError("requests not installed; HTTP calls unavailable")
+    _SESSION = _NoHTTP()
 
 # ── 配置 ──────────────────────────────────────────────────────────────────────
 

@@ -40,6 +40,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 # 修复 yfinance 在某些环境下的 SSL/TLS 问题（必须在 yfinance 导入前设置）

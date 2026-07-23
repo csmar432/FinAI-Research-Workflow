@@ -5,6 +5,8 @@ Targets uncovered helpers in scripts/factor_models.py.
 
 from __future__ import annotations
 
+import numpy as np
+
 import sys
 from pathlib import Path
 import pytest
@@ -14,7 +16,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    import numpy as np
     import pandas as pd
     from scripts.factor_models import (
         _stars,

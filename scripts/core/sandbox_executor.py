@@ -389,12 +389,14 @@ class FullSandboxExecutor:
                     _log.warning(
                         f"silent except in _run_with_limits (read success flag): {type(exc).__name__}: {exc}"
                     )
+                    pass
                 try:
                     os.unlink(success_file)
                 except Exception as exc:
                     _log.warning(
                         f"silent except in _run_with_limits (unlink success file): {type(exc).__name__}: {exc}"
                     )
+                    pass
 
             # Estimate memory from resource (best-effort)
             mem_mb = 0.0
@@ -405,6 +407,7 @@ class FullSandboxExecutor:
                 _log.warning(
                     f"silent except in _run_with_limits (getrusage): {type(exc).__name__}: {exc}"
                 )
+                pass
 
             return self._truncate_output(stdout), self._truncate_output(stderr), return_code, mem_mb
 
@@ -417,6 +420,7 @@ class FullSandboxExecutor:
                 _log.warning(
                     f"silent except in _run_with_limits (cleanup wrapper): {type(exc).__name__}: {exc}"
                 )
+                pass
 
     def _build_wrapper(
         self, code: str, sandbox: Path, capture_plots: bool

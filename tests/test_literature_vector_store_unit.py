@@ -17,6 +17,7 @@ fixed in the source; this fixture is kept for belt-and-suspenders safety.
 """
 
 from __future__ import annotations
+import numpy as np
 
 import sqlite3
 import sys
@@ -466,7 +467,6 @@ class TestEmbedFunctions:
         s = LiteratureVectorStore(persist_dir=str(tmp_path / "lit2"))
         out = s._embed_texts(["x", "y"])
         if lvs.NP_AVAILABLE:
-            import numpy as np
             arr = np.asarray(out)
             assert arr.shape == (2, 1536)
             assert arr.dtype.kind == "f"

@@ -6,6 +6,8 @@ that don't require complex data simulation.
 
 from __future__ import annotations
 
+import numpy as np
+
 import sys
 from pathlib import Path
 import pytest
@@ -15,7 +17,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    import numpy as np
     from scripts.research_framework.modern_did import (
         _two_way_clustered_se,
         _t_cdf,

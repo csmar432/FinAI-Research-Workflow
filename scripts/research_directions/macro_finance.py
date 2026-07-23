@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, Optional
 
 from scripts.research_directions import (
     BaseResearchDirection,
@@ -396,6 +396,7 @@ class MacroFinanceDirection(BaseResearchDirection):
         Returns dict of horizon → coefficient estimates.
         """
         import numpy as np
+        import pandas as pd
 
         irf: dict[int, dict] = {}
 
@@ -510,7 +511,7 @@ class MacroFinanceDirection(BaseResearchDirection):
         where E[R_t] is estimated over [-60, -11] pre-event window.
         """
         try:
-            pass
+            import numpy as np
 
             if ts_panel is None:
                 return {"error": "No time-series panel for event study"}

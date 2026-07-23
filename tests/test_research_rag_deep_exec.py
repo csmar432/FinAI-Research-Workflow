@@ -4,6 +4,7 @@ Targets uncovered helpers in scripts/research_rag.py.
 """
 
 from __future__ import annotations
+import numpy as np
 
 import sys
 from pathlib import Path
@@ -14,9 +15,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 try:
-    import numpy as np
     from scripts.research_rag import (
         Chunk,
+        RetrievalResult,
         Embedder,
         BM25Searcher,
         FAISS_AVAILABLE,
