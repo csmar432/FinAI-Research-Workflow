@@ -448,7 +448,6 @@ class ReportGenerator:
         # When submitting to a specific journal, replace the .cls file:
         #   JF/JFE → jf.cls / jfe.cls,  RFS → rfs.cls,
         #   管理世界/经济研究/金融研究 → ctexart.cls
-        journal = self._metadata.get("journal", "") or ""
         doc_class = "article"   # standalone-safe default
 
         lines = [
