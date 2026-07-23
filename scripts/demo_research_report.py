@@ -24,7 +24,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:

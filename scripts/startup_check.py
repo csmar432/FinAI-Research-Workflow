@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).parent.parent.resolve()

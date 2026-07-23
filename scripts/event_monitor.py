@@ -27,14 +27,10 @@ import time
 import uuid
 from collections import deque
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Any
-
-if TYPE_CHECKING:
-    from datetime import datetime as dt
-
+from typing import Callable
 
 _log = logging.getLogger("event_monitor")
 _log.setLevel(logging.INFO)
@@ -797,7 +793,6 @@ def _run_pipeline_bg(
 
 def _run_demo_pipeline(topic: str, output_dir: str, event: ResearchEvent) -> dict:
     """Run demo_research_report.py as subprocess."""
-    import threading as _t
     "".join(c if c.isalnum() else "_" for c in topic[:30])
     datetime.now().strftime("%Y%m%d_%H%M%S")
 

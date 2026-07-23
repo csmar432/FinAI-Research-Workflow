@@ -84,7 +84,6 @@ def plot_event_study(event_study_data: dict, output_path: Path):
         import matplotlib
         for key, val in ACADEMIC_STYLE.items():
             matplotlib.rcParams[key] = val
-        import matplotlib.patches as mpatches
         import matplotlib.pyplot as plt
     except ImportError:
         print("  [警告] matplotlib 未安装，将生成 Python+matplotlib 绘图代码")

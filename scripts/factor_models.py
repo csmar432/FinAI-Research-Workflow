@@ -1399,7 +1399,7 @@ class LassoFactorSelector:
             FactorModelResult
         """
         try:
-            from sklearn.linear_model import Lasso, LassoCV
+            from sklearn.linear_model import Lasso
             from sklearn.preprocessing import StandardScaler
         except ImportError:
             warnings.warn("scikit-learn 未安装，使用 statsmodels OLS 近似")

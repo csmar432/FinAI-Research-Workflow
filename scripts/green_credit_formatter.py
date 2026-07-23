@@ -221,10 +221,8 @@ def md_to_docx_python(text: str, output_path: Path) -> bool:
     """使用 python-docx 生成 Word 文档"""
     try:
         from docx import Document
-        from docx.enum.table import WD_TABLE_ALIGNMENT
         from docx.enum.text import WD_ALIGN_PARAGRAPH
-        from docx.oxml.ns import qn
-        from docx.shared import Cm, Pt, RGBColor
+        from docx.shared import Cm, Pt
     except ImportError:
         print("  [警告] python-docx 未安装，使用 HTML 中转方案")
         return False

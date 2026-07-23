@@ -111,7 +111,6 @@ class JournalTemplate:
             - If engine is None: auto-detect in priority order
             - Each backend failure logs a clear message with fix instructions
         """
-        import shutil as _sh
 
         tex_path = Path(tex_path)
         if not str(tex_path).endswith(".tex"):

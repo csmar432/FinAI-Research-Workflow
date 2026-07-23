@@ -986,7 +986,7 @@ def run_diagnostic(
 
     # 3b. 数据源可用性检查
     from scripts.data_source_checker import (
-        DataSourceChecker, DataRequirement,
+        DataSourceChecker,
         TARIFF_RESEARCH_REQUIREMENTS,
     )
     ds_checker = DataSourceChecker(TARIFF_RESEARCH_REQUIREMENTS)

@@ -623,7 +623,7 @@ if HAS_DOCX:
     from docx import Document as DocxDocument
     from docx.shared import Pt, Cm, Inches, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
-    from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+    from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
     from scripts.plot_utils import get_cjk_font

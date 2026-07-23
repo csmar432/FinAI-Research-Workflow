@@ -408,7 +408,7 @@ def ask_paper_with_ai(arxiv_id: str, question: str) -> str:
 def compare_papers_with_ai(arxiv_ids: list[str], question: str) -> str:
     """对比多篇论文。"""
     sys.path.insert(0, str(SCRIPT_DIR))
-    from scripts.ai_router import AI, Task
+    from scripts.ai_router import Task
 
     papers_content = []
     for aid in arxiv_ids:

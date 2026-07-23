@@ -47,7 +47,7 @@ import re
 import sys
 import urllib.request
 import urllib.error
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Optional

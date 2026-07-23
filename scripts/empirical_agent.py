@@ -76,18 +76,13 @@ _log.setLevel(logging.INFO)
 
 try:
     from scripts.econometrics import (
-        DiagnosticSuite,
         DIDRegression,
         OLSRegression,
-        breusch_pagan_test,
-        durbin_watson_test,
         vif_test,
-        white_test,
     )
     from scripts.empirical_advisor import (
         AdjustmentAction,
         AdjustmentStrategy,
-        DiagnosticResult,
         EmpiricalAdvisor,
         EvaluationResult,
         ModelSwitch,

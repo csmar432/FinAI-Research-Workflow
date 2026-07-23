@@ -37,7 +37,6 @@ from datetime import datetime
 try:
     import pandas as pd
     import plotly.express as px
-    import plotly.graph_objects as go
     import streamlit as st
     STREAMLIT_AVAILABLE = True
 except ImportError:

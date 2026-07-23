@@ -740,7 +740,6 @@ if __name__ == "__main__":
     from scripts.plot_utils import setup_chinese_font
     setup_chinese_font(verbose=False)
     import matplotlib.pyplot as plt
-    import matplotlib as mpl
 
     # 顶刊配色（NBER/QJE/JFE 标准）
     TREATMENT_COLOR = "#1f4e79"   # 深蓝（NBER style）

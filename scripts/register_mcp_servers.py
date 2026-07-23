@@ -78,7 +78,6 @@ def discover_servers() -> list[dict]:
     SURFACED in --list output so the operator knows they're already
     registered manually.
     """
-    import os as _os
 
     # Legal-risk servers: ALWAYS excluded from auto-registration.
     # They exist in mcp_servers/ but require CLI_ACCEPT_RISK to load.

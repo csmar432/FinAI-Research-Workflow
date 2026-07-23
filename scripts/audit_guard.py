@@ -830,7 +830,7 @@ def _check_mcp_registration_health() -> CheckResult:
     """T4 audit 2026-07-12: verify all mcp.json registered servers have
     valid command + module path. External whitelist (e.g. user_pdf_excel
     pointing outside this repo) is allowed but flagged."""
-    import json, re
+    import re
     from pathlib import Path
     try:
         from scripts.core.platform import get_mcp_config
@@ -1152,7 +1152,7 @@ def _check_paid_source_notifier() -> CheckResult:
     if project_root_str not in _sys.path:
         _sys.path.insert(0, project_root_str)
     try:
-        from scripts.core.paid_source_notifier import PAID_SOURCE_REGISTRY, paid_notifier
+        from scripts.core.paid_source_notifier import PAID_SOURCE_REGISTRY
     except Exception as e:
         return CheckResult(
             passed=False,
